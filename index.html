@@ -70,52 +70,52 @@
             border-radius: 2px;
         }
         .timeline-event {
-            padding: 5px 15px;
+            padding: 0;
             position: relative;
             background-color: inherit;
             width: 50%;
             box-sizing: border-box;
-            margin-bottom: 2px;
+            margin-bottom: 10px;
             display: flex;
             align-items: center;
         }
         .timeline-event.left {
             left: 0;
-            padding-right: 30px;
+            padding-right: 20px;
             justify-content: flex-end;
         }
         .timeline-event.right {
             left: 50%;
-            padding-left: 30px;
+            padding-left: 20px;
         }
         .timeline-event::after {
             content: '';
             position: absolute;
-            width: 14px;
-            height: 14px;
-            right: -7px;
-            background-color: #f8f9fa;
-            border: 3px solid #007bff;
-            top: 50%;
-            transform: translateY(-50%);
+            width: 12px;
+            height: 12px;
+            background-color: #007bff;
             border-radius: 50%;
             z-index: 1;
             transition: transform 0.3s ease;
+            top: 15px;
+        }
+        .timeline-event.left::after {
+            right: -6px;
         }
         .timeline-event.right::after {
-            left: -7px;
+            left: -6px;
         }
         .timeline-event:hover::after {
-            transform: translateY(-50%) scale(1.1);
+            transform: scale(1.2);
         }
         .timeline-content {
-            padding: 10px 15px;
+            padding: 15px;
             background-color: white;
             position: relative;
             border-radius: 8px;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
             transition: transform 0.3s ease, box-shadow 0.3s ease;
-            width: calc(100% - 15px);
+            width: 100%;
         }
         .timeline-content:hover {
             transform: translateY(-2px);
@@ -127,8 +127,7 @@
         }
         .timeline-date {
             position: absolute;
-            top: 50%;
-            transform: translateY(-50%);
+            top: 10px;
             color: #6c757d;
             font-size: 0.85rem;
             font-weight: 600;
@@ -140,12 +139,12 @@
         .timeline-event.left .timeline-date {
             right: auto;
             left: 100%;
-            margin-left: 15px;
+            margin-left: 25px;
         }
         .timeline-event.right .timeline-date {
             left: auto;
             right: 100%;
-            margin-right: 15px;
+            margin-right: 25px;
         }
         .timeline-content h1, .timeline-content h2, .timeline-content h3 {
             font-weight: 600;
