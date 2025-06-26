@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Markdown Timeline Generator</title>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+        <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap');
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #f8f9fa;
+            color: #495057;
+            margin: 0;
+            padding: 2rem;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        .app-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        .app-header h1 {
+            font-weight: 600;
+            font-size: 2rem;
+            color: #212529;
+        }
+        .app-header p {
+            font-size: 1rem;
+            color: #6c757d;
+        }
+        .file-upload-wrapper {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        input[type="file"] {
+            display: none;
+        }
+        .file-upload-label {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: background-color 0.3s ease, box-shadow 0.3s ease;
+            font-weight: 400;
+            box-shadow: 0 4px 15px rgba(0, 123, 255, 0.2);
+            font-size: 0.9rem;
+        }
+        .file-upload-label:hover {
+            background-color: #0056b3;
+            box-shadow: 0 6px 20px rgba(0, 123, 255, 0.3);
+        }
+        #timeline-container {
+            position: relative;
+            margin: 1.5rem auto;
+            max-width: 900px;
+        }
+        #timeline-container::before {
+            content: '';
+            position: absolute;
+            width: 2px;
+            background: linear-gradient(to bottom, #007bff, #00c6ff);
+            top: 0;
+            bottom: 0;
+            left: 50%;
+            margin-left: -1px;
+            border-radius: 2px;
+        }
+        .timeline-event {
+            padding: 5px 15px;
+            position: relative;
+            background-color: inherit;
+            width: 50%;
+            box-sizing: border-box;
+            margin-bottom: 2px;
+            display: flex;
+            align-items: center;
+        }
+        .timeline-event.left {
+            left: 0;
+            padding-right: 30px;
+            justify-content: flex-end;
+        }
+        .timeline-event.right {
+            left: 50%;
+            padding-left: 30px;
+        }
+        .timeline-event::after {
+            content: '';
+            position: absolute;
+            width: 14px;
+            height: 14px;
+            right: -7px;
+            background-color: #f8f9fa;
+            border: 3px solid #007bff;
+            top: 50%;
+            transform: translateY(-50%);
+            border-radius: 50%;
+            z-index: 1;
+            transition: transform 0.3s ease;
+        }
+        .timeline-event.right::after {
+            left: -7px;
+        }
+        .timeline-event:hover::after {
+            transform: translateY(-50%) scale(1.1);
+        }
+        .timeline-content {
+            padding: 10px 15px;
+            background-color: white;
+            position: relative;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            width: calc(100% - 15px);
+        }
+        .timeline-content:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.08);
+        }
+        .timeline-content:focus {
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25);
+        }
+        .timeline-date {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #6c757d;
+            font-size: 0.85rem;
+            font-weight: 600;
+            padding: 4px 8px;
+            background-color: #e9ecef;
+            border-radius: 20px;
+            white-space: nowrap;
+        }
+        .timeline-event.left .timeline-date {
+            right: auto;
+            left: 100%;
+            margin-left: 15px;
+        }
+        .timeline-event.right .timeline-date {
+            left: auto;
+            right: 100%;
+            margin-right: 15px;
+        }
+        .timeline-content h1, .timeline-content h2, .timeline-content h3 {
+            font-weight: 600;
+            font-size: 1rem;
+            color: #343a40;
+            margin-bottom: 0.4rem;
+        }
+        .timeline-content p {
+            line-height: 1.5;
+            font-size: 0.85rem;
+            margin-bottom: 0.4rem;
+        }
+        .timeline-content ul, .timeline-content ol {
+            padding-left: 18px;
+            font-size: 0.85rem;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="app-header">
+        <h1>Markdown Timeline Generator</h1>
+        <p>Select a Markdown file to convert it into a vertical timeline.</p>
+    </div>
+
+    <div class="file-upload-wrapper">
+        <label for="markdown-file" class="file-upload-label">Choose a Markdown File</label>
+        <input type="file" id="markdown-file" accept=".md">
+        <button id="export-btn" class="file-upload-label" style="display: none; background-color: #28a745; margin-left: 1rem;">Export as PNG</button>
+    </div>
+
+    <div id="timeline-container"></div>
+
+    <script>
+        document.getElementById('markdown-file').addEventListener('change', handleFileSelect);
+
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (!file) {
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const content = e.target.result;
+                generateTimeline(content);
+            };
+            reader.readAsText(file);
+        }
+
+        function generateTimeline(markdownContent) {
+            const timelineContainer = document.getElementById('timeline-container');
+            const exportBtn = document.getElementById('export-btn');
+            timelineContainer.innerHTML = ''; // Clear previous timeline
+
+            const events = markdownContent.split('---').filter(event => event.trim() !== '');
+
+            if (events.length > 0) {
+                exportBtn.style.display = 'inline-block';
+            } else {
+                exportBtn.style.display = 'none';
+            }
+
+            events.forEach((eventMarkdown, index) => {
+                const timelineEvent = document.createElement('div');
+                const side = index % 2 === 0 ? 'left' : 'right';
+                timelineEvent.className = `timeline-event ${side}`;
+
+                let date = '';
+                const dateRegex = /\*(.*?)\*/; // Correctly look for *Date*
+                const dateMatch = eventMarkdown.match(dateRegex);
+                
+                let contentMarkdown = eventMarkdown;
+                if (dateMatch) {
+                    date = dateMatch[1];
+                    contentMarkdown = eventMarkdown.replace(dateMatch[0], '').trim();
+                }
+
+                const timelineContent = document.createElement('div');
+                timelineContent.className = 'timeline-content';
+                timelineContent.innerHTML = marked.parse(contentMarkdown.trim());
+                timelineContent.setAttribute('contenteditable', 'true');
+
+                const dateElement = document.createElement('div');
+                dateElement.className = 'timeline-date';
+                dateElement.textContent = date;
+
+                timelineEvent.appendChild(dateElement);
+                timelineEvent.appendChild(timelineContent);
+                timelineContainer.appendChild(timelineEvent);
+            });
+        }
+
+        document.getElementById('export-btn').addEventListener('click', () => {
+            const timelineContainer = document.getElementById('timeline-container');
+            // Temporarily remove focus to not capture the blue shadow in the export
+            const activeElement = document.activeElement;
+            if (activeElement) {
+                activeElement.blur();
+            }
+
+            html2canvas(timelineContainer, { 
+                scrollX: 0,
+                scrollY: -window.scrollY,
+                windowWidth: document.documentElement.offsetWidth,
+                windowHeight: document.documentElement.offsetHeight,
+                backgroundColor: null // Use transparent background
+            }).then(canvas => {
+                const link = document.createElement('a');
+                link.download = 'timeline.png';
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            });
+        });
+    </script>
+
+</body>
+</html>
