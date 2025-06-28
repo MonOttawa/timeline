@@ -11,8 +11,8 @@
 
         body {
             font-family: 'Poppins', sans-serif;
-            background-color: #f8f9fa;
-            color: #495057;
+            background-color: #ffffff;
+            color: #333;
             margin: 0;
             padding: 2rem;
             -webkit-font-smoothing: antialiased;
@@ -56,106 +56,113 @@
         #timeline-container {
             position: relative;
             margin: 1.5rem auto;
-            max-width: 900px;
+            max-width: 600px;
+            padding-left: 150px;
         }
         #timeline-container::before {
             content: '';
             position: absolute;
             width: 2px;
-            background: linear-gradient(to bottom, #007bff, #00c6ff);
+            background: #007bff;
             top: 0;
             bottom: 0;
-            left: 50%;
-            margin-left: -1px;
+            left: 150px;
             border-radius: 2px;
         }
         .timeline-event {
             padding: 0;
             position: relative;
             background-color: inherit;
-            width: 50%;
+            width: 100%;
             box-sizing: border-box;
-            margin-bottom: 10px;
+            margin-bottom: 30px;
             display: flex;
-            align-items: center;
+            align-items: flex-start;
         }
         .timeline-event.left {
             left: 0;
-            padding-right: 20px;
-            justify-content: flex-end;
+            padding-left: 20px;
         }
         .timeline-event.right {
-            left: 50%;
+            left: 0;
             padding-left: 20px;
         }
         .timeline-event::after {
             content: '';
             position: absolute;
-            width: 12px;
-            height: 12px;
+            width: 10px;
+            height: 10px;
             background-color: #007bff;
             border-radius: 50%;
             z-index: 1;
-            transition: transform 0.3s ease;
-            top: 15px;
+            top: 8px;
+            left: -25px;
         }
         .timeline-event.left::after {
-            right: -6px;
+            left: -25px;
         }
         .timeline-event.right::after {
-            left: -6px;
+            left: -25px;
         }
         .timeline-event:hover::after {
-            transform: scale(1.2);
+            transform: none;
         }
         .timeline-content {
-            padding: 15px;
-            background-color: white;
+            padding: 0;
+            background-color: transparent;
             position: relative;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            border-radius: 0;
+            box-shadow: none;
+            transition: none;
             width: 100%;
         }
         .timeline-content:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.08);
+            transform: none;
+            box-shadow: none;
         }
         .timeline-content:focus {
             outline: none;
-            box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25);
+            box-shadow: none;
         }
         .timeline-date {
             position: absolute;
-            top: 10px;
-            color: #6c757d;
-            font-size: 0.85rem;
+            top: 0;
+            left: -140px;
+            color: white;
+            font-size: 0.7rem;
             font-weight: 600;
             padding: 4px 8px;
-            background-color: #e9ecef;
-            border-radius: 20px;
+            background-color: #28a745;
+            border-radius: 4px;
             white-space: nowrap;
+            text-transform: uppercase;
         }
         .timeline-event.left .timeline-date {
-            right: auto;
-            left: 100%;
-            margin-left: 25px;
+            left: -140px;
         }
         .timeline-event.right .timeline-date {
-            left: auto;
-            right: 100%;
-            margin-right: 25px;
+            left: -140px;
         }
         .timeline-content h1, .timeline-content h2, .timeline-content h3 {
-            font-weight: 600;
-            font-size: 1rem;
-            color: #343a40;
-            margin-bottom: 0.4rem;
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: #333;
+            margin-bottom: 0.5rem;
+            margin-top: 0;
         }
         .timeline-content p {
-            line-height: 1.5;
+            line-height: 1.6;
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+            color: #666;
+        }
+        .timeline-content em {
+            color: #007bff;
+            font-style: italic;
+            font-weight: 400;
+            display: block;
+            margin-bottom: 0.25rem;
             font-size: 0.85rem;
-            margin-bottom: 0.4rem;
         }
         .timeline-content ul, .timeline-content ol {
             padding-left: 18px;
@@ -210,11 +217,10 @@
 
             events.forEach((eventMarkdown, index) => {
                 const timelineEvent = document.createElement('div');
-                const side = index % 2 === 0 ? 'left' : 'right';
-                timelineEvent.className = `timeline-event ${side}`;
+                timelineEvent.className = `timeline-event left`; // All events on the left side now
 
                 let date = '';
-                const dateRegex = /\*(.*?)\*/; // Correctly look for *Date*
+                const dateRegex = /\*(.*?)\*/; // Look for *Date*
                 const dateMatch = eventMarkdown.match(dateRegex);
                 
                 let contentMarkdown = eventMarkdown;
