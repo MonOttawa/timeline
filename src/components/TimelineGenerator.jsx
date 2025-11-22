@@ -108,6 +108,9 @@ const TimelineGenerator = () => {
     const filename = sanitizeFilename(timelineTitle);
 
     try {
+      // Ensure all fonts are loaded before exporting
+      await document.fonts.ready;
+
       if (format === 'svg') {
         // Add a temporary style to remove all borders during export
         const style = document.createElement('style');
