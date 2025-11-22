@@ -1,5 +1,5 @@
 import React from "react";
-import { Home } from "lucide-react";
+import { Home, Keyboard, BarChart, Trophy, BookOpen, Mic, Moon, Sun } from "lucide-react";
 import { BurgerMenu } from "./BurgerMenu";
 
 interface HeaderProps {
@@ -127,46 +127,51 @@ export const Header: React.FC<HeaderProps> = ({
         {onShowKeyboardHelp && (
           <button
             onClick={onShowKeyboardHelp}
-            className="px-4 py-2 border-2 border-black dark:border-white bg-yellow-400 text-black font-bold rounded-lg shadow-[4px_4px_0px_#000] dark:shadow-[4px_4px_0px_#FFF] hover:bg-black hover:text-yellow-400 transition-all focus:outline-none focus:ring-4 focus:ring-yellow-400 focus:ring-offset-2"
+            className="inline-flex items-center gap-2 px-4 py-3 border-2 border-black dark:border-white bg-yellow-400 text-black font-bold rounded-lg shadow-[4px_4px_0px_#000] dark:shadow-[4px_4px_0px_#FFF] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_#000] dark:hover:shadow-[6px_6px_0px_#FFF] transition-all focus:outline-none"
           >
-            ⌨️ Shortcuts
+            <Keyboard size={20} />
+            Shortcuts
           </button>
         )}
         {onShowStats && (
           <button
             onClick={onShowStats}
-            className="px-4 py-2 border-2 border-black dark:border-white bg-blue-300 text-black font-bold rounded-lg shadow-[4px_4px_0px_#000] dark:shadow-[4px_4px_0px_#FFF] hover:bg-black hover:text-blue-300 transition-all focus:outline-none focus:ring-4 focus:ring-yellow-400 focus:ring-offset-2"
+            className="inline-flex items-center gap-2 px-4 py-3 border-2 border-black dark:border-white bg-blue-300 text-black font-bold rounded-lg shadow-[4px_4px_0px_#000] dark:shadow-[4px_4px_0px_#FFF] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_#000] dark:hover:shadow-[6px_6px_0px_#FFF] transition-all focus:outline-none"
           >
-            📊 Stats
+            <BarChart size={20} />
+            Stats
           </button>
         )}
         {onShowLeaderboard && (
           <button
             onClick={onShowLeaderboard}
-            className="px-4 py-2 border-2 border-black dark:border-white bg-purple-300 text-black font-bold rounded-lg shadow-[4px_4px_0px_#000] dark:shadow-[4px_4px_0px_#FFF] hover:bg-black hover:text-purple-300 transition-all focus:outline-none focus:ring-4 focus:ring-yellow-400 focus:ring-offset-2"
+            className="inline-flex items-center gap-2 px-4 py-3 border-2 border-black dark:border-white bg-purple-300 text-black font-bold rounded-lg shadow-[4px_4px_0px_#000] dark:shadow-[4px_4px_0px_#FFF] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_#000] dark:hover:shadow-[6px_6px_0px_#FFF] transition-all focus:outline-none"
           >
-            🏆 Leaderboard
+            <Trophy size={20} />
+            Leaderboard
           </button>
         )}
         {canSeedPoems && onShowSeeder && (
           <button
             onClick={onShowSeeder}
-            className="px-4 py-2 border-2 border-black dark:border-white bg-green-300 text-black font-bold rounded-lg shadow-[4px_4px_0px_#000] dark:shadow-[4px_4px_0px_#FFF] hover:bg-black hover:text-green-300 transition-all focus:outline-none focus:ring-4 focus:ring-yellow-400 focus:ring-offset-2"
+            className="inline-flex items-center gap-2 px-4 py-3 border-2 border-black dark:border-white bg-green-300 text-black font-bold rounded-lg shadow-[4px_4px_0px_#000] dark:shadow-[4px_4px_0px_#FFF] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_#000] dark:hover:shadow-[6px_6px_0px_#FFF] transition-all focus:outline-none"
           >
-            📚 Seed Poems
+            <BookOpen size={20} />
+            Seed Poems
           </button>
         )}
         {onShowTeleprompter && (
           <button
             onClick={onShowTeleprompter}
-            className="px-4 py-2 border-2 border-black dark:border-white bg-pink-400 text-black font-bold rounded-lg shadow-[4px_4px_0px_#000] dark:shadow-[4px_4px_0px_#FFF] hover:bg-black hover:text-pink-400 transition-all focus:outline-none focus:ring-4 focus:ring-yellow-400 focus:ring-offset-2"
+            className="inline-flex items-center gap-2 px-4 py-3 border-2 border-black dark:border-white bg-pink-400 text-black font-bold rounded-lg shadow-[4px_4px_0px_#000] dark:shadow-[4px_4px_0px_#FFF] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_#000] dark:hover:shadow-[6px_6px_0px_#FFF] transition-all focus:outline-none"
           >
-            🎤 Teleprompter
+            <Mic size={20} />
+            Teleprompter
           </button>
         )}
         <button
           onClick={onToggleTheme}
-          className="px-4 py-2 border-2 border-black dark:border-white bg-black dark:bg-yellow-400 text-yellow-400 dark:text-black font-bold rounded-lg shadow-[4px_4px_0px_rgba(17,24,39,0.4)] dark:shadow-[4px_4px_0px_rgba(255,255,255,0.5)] hover:bg-yellow-400 hover:text-black dark:hover:bg-black dark:hover:text-yellow-400 transition-all focus:outline-none focus:ring-4 focus:ring-yellow-400 focus:ring-offset-2"
+          className="inline-flex items-center gap-2 px-4 py-3 border-2 border-black dark:border-white bg-black dark:bg-yellow-400 text-yellow-400 dark:text-black font-bold rounded-lg shadow-[4px_4px_0px_rgba(17,24,39,0.4)] dark:shadow-[4px_4px_0px_rgba(255,255,255,0.5)] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_rgba(17,24,39,0.4)] dark:hover:shadow-[6px_6px_0px_rgba(255,255,255,0.5)] transition-all focus:outline-none"
           aria-label={
             theme === "light" ? "Switch to dark mode" : "Switch to light mode"
           }
@@ -174,7 +179,7 @@ export const Header: React.FC<HeaderProps> = ({
             theme === "light" ? "Switch to dark mode" : "Switch to light mode"
           }
         >
-          {theme === "light" ? "🌙" : "☀️"}
+          {theme === "light" ? <Moon size={20} /> : <Sun size={20} />}
         </button>
         {displayName && (
           <div className="flex items-center gap-2 border-2 border-black dark:border-white bg-white dark:bg-gray-700 text-black dark:text-white font-mono text-sm font-semibold rounded-lg px-3 py-2 shadow-[4px_4px_0px_#000] dark:shadow-[4px_4px_0px_#FFF]">
