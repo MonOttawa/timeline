@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { marked } from 'marked';
 import { Upload, Download, FileText } from 'lucide-react';
-import html2canvas from 'html2canvas';
+import domtoimage from 'dom-to-image-more';
 
 const TimelineGenerator = () => {
   const [events, setEvents] = useState([]);
@@ -107,41 +107,107 @@ const TimelineGenerator = () => {
     const element = timelineRef.current;
     const filename = sanitizeFilename(timelineTitle);
 
-    if (format === 'svg') {
-      const svgData = `
-        <svg xmlns="http://www.w3.org/2000/svg" width="${element.offsetWidth}" height="${element.offsetHeight}">
-          <foreignObject width="100%" height="100%">
-            <div xmlns="http://www.w3.org/1999/xhtml">
-              ${element.outerHTML}
-            </div>
-          </foreignObject>
-        </svg>
-      `;
+    try {
+      if (format === 'svg') {
+        const svgData = `
+          <svg xmlns="http://www.w3.org/2000/svg" width="${element.offsetWidth}" height="${element.offsetHeight}">
+            <foreignObject width="100%" height="100%">
+              <div xmlns="http://www.w3.org/1999/xhtml">
+                ${element.outerHTML}
+              </div>
+            </foreignObject>
+          </svg>
+        `;
 
-      const blob = new Blob([svgData], { type: 'image/svg+xml' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.download = `${filename}.svg`;
-      link.href = url;
-      link.click();
-      URL.revokeObjectURL(url);
-    } else {
-      // PNG or JPG export
-      const canvas = await html2canvas(element, {
-        backgroundColor: format === 'png' ? null : '#ffffff',
-        scale: 2, // Higher quality
-        logging: false,
-        useCORS: true
-      });
-
-      canvas.toBlob((blob) => {
+        const blob = new Blob([svgData], { type: 'image/svg+xml' });
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
-        link.download = `${filename}.${format}`;
+        link.download = `${filename}.svg`;
         link.href = url;
         link.click();
         URL.revokeObjectURL(url);
-      }, `image/${format === 'jpg' ? 'jpeg' : 'png'}`);
+      } else if (format === 'png') {
+        // Add a temporary style to remove all borders during export
+        const style = document.createElement('style');
+        style.innerHTML = `
+          #timeline-container,
+          #timeline-container *,
+          #timeline-container *::before,
+          #timeline-container *::after {
+            border: none !important;
+            outline: none !important;
+            box-shadow: none !important;
+          }
+        `;
+        document.head.appendChild(style);
+
+        // PNG export with transparent background
+        const dataUrl = await domtoimage.toPng(element, {
+          quality: 1,
+          bgcolor: null,
+          width: element.offsetWidth * 2,
+          height: element.offsetHeight * 2,
+          style: {
+            transform: 'scale(2)',
+            transformOrigin: 'top left',
+            width: element.offsetWidth + 'px',
+            height: element.offsetHeight + 'px',
+            border: 'none',
+            outline: 'none',
+            boxShadow: 'none'
+          }
+        });
+
+        // Remove temporary style
+        document.head.removeChild(style);
+
+        const link = document.createElement('a');
+        link.download = `${filename}.png`;
+        link.href = dataUrl;
+        link.click();
+      } else if (format === 'jpg') {
+        // Add a temporary style to remove all borders during export
+        const style = document.createElement('style');
+        style.innerHTML = `
+          #timeline-container,
+          #timeline-container *,
+          #timeline-container *::before,
+          #timeline-container *::after {
+            border: none !important;
+            outline: none !important;
+            box-shadow: none !important;
+          }
+        `;
+        document.head.appendChild(style);
+
+        // JPG export with white background
+        const dataUrl = await domtoimage.toJpeg(element, {
+          quality: 1,
+          bgcolor: '#ffffff',
+          width: element.offsetWidth * 2,
+          height: element.offsetHeight * 2,
+          style: {
+            transform: 'scale(2)',
+            transformOrigin: 'top left',
+            width: element.offsetWidth + 'px',
+            height: element.offsetHeight + 'px',
+            border: 'none',
+            outline: 'none',
+            boxShadow: 'none'
+          }
+        });
+
+        // Remove temporary style
+        document.head.removeChild(style);
+
+        const link = document.createElement('a');
+        link.download = `${filename}.jpg`;
+        link.href = dataUrl;
+        link.click();
+      }
+    } catch (error) {
+      console.error('Export failed:', error);
+      alert(`Export failed: ${error.message}`);
     }
   };
 
@@ -168,13 +234,11 @@ const TimelineGenerator = () => {
                   const format = e.target.value;
                   if (!format) return;
                   setExportFormat(format);
-                  // Trigger export on next tick to ensure state is updated
-                  await new Promise(resolve => setTimeout(resolve, 0));
-                  await handleExport();
-                  // Reset to default
+                  await handleExport(format);
                   setExportFormat('');
                 }}
-                className="inline-flex items-center gap-2 border-2 border-black dark:border-white font-bold py-3 pl-6 pr-10 bg-green-400 text-black shadow-[4px_4px_0px_#000] dark:shadow-[4px_4px_0px_#FFF] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_#000] dark:hover:shadow-[6px_6px_0px_#FFF] transition-all rounded-lg cursor-pointer text-center"
+                style={{ backgroundPositionX: 'calc(100% - 3rem)' }}
+                className="inline-flex items-center gap-2 border-2 border-black dark:border-white font-bold py-3 px-6 bg-green-400 text-black shadow-[4px_4px_0px_#000] dark:shadow-[4px_4px_0px_#FFF] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_#000] dark:hover:shadow-[6px_6px_0px_#FFF] transition-all rounded-lg cursor-pointer text-center"
               >
                 <option value="">Export As...</option>
                 <option value="png">PNG (Transparent)</option>
@@ -193,7 +257,8 @@ const TimelineGenerator = () => {
               <select
                 value={timelineStyle}
                 onChange={(e) => setTimelineStyle(e.target.value)}
-                className="inline-flex items-center gap-2 border-2 border-black dark:border-white font-bold py-3 pl-6 pr-10 bg-purple-400 text-black shadow-[4px_4px_0px_#000] dark:shadow-[4px_4px_0px_#FFF] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_#000] dark:hover:shadow-[6px_6px_0px_#FFF] transition-all rounded-lg cursor-pointer text-center"
+                style={{ backgroundPositionX: 'calc(100% - 3rem)' }}
+                className="inline-flex items-center gap-2 border-2 border-black dark:border-white font-bold py-3 px-6 bg-purple-400 text-black shadow-[4px_4px_0px_#000] dark:shadow-[4px_4px_0px_#FFF] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_#000] dark:hover:shadow-[6px_6px_0px_#FFF] transition-all rounded-lg cursor-pointer text-center"
               >
                 <option value="bauhaus">Bauhaus</option>
                 <option value="neo-brutalist">Neo-Brutalist</option>
@@ -240,6 +305,7 @@ const TimelineGenerator = () => {
           id="timeline-container"
           ref={timelineRef}
           className={`relative max-w-3xl mx-auto p-8 ${timelineStyle === 'bauhaus' ? 'pl-10' : ''}`}
+          style={{ backgroundColor: 'transparent' }}
         >
           {/* Timeline Title */}
           <h2 className={`text-5xl font-black font-display mb-12 text-black dark:text-white tracking-tighter ${timelineStyle === 'bauhaus' ? 'text-left pl-16' : 'text-center'}`}>
