@@ -59,7 +59,24 @@ const TimelineGenerator = () => {
       };
     });
 
-    setEvents(parsedEvents);
+    // Sort events by date
+    const sortedEvents = parsedEvents.sort((a, b) => {
+      if (!a.date && !b.date) return 0;
+      if (!a.date) return 1;
+      if (!b.date) return -1;
+
+      const dateA = new Date(a.date);
+      const dateB = new Date(b.date);
+
+      // If date parsing fails, keep original order
+      if (isNaN(dateA.getTime()) && isNaN(dateB.getTime())) return 0;
+      if (isNaN(dateA.getTime())) return 1;
+      if (isNaN(dateB.getTime())) return -1;
+
+      return dateA - dateB;
+    });
+
+    setEvents(sortedEvents);
   };
 
   const handleMarkdownChange = (e) => {
@@ -258,23 +275,26 @@ const TimelineGenerator = () => {
                 const isLeft = index % 2 === 0;
 
                 return (
-                  <div key={index} className="relative mb-6">
-                    {/* Timeline dot */}
-                    <div className="absolute left-1/2 top-4 w-4 h-4 bg-[#C41E3A] rounded-full transform -translate-x-1/2 z-10 ring-4 ring-white dark:ring-gray-800"></div>
+                  <div key={index} className={`relative ${index > 0 ? '-mt-16' : ''}`}>
+                    {/* Timeline dot - centered on card */}
+                    <div className="absolute left-1/2 top-1/2 -translate-y-1/2 w-3 h-3 bg-[#C41E3A] rounded-full transform -translate-x-1/2 z-20 ring-3 ring-white dark:ring-gray-800"></div>
+
+                    {/* Connecting line from dot to card */}
+                    <div className={`absolute top-1/2 -translate-y-1/2 h-px bg-black dark:bg-gray-400 z-10 ${isLeft ? 'left-[48%] w-[2%]' : 'left-[50%] w-[2%]'}`}></div>
 
                     {/* Event card - alternating sides */}
                     <div className={`relative ${isLeft ? 'pr-[52%]' : 'pl-[52%]'}`}>
-                      <div className="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-[0_8px_30px_rgb(0,0,0,0.12)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.4)] hover:shadow-[0_12px_40px_rgb(0,0,0,0.18)] dark:hover:shadow-[0_12px_40px_rgb(0,0,0,0.5)] transition-all duration-300">
+                      <div className={`bg-white dark:bg-gray-800 rounded-lg p-4 shadow-[0_8px_30px_rgb(0,0,0,0.12)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.4)] hover:shadow-[0_12px_40px_rgb(0,0,0,0.18)] dark:hover:shadow-[0_12px_40px_rgb(0,0,0,0.5)] transition-all duration-300 relative ${isLeft ? 'text-right' : ''}`} style={{ zIndex: index }}>
                         {/* Date */}
                         {event.date && (
-                          <div className="font-black text-xl text-black dark:text-white mb-2 tracking-tight">
+                          <div className="font-black text-lg text-black dark:text-white mb-1.5 tracking-tight">
                             {event.date}
                           </div>
                         )}
 
                         {/* Content */}
                         <div
-                          className="markdown-content prose prose-sm dark:prose-invert max-w-none text-gray-700 dark:text-gray-300"
+                          className="markdown-content prose prose-sm dark:prose-invert max-w-none text-gray-700 dark:text-gray-300 [&>*]:my-1"
                           dangerouslySetInnerHTML={{ __html: event.content }}
                         />
                       </div>
