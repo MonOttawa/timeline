@@ -13,6 +13,7 @@
     "dom-to-image-more": "^3.7.2",
     "lucide-react": "^0.554.0",
     "marked": "^17.0.1",
+    "pocketbase": "^0.26.3",
     "react": "^19.2.0",
     "react-dom": "^19.2.0"
   },

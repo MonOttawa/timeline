@@ -2,12 +2,15 @@ import React, { useState, useEffect } from 'react';
 import LandingPage from './components/LandingPage';
 import TimelineGenerator from './components/TimelineGenerator';
 import TermsAndPrivacy from './components/TermsAndPrivacy';
+import AuthModal from './components/AuthModal';
 import { Header } from './components/poemlearning/Header';
+import { useAuth } from './contexts/AuthContext';
 
 function App() {
+  const { user, signOut } = useAuth();
   const [showApp, setShowApp] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [showLegal, setShowLegal] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
   const [theme, setTheme] = useState('light');
 
   useEffect(() => {
@@ -19,7 +22,15 @@ function App() {
   }, [theme]);
 
   const handleLogin = () => {
-    setIsLoggedIn(true);
+    setShowAuthModal(true);
+  };
+
+  const handleLogout = async () => {
+    await signOut();
+    setShowApp(false);
+  };
+
+  const handleAuthSuccess = () => {
     setShowApp(true);
   };
 
@@ -32,11 +43,11 @@ function App() {
       <Header
         theme={theme}
         onToggleTheme={toggleTheme}
-        userEmail={isLoggedIn ? "user@example.com" : null}
-        onLogout={isLoggedIn ? () => { setIsLoggedIn(false); setShowApp(false); } : null}
+        userEmail={user?.email || null}
+        onLogout={user ? handleLogout : null}
         onNavigateHome={showApp ? () => setShowApp(false) : null}
-        onNavigateTimeline={!showApp && isLoggedIn ? () => setShowApp(true) : null}
-        onLogin={!isLoggedIn ? handleLogin : null}
+        onNavigateTimeline={!showApp && user ? () => setShowApp(true) : null}
+        onLogin={!user ? handleLogin : null}
       />
 
       <main className="container mx-auto px-4 pb-12">
@@ -46,13 +57,20 @@ function App() {
           <LandingPage
             onStart={() => setShowApp(true)}
             onLogin={handleLogin}
-            isLoggedIn={isLoggedIn}
+            isLoggedIn={!!user}
             onShowLegal={() => setShowLegal(true)}
           />
         ) : (
           <TimelineGenerator />
         )}
       </main>
+
+      {showAuthModal && (
+        <AuthModal
+          onClose={() => setShowAuthModal(false)}
+          onSuccess={handleAuthSuccess}
+        />
+      )}
     </div>
   );
 }
