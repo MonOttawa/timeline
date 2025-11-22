@@ -258,16 +258,16 @@ const TimelineGenerator = () => {
                 const isLeft = index % 2 === 0;
 
                 return (
-                  <div key={index} className="relative mb-12">
+                  <div key={index} className="relative mb-6">
                     {/* Timeline dot */}
-                    <div className="absolute left-1/2 top-8 w-4 h-4 bg-[#C41E3A] rounded-full transform -translate-x-1/2 z-10 ring-4 ring-white dark:ring-gray-800"></div>
+                    <div className="absolute left-1/2 top-4 w-4 h-4 bg-[#C41E3A] rounded-full transform -translate-x-1/2 z-10 ring-4 ring-white dark:ring-gray-800"></div>
 
                     {/* Event card - alternating sides */}
                     <div className={`relative ${isLeft ? 'pr-[52%]' : 'pl-[52%]'}`}>
-                      <div className="bg-white dark:bg-gray-800 rounded-xl p-8 shadow-[0_8px_30px_rgb(0,0,0,0.12)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.4)] hover:shadow-[0_12px_40px_rgb(0,0,0,0.18)] dark:hover:shadow-[0_12px_40px_rgb(0,0,0,0.5)] transition-all duration-300">
+                      <div className="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-[0_8px_30px_rgb(0,0,0,0.12)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.4)] hover:shadow-[0_12px_40px_rgb(0,0,0,0.18)] dark:hover:shadow-[0_12px_40px_rgb(0,0,0,0.5)] transition-all duration-300">
                         {/* Date */}
                         {event.date && (
-                          <div className="font-black text-2xl text-black dark:text-white mb-4 tracking-tight">
+                          <div className="font-black text-xl text-black dark:text-white mb-2 tracking-tight">
                             {event.date}
                           </div>
                         )}
