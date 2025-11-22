@@ -1,13 +1,14 @@
 import React from "react";
+import { Home } from "lucide-react";
 import { BurgerMenu } from "./BurgerMenu";
 
 interface HeaderProps {
   theme: "light" | "dark";
   onToggleTheme: () => void;
-  onShowPoemSelector: () => void;
-  onShowKeyboardHelp: () => void;
-  onShowStats: () => void;
-  onShowLeaderboard: () => void;
+  onShowPoemSelector?: () => void;
+  onShowKeyboardHelp?: () => void;
+  onShowStats?: () => void;
+  onShowLeaderboard?: () => void;
   userEmail?: string | null;
   userName?: string | null;
   onLogout?: () => void;
@@ -17,6 +18,9 @@ interface HeaderProps {
   hasHistory?: boolean;
   onShowProfileSettings?: () => void;
   onShowTeleprompter?: () => void;
+  onNavigateHome?: () => void;
+  onNavigateTimeline?: () => void;
+  onLogin?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -35,6 +39,9 @@ export const Header: React.FC<HeaderProps> = ({
   hasHistory = false,
   onShowProfileSettings,
   onShowTeleprompter,
+  onNavigateHome,
+  onNavigateTimeline,
+  onLogin,
 }) => {
   const displayName =
     userName && userName.trim().length > 0
@@ -48,12 +55,23 @@ export const Header: React.FC<HeaderProps> = ({
       {/* Mobile: Stats, Session History, Leaderboard, Change Poem, and Burger Menu */}
       <div className="md:hidden flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 overflow-x-auto pb-1 pr-1">
-          <button
-            onClick={onShowStats}
-            className="px-3 py-2 border-2 border-black dark:border-white bg-blue-300 text-black font-bold rounded-lg shadow-[2px_2px_0px_#000] dark:shadow-[2px_2px_0px_#FFF] hover:bg-black hover:text-blue-300 transition-all focus:outline-none text-sm whitespace-nowrap"
-          >
-            Stats
-          </button>
+          {onNavigateHome && (
+            <button
+              onClick={onNavigateHome}
+              className="inline-flex items-center gap-2 px-3 py-2 border-2 border-black dark:border-white bg-blue-400 text-black font-bold rounded-lg shadow-[2px_2px_0px_#000] dark:shadow-[2px_2px_0px_#FFF] hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-[3px_3px_0px_#000] dark:hover:shadow-[3px_3px_0px_#FFF] transition-all focus:outline-none text-sm whitespace-nowrap"
+              title="Home"
+            >
+              <Home size={16} />
+            </button>
+          )}
+          {onShowStats && (
+            <button
+              onClick={onShowStats}
+              className="px-3 py-2 border-2 border-black dark:border-white bg-blue-300 text-black font-bold rounded-lg shadow-[2px_2px_0px_#000] dark:shadow-[2px_2px_0px_#FFF] hover:bg-black hover:text-blue-300 transition-all focus:outline-none text-sm whitespace-nowrap"
+            >
+              Stats
+            </button>
+          )}
           {hasHistory && onShowHistory && (
             <button
               onClick={onShowHistory}
@@ -62,18 +80,22 @@ export const Header: React.FC<HeaderProps> = ({
               History
             </button>
           )}
-          <button
-            onClick={onShowLeaderboard}
-            className="px-3 py-2 border-2 border-black dark:border-white bg-purple-300 text-black font-bold rounded-lg shadow-[2px_2px_0px_#000] dark:shadow-[2px_2px_0px_#FFF] hover:bg-black hover:text-purple-300 transition-all focus:outline-none text-sm whitespace-nowrap"
-          >
-            Leaderboard
-          </button>
-          <button
-            onClick={onShowPoemSelector}
-            className="px-3 py-2 border-2 border-black dark:border-white bg-green-300 text-black font-bold rounded-lg shadow-[2px_2px_0px_#000] dark:shadow-[2px_2px_0px_#FFF] hover:bg-black hover:text-green-300 transition-all focus:outline-none text-sm whitespace-nowrap"
-          >
-            Change Poem
-          </button>
+          {onShowLeaderboard && (
+            <button
+              onClick={onShowLeaderboard}
+              className="px-3 py-2 border-2 border-black dark:border-white bg-purple-300 text-black font-bold rounded-lg shadow-[2px_2px_0px_#000] dark:shadow-[2px_2px_0px_#FFF] hover:bg-black hover:text-purple-300 transition-all focus:outline-none text-sm whitespace-nowrap"
+            >
+              Leaderboard
+            </button>
+          )}
+          {onShowPoemSelector && (
+            <button
+              onClick={onShowPoemSelector}
+              className="px-3 py-2 border-2 border-black dark:border-white bg-green-300 text-black font-bold rounded-lg shadow-[2px_2px_0px_#000] dark:shadow-[2px_2px_0px_#FFF] hover:bg-black hover:text-green-300 transition-all focus:outline-none text-sm whitespace-nowrap"
+            >
+              Change Poem
+            </button>
+          )}
         </div>
         <BurgerMenu
           theme={theme}
@@ -93,24 +115,39 @@ export const Header: React.FC<HeaderProps> = ({
 
       {/* Tablet/Desktop: Regular Button Bar */}
       <div className="hidden md:flex flex-wrap justify-center items-center gap-3">
-        <button
-          onClick={onShowKeyboardHelp}
-          className="px-4 py-2 border-2 border-black dark:border-white bg-yellow-400 text-black font-bold rounded-lg shadow-[4px_4px_0px_#000] dark:shadow-[4px_4px_0px_#FFF] hover:bg-black hover:text-yellow-400 transition-all focus:outline-none focus:ring-4 focus:ring-yellow-400 focus:ring-offset-2"
-        >
-          ⌨️ Shortcuts
-        </button>
-        <button
-          onClick={onShowStats}
-          className="px-4 py-2 border-2 border-black dark:border-white bg-blue-300 text-black font-bold rounded-lg shadow-[4px_4px_0px_#000] dark:shadow-[4px_4px_0px_#FFF] hover:bg-black hover:text-blue-300 transition-all focus:outline-none focus:ring-4 focus:ring-yellow-400 focus:ring-offset-2"
-        >
-          📊 Stats
-        </button>
-        <button
-          onClick={onShowLeaderboard}
-          className="px-4 py-2 border-2 border-black dark:border-white bg-purple-300 text-black font-bold rounded-lg shadow-[4px_4px_0px_#000] dark:shadow-[4px_4px_0px_#FFF] hover:bg-black hover:text-purple-300 transition-all focus:outline-none focus:ring-4 focus:ring-yellow-400 focus:ring-offset-2"
-        >
-          🏆 Leaderboard
-        </button>
+        {onNavigateHome && (
+          <button
+            onClick={onNavigateHome}
+            className="inline-flex items-center gap-2 px-4 py-3 border-2 border-black dark:border-white bg-blue-400 text-black font-bold rounded-lg shadow-[4px_4px_0px_#000] dark:shadow-[4px_4px_0px_#FFF] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_#000] dark:hover:shadow-[6px_6px_0px_#FFF] transition-all focus:outline-none"
+            title="Home"
+          >
+            <Home size={20} />
+          </button>
+        )}
+        {onShowKeyboardHelp && (
+          <button
+            onClick={onShowKeyboardHelp}
+            className="px-4 py-2 border-2 border-black dark:border-white bg-yellow-400 text-black font-bold rounded-lg shadow-[4px_4px_0px_#000] dark:shadow-[4px_4px_0px_#FFF] hover:bg-black hover:text-yellow-400 transition-all focus:outline-none focus:ring-4 focus:ring-yellow-400 focus:ring-offset-2"
+          >
+            ⌨️ Shortcuts
+          </button>
+        )}
+        {onShowStats && (
+          <button
+            onClick={onShowStats}
+            className="px-4 py-2 border-2 border-black dark:border-white bg-blue-300 text-black font-bold rounded-lg shadow-[4px_4px_0px_#000] dark:shadow-[4px_4px_0px_#FFF] hover:bg-black hover:text-blue-300 transition-all focus:outline-none focus:ring-4 focus:ring-yellow-400 focus:ring-offset-2"
+          >
+            📊 Stats
+          </button>
+        )}
+        {onShowLeaderboard && (
+          <button
+            onClick={onShowLeaderboard}
+            className="px-4 py-2 border-2 border-black dark:border-white bg-purple-300 text-black font-bold rounded-lg shadow-[4px_4px_0px_#000] dark:shadow-[4px_4px_0px_#FFF] hover:bg-black hover:text-purple-300 transition-all focus:outline-none focus:ring-4 focus:ring-yellow-400 focus:ring-offset-2"
+          >
+            🏆 Leaderboard
+          </button>
+        )}
         {canSeedPoems && onShowSeeder && (
           <button
             onClick={onShowSeeder}
