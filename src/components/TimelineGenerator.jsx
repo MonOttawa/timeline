@@ -155,12 +155,12 @@ const TimelineGenerator = () => {
 
       {/* Markdown Editor */}
       {showEditor && markdownContent && (
-        <div className="bg-white bg-gray-800 p-6 mb-8 border-4 border-black border-white shadow-[8px_8px_0px_#000] shadow-[8px_8px_0px_#FFF] rounded-lg">
+        <div className="bg-white dark:bg-gray-800 p-6 mb-8 border-4 border-black dark:border-white shadow-[8px_8px_0px_#000] dark:shadow-[8px_8px_0px_#FFF] rounded-lg">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-2xl font-black font-display">Edit Markdown</h2>
             <button
               onClick={handleDownloadMarkdown}
-              className="inline-flex items-center gap-2 border-2 border-black border-white font-bold py-2 px-4 bg-blue-400 text-black shadow-[4px_4px_0px_#000] shadow-[4px_4px_0px_#FFF] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_#000] transition-all rounded-lg text-sm"
+              className="inline-flex items-center gap-2 border-2 border-black dark:border-white font-bold py-2 px-4 bg-blue-400 text-black shadow-[4px_4px_0px_#000] dark:shadow-[4px_4px_0px_#FFF] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_#000] transition-all rounded-lg text-sm"
             >
               <Download size={16} />
               Download MD
@@ -169,7 +169,7 @@ const TimelineGenerator = () => {
           <textarea
             value={markdownContent}
             onChange={handleMarkdownChange}
-            className="w-full h-96 p-4 font-mono text-sm border-2 border-black border-white rounded-lg bg-gray-50 bg-gray-900 text-black text-white focus:outline-none focus:ring-4 focus:ring-yellow-400 focus:ring-offset-2"
+            className="w-full h-96 p-4 font-mono text-sm border-2 border-black dark:border-white rounded-lg bg-gray-50 dark:bg-gray-900 text-black dark:text-white focus:outline-none focus:ring-4 focus:ring-yellow-400 focus:ring-offset-2"
             placeholder="Enter your markdown here..."
           />
           <p className="mt-2 text-sm text-gray-500 text-gray-400">
@@ -185,7 +185,7 @@ const TimelineGenerator = () => {
           className={`relative max-w-3xl mx-auto p-8 ${timelineStyle === 'bauhaus' ? 'pl-10' : ''}`}
         >
           {/* Timeline Title */}
-          <h2 className={`text-5xl font-black font-display mb-12 text-black text-white tracking-tighter ${timelineStyle === 'bauhaus' ? 'text-left pl-16' : 'text-center'}`}>
+          <h2 className={`text-5xl font-black font-display mb-12 text-black dark:text-white tracking-tighter ${timelineStyle === 'bauhaus' ? 'text-left pl-16' : 'text-center'}`}>
             {timelineTitle}
           </h2>
 
@@ -193,7 +193,7 @@ const TimelineGenerator = () => {
             /* Bauhaus Style */
             <>
               {/* Vertical Line - starts at center of first red dot */}
-              <div className="absolute left-10 bottom-8 w-0.5 bg-black bg-white" style={{ top: 'calc(5rem + 3rem + 0.5rem + 0.75rem)' }}></div>
+              <div className="absolute left-10 bottom-8 w-0.5 bg-black dark:bg-white" style={{ top: 'calc(5rem + 3rem + 0.5rem + 0.75rem)' }}></div>
 
               {events.map((event, index) => (
                 <div key={index} className="relative mb-16 pl-16">
@@ -204,7 +204,7 @@ const TimelineGenerator = () => {
                   <div className="flex flex-col gap-0">
                     {/* Date */}
                     {event.date && (
-                      <div className="text-4xl font-black font-display text-black text-white mb-1 tracking-tighter">
+                      <div className="text-4xl font-black font-display text-black dark:text-white mb-1 tracking-tighter">
                         {event.date}
                       </div>
                     )}
