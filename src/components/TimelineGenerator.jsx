@@ -109,23 +109,44 @@ const TimelineGenerator = () => {
 
     try {
       if (format === 'svg') {
-        const svgData = `
-          <svg xmlns="http://www.w3.org/2000/svg" width="${element.offsetWidth}" height="${element.offsetHeight}">
-            <foreignObject width="100%" height="100%">
-              <div xmlns="http://www.w3.org/1999/xhtml">
-                ${element.outerHTML}
-              </div>
-            </foreignObject>
-          </svg>
+        // Add a temporary style to remove all borders during export
+        const style = document.createElement('style');
+        style.innerHTML = `
+          #timeline-container,
+          #timeline-container *,
+          #timeline-container *::before,
+          #timeline-container *::after {
+            border: none !important;
+            outline: none !important;
+            box-shadow: none !important;
+          }
         `;
+        document.head.appendChild(style);
 
-        const blob = new Blob([svgData], { type: 'image/svg+xml' });
-        const url = URL.createObjectURL(blob);
+        // SVG export with all styles embedded
+        const dataUrl = await domtoimage.toSvg(element, {
+          quality: 1,
+          bgcolor: null,
+          width: element.offsetWidth * 2,
+          height: element.offsetHeight * 2,
+          style: {
+            transform: 'scale(2)',
+            transformOrigin: 'top left',
+            width: element.offsetWidth + 'px',
+            height: element.offsetHeight + 'px',
+            border: 'none',
+            outline: 'none',
+            boxShadow: 'none'
+          }
+        });
+
+        // Remove temporary style
+        document.head.removeChild(style);
+
         const link = document.createElement('a');
         link.download = `${filename}.svg`;
-        link.href = url;
+        link.href = dataUrl;
         link.click();
-        URL.revokeObjectURL(url);
       } else if (format === 'png') {
         // Add a temporary style to remove all borders during export
         const style = document.createElement('style');
