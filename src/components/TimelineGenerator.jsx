@@ -284,6 +284,7 @@ const TimelineGenerator = () => {
                 <option value="bauhaus">Bauhaus</option>
                 <option value="neo-brutalist">Neo-Brutalist</option>
                 <option value="corporate">Corporate</option>
+                <option value="handwritten">Handwritten</option>
               </select>
             </>
           )}
@@ -425,6 +426,47 @@ const TimelineGenerator = () => {
                         />
                       </div>
                     </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : timelineStyle === 'handwritten' ? (
+            /* Handwritten Style */
+            <div className="relative -my-3">
+              {events.map((event, index) => {
+                const labels = ['The beginning', 'Milestone', 'Milestone', 'Milestone', 'Latest'];
+                const label = index === 0 ? labels[0] : index === events.length - 1 ? labels[4] : labels[1];
+
+                return (
+                  <div
+                    key={index}
+                    className="relative pl-8 sm:pl-36 py-3 group"
+                  >
+                    {/* Handwritten label */}
+                    <div className="font-cursive text-2xl text-indigo-500 dark:text-indigo-400 mb-1 sm:mb-0">
+                      {label}
+                    </div>
+
+                    {/* Timeline line and dot */}
+                    <div className="flex flex-col sm:flex-row items-start mb-1 group-last:before:hidden before:absolute before:left-2 sm:before:left-0 before:h-full before:px-px before:bg-slate-300 dark:before:bg-slate-600 sm:before:ml-[7.5rem] before:self-start before:-translate-x-1/2 before:translate-y-3 after:absolute after:left-2 sm:after:left-0 after:w-2 after:h-2 after:bg-indigo-600 dark:after:bg-indigo-500 after:border-4 after:box-content after:border-white dark:after:border-gray-800 after:rounded-full sm:after:ml-[7.5rem] after:-translate-x-1/2 after:translate-y-1.5">
+                      {/* Date */}
+                      {event.date && (
+                        <time className="sm:absolute left-0 translate-y-0.5 text-sm font-bold mb-3 sm:mb-0 text-slate-700 dark:text-slate-300 sm:w-28 sm:pr-4 sm:text-right">
+                          {event.date}
+                        </time>
+                      )}
+
+                      {/* Title */}
+                      <div className="text-xl font-bold text-slate-900 dark:text-white">
+                        {event.content.match(/<h[1-6][^>]*>(.*?)<\/h[1-6]>/)?.[1]?.replace(/<[^>]*>/g, '') || 'Event'}
+                      </div>
+                    </div>
+
+                    {/* Description */}
+                    <div
+                      className="text-slate-500 dark:text-slate-400 [&>h1]:hidden [&>h2]:hidden [&>h3]:hidden [&>h4]:hidden [&>h5]:hidden [&>h6]:hidden"
+                      dangerouslySetInnerHTML={{ __html: event.content }}
+                    />
                   </div>
                 );
               })}

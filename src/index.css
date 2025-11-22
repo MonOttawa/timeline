@@ -3,6 +3,7 @@
 @theme {
   --font-sans: 'Inter', sans-serif;
   --font-display: 'Archivo Black', sans-serif;
+  --font-cursive: 'Caveat', cursive;
 }
 
 @variant dark (.dark &);
