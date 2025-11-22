@@ -21,8 +21,64 @@ export const Header = ({
     return (
         <header className="w-full mb-4 md:mb-8 px-4 pb-2 pt-4 flex justify-between items-center">
             {/* Left: Site Title */}
-            <div className="flex items-center">
-                <h1 className="text-2xl font-black font-display tracking-tighter">TIMELINE.MD</h1>
+            <div className="flex items-center border-2 border-gray-300 bg-gray-100 shadow-[4px_4px_0px_#000] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_#000] transition-all rounded-lg p-1 cursor-pointer" onClick={onNavigateHome}>
+                <svg
+                    width="150"
+                    height="50"
+                    viewBox="0 0 150 50"
+                    xmlns="http://www.w3.org/2000/svg"
+                    role="img"
+                    aria-label="Markdown Timeline logo"
+                    className="inline-block"
+                >
+                    <rect width="150" height="50" rx="6" fill="#050608" />
+                    <rect
+                        x="1.5"
+                        y="1.5"
+                        width="147"
+                        height="47"
+                        rx="5"
+                        fill="none"
+                        stroke="#F5F5F5"
+                        strokeWidth="3"
+                    />
+                    <g transform="translate(18, 13)">
+                        <line
+                            x1="0"
+                            y1="12"
+                            x2="50"
+                            y2="12"
+                            stroke="#F5F5F5"
+                            strokeWidth="3"
+                            strokeLinecap="round"
+                        />
+                        <circle cx="0" cy="12" r="5" fill="#050608" stroke="#F5F5F5" strokeWidth="3" />
+                        <circle cx="25" cy="12" r="5" fill="#00FF85" stroke="#050608" strokeWidth="2" />
+                        <circle cx="50" cy="12" r="5" fill="#050608" stroke="#F5F5F5" strokeWidth="3" />
+                    </g>
+                    <text
+                        x="78"
+                        y="22"
+                        fill="#F5F5F5"
+                        fontFamily="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
+                        fontSize="9"
+                        fontWeight="700"
+                        letterSpacing="0.14em"
+                    >
+                        MARKDOWN
+                    </text>
+                    <text
+                        x="78"
+                        y="36"
+                        fill="#00FF85"
+                        fontFamily="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
+                        fontSize="11"
+                        fontWeight="800"
+                        letterSpacing="0.18em"
+                    >
+                        TIMELINE
+                    </text>
+                </svg>
             </div>
 
             {/* Right: Navigation & Actions */}

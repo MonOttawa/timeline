@@ -47,7 +47,7 @@ const LandingPage = ({ onStart, onLogin, isLoggedIn, onShowLegal }) => {
             </section>
 
             {/* Footer */}
-            <footer className="py-12 border-t-4 border-black dark:border-white mt-12 bg-white dark:bg-gray-900">
+            <footer className="py-12 border-black dark:border-white mt-12 bg-white dark:bg-gray-900">
                 <div className="flex flex-col md:flex-row justify-between items-center gap-6">
                     <div className="text-left">
                         <h2 className="text-2xl font-black font-display tracking-tighter mb-2">TIMELINE.MD</h2>
