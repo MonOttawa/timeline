@@ -141,6 +141,7 @@ const TimelineGenerator = () => {
               >
                 <option value="bauhaus">Bauhaus</option>
                 <option value="neo-brutalist">Neo-Brutalist</option>
+                <option value="corporate">Corporate</option>
               </select>
             </>
           )}
@@ -218,7 +219,7 @@ const TimelineGenerator = () => {
                 </div>
               ))}
             </>
-          ) : (
+          ) : timelineStyle === 'neo-brutalist' ? (
             /* Neo-Brutalist Style */
             <div className="flex flex-col gap-6">
               {events.map((event, index) => {
@@ -247,7 +248,42 @@ const TimelineGenerator = () => {
                 );
               })}
             </div>
-          )}
+          ) : timelineStyle === 'corporate' ? (
+            /* Corporate/Professional Style */
+            <div className="relative">
+              {/* Center vertical line */}
+              <div className="absolute left-1/2 top-0 bottom-0 w-px bg-gray-200 dark:bg-gray-700 transform -translate-x-1/2"></div>
+
+              {events.map((event, index) => {
+                const isLeft = index % 2 === 0;
+
+                return (
+                  <div key={index} className="relative mb-12">
+                    {/* Timeline dot */}
+                    <div className="absolute left-1/2 top-8 w-4 h-4 bg-[#C41E3A] rounded-full transform -translate-x-1/2 z-10 ring-4 ring-white dark:ring-gray-800"></div>
+
+                    {/* Event card - alternating sides */}
+                    <div className={`relative ${isLeft ? 'pr-[52%]' : 'pl-[52%]'}`}>
+                      <div className="bg-white dark:bg-gray-800 rounded-xl p-8 shadow-[0_8px_30px_rgb(0,0,0,0.12)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.4)] hover:shadow-[0_12px_40px_rgb(0,0,0,0.18)] dark:hover:shadow-[0_12px_40px_rgb(0,0,0,0.5)] transition-all duration-300">
+                        {/* Date */}
+                        {event.date && (
+                          <div className="font-black text-2xl text-black dark:text-white mb-4 tracking-tight">
+                            {event.date}
+                          </div>
+                        )}
+
+                        {/* Content */}
+                        <div
+                          className="markdown-content prose prose-sm dark:prose-invert max-w-none text-gray-700 dark:text-gray-300"
+                          dangerouslySetInnerHTML={{ __html: event.content }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : null}
         </div>
       )}
     </div>
