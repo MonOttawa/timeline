@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { marked } from 'marked';
 import { Upload, Download, FileText } from 'lucide-react';
+import html2canvas from 'html2canvas';
 
 const TimelineGenerator = () => {
   const [events, setEvents] = useState([]);
@@ -9,6 +10,7 @@ const TimelineGenerator = () => {
   const [showEditor, setShowEditor] = useState(false);
   const [timelineTitle, setTimelineTitle] = useState('My Project Timeline');
   const [timelineStyle, setTimelineStyle] = useState('bauhaus');
+  const [exportFormat, setExportFormat] = useState('');
   const timelineRef = useRef(null);
 
   const handleFileSelect = (event) => {
@@ -95,34 +97,59 @@ const TimelineGenerator = () => {
     URL.revokeObjectURL(url);
   };
 
-  const handleExportSVG = () => {
-    if (!timelineRef.current) return;
+  const sanitizeFilename = (name) => {
+    return name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+  };
+
+  const handleExport = async (format = exportFormat) => {
+    if (!timelineRef.current || !format) return;
 
     const element = timelineRef.current;
-    const svgData = `
-      <svg xmlns="http://www.w3.org/2000/svg" width="${element.offsetWidth}" height="${element.offsetHeight}">
-        <foreignObject width="100%" height="100%">
-          <div xmlns="http://www.w3.org/1999/xhtml">
-            ${element.outerHTML}
-          </div>
-        </foreignObject>
-      </svg>
-    `;
+    const filename = sanitizeFilename(timelineTitle);
 
-    const blob = new Blob([svgData], { type: 'image/svg+xml' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.download = 'timeline.svg';
-    link.href = url;
-    link.click();
-    URL.revokeObjectURL(url);
+    if (format === 'svg') {
+      const svgData = `
+        <svg xmlns="http://www.w3.org/2000/svg" width="${element.offsetWidth}" height="${element.offsetHeight}">
+          <foreignObject width="100%" height="100%">
+            <div xmlns="http://www.w3.org/1999/xhtml">
+              ${element.outerHTML}
+            </div>
+          </foreignObject>
+        </svg>
+      `;
+
+      const blob = new Blob([svgData], { type: 'image/svg+xml' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.download = `${filename}.svg`;
+      link.href = url;
+      link.click();
+      URL.revokeObjectURL(url);
+    } else {
+      // PNG or JPG export
+      const canvas = await html2canvas(element, {
+        backgroundColor: format === 'png' ? null : '#ffffff',
+        scale: 2, // Higher quality
+        logging: false,
+        useCORS: true
+      });
+
+      canvas.toBlob((blob) => {
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.download = `${filename}.${format}`;
+        link.href = url;
+        link.click();
+        URL.revokeObjectURL(url);
+      }, `image/${format === 'jpg' ? 'jpeg' : 'png'}`);
+    }
   };
 
   return (
     <div className="max-w-4xl mx-auto">
       <div className="bg-white dark:bg-gray-800 p-8 mb-8 text-center border-4 border-black dark:border-white shadow-[8px_8px_0px_#000] dark:shadow-[8px_8px_0px_#FFF] rounded-lg">
         <h1 className="text-4xl font-black mb-4 font-display">{timelineTitle}</h1>
-        <p className="mb-8 text-lg text-gray-600 dark:text-gray-300">Upload your Markdown file to generate a Bauhaus-style timeline.</p>
+        <p className="mb-8 text-lg text-gray-600 dark:text-gray-300">Upload your Markdown file to generate a beautiful timeline.</p>
 
         <div className="flex flex-wrap gap-4 justify-center items-center">
           <label className="cursor-pointer">
@@ -135,13 +162,25 @@ const TimelineGenerator = () => {
 
           {events.length > 0 && (
             <>
-              <button
-                onClick={handleExportSVG}
-                className="inline-flex items-center gap-2 border-2 border-black dark:border-white font-bold py-3 px-6 bg-green-400 text-black shadow-[4px_4px_0px_#000] dark:shadow-[4px_4px_0px_#FFF] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_#000] dark:hover:shadow-[6px_6px_0px_#FFF] transition-all rounded-lg"
+              <select
+                value={exportFormat}
+                onChange={async (e) => {
+                  const format = e.target.value;
+                  if (!format) return;
+                  setExportFormat(format);
+                  // Trigger export on next tick to ensure state is updated
+                  await new Promise(resolve => setTimeout(resolve, 0));
+                  await handleExport();
+                  // Reset to default
+                  setExportFormat('');
+                }}
+                className="inline-flex items-center gap-2 border-2 border-black dark:border-white font-bold py-3 px-6 bg-green-400 text-black shadow-[4px_4px_0px_#000] dark:shadow-[4px_4px_0px_#FFF] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_#000] dark:hover:shadow-[6px_6px_0px_#FFF] transition-all rounded-lg cursor-pointer"
               >
-                <Download size={20} />
-                Export SVG
-              </button>
+                <option value="">Export As...</option>
+                <option value="png">PNG (Transparent)</option>
+                <option value="jpg">JPG</option>
+                <option value="svg">SVG (Transparent)</option>
+              </select>
 
               <button
                 onClick={() => setShowEditor(!showEditor)}
@@ -165,8 +204,8 @@ const TimelineGenerator = () => {
         </div>
 
         {events.length > 0 && (
-          <p className="mt-4 text-sm text-gray-500 text-gray-400">
-            Tip: You can convert the SVG to PNG using any image editor or online converter
+          <p className="mt-4 text-sm text-gray-500 dark:text-gray-400">
+            Tip: PNG & SVG exports have transparent backgrounds • JPG has white background
           </p>
         )}
       </div>
