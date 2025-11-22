@@ -112,7 +112,7 @@ const TimelineGenerator = () => {
       await document.fonts.ready;
 
       if (format === 'svg') {
-        // Add a temporary style to remove all borders during export
+        // Add a temporary style to remove all borders and ensure fonts during export
         const style = document.createElement('style');
         style.innerHTML = `
           #timeline-container,
@@ -122,6 +122,9 @@ const TimelineGenerator = () => {
             border: none !important;
             outline: none !important;
             box-shadow: none !important;
+          }
+          .font-cursive {
+            font-family: 'Caveat', cursive !important;
           }
         `;
         document.head.appendChild(style);
@@ -151,7 +154,7 @@ const TimelineGenerator = () => {
         link.href = dataUrl;
         link.click();
       } else if (format === 'png') {
-        // Add a temporary style to remove all borders during export
+        // Add a temporary style to remove all borders and ensure fonts during export
         const style = document.createElement('style');
         style.innerHTML = `
           #timeline-container,
@@ -161,6 +164,9 @@ const TimelineGenerator = () => {
             border: none !important;
             outline: none !important;
             box-shadow: none !important;
+          }
+          .font-cursive {
+            font-family: 'Caveat', cursive !important;
           }
         `;
         document.head.appendChild(style);
@@ -190,7 +196,7 @@ const TimelineGenerator = () => {
         link.href = dataUrl;
         link.click();
       } else if (format === 'jpg') {
-        // Add a temporary style to remove all borders during export
+        // Add a temporary style to remove all borders and ensure fonts during export
         const style = document.createElement('style');
         style.innerHTML = `
           #timeline-container,
@@ -200,6 +206,9 @@ const TimelineGenerator = () => {
             border: none !important;
             outline: none !important;
             box-shadow: none !important;
+          }
+          .font-cursive {
+            font-family: 'Caveat', cursive !important;
           }
         `;
         document.head.appendChild(style);
