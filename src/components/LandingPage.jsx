@@ -1,6 +1,6 @@
 import React from 'react';
 import { ArrowRight, Check, Zap, Layout, Upload, Palette, Download } from 'lucide-react';
-import { NeoButton } from './poemlearning/ui/NeoButton';
+
 
 const LandingPage = ({ onStart, onLogin, isLoggedIn, onShowLegal }) => {
     return (
@@ -20,19 +20,19 @@ const LandingPage = ({ onStart, onLogin, isLoggedIn, onShowLegal }) => {
 
                 {isLoggedIn ? (
                     <div className="flex justify-center gap-4">
-                        <NeoButton onClick={onStart} className="bg-green-400 text-black !w-auto flex items-center gap-2 px-8 shadow-[4px_4px_0px_#000] dark:shadow-[4px_4px_0px_#FFF]">
+                        <button onClick={onStart} className="bg-green-400 text-black !w-auto flex items-center gap-2 px-8 shadow-[4px_4px_0px_#000] dark:shadow-[4px_4px_0px_#FFF] border-2 border-black dark:border-white font-bold rounded-lg py-3 hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_#000] dark:hover:shadow-[6px_6px_0px_#FFF] transition-all">
                             Go to Timeline <ArrowRight size={20} />
-                        </NeoButton>
+                        </button>
                     </div>
                 ) : (
                     <div className="flex flex-col items-center gap-4">
                         <div className="flex flex-wrap justify-center gap-4">
-                            <NeoButton onClick={onLogin} className="bg-blue-400 text-black !w-auto flex items-center gap-2 px-8 shadow-[4px_4px_0px_#000] dark:shadow-[4px_4px_0px_#FFF]">
+                            <button onClick={onLogin} className="bg-blue-400 text-black !w-auto flex items-center gap-2 px-8 shadow-[4px_4px_0px_#000] dark:shadow-[4px_4px_0px_#FFF] border-2 border-black dark:border-white font-bold rounded-lg py-3 hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_#000] dark:hover:shadow-[6px_6px_0px_#FFF] transition-all">
                                 Sign In / Create Account
-                            </NeoButton>
-                            <NeoButton onClick={onStart} className="bg-green-400 text-black !w-auto flex items-center gap-2 px-8 shadow-[4px_4px_0px_#000] dark:shadow-[4px_4px_0px_#FFF]">
+                            </button>
+                            <button onClick={onStart} className="bg-green-400 text-black !w-auto flex items-center gap-2 px-8 shadow-[4px_4px_0px_#000] dark:shadow-[4px_4px_0px_#FFF] border-2 border-black dark:border-white font-bold rounded-lg py-3 hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_#000] dark:hover:shadow-[6px_6px_0px_#FFF] transition-all">
                                 Try Demo <ArrowRight size={20} />
-                            </NeoButton>
+                            </button>
                         </div>
                         <p className="text-sm text-gray-500 dark:text-gray-400">
                             No account needed to try • Test all features instantly

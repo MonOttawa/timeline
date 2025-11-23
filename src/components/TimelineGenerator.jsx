@@ -1,13 +1,14 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { marked } from 'marked';
-import { Upload, Download, FileText, Palette, Save, FolderOpen } from 'lucide-react';
+import { Upload, Download, FileText, Palette, Save, FolderOpen, ChevronDown } from 'lucide-react';
 import domtoimage from 'dom-to-image-more';
 import { useAuth } from '../contexts/AuthContext';
 import { pb } from '../lib/pocketbase';
 import AuthModal from './AuthModal';
 import SavedTimelinesModal from './SavedTimelinesModal';
+import { sampleTimelines } from '../data/sampleTimelines';
 
-const TimelineGenerator = () => {
+const TimelineGenerator = ({ isDemoMode = false }) => {
   const [events, setEvents] = useState([]);
   const [fileName, setFileName] = useState('');
   const [markdownContent, setMarkdownContent] = useState('');
@@ -20,7 +21,10 @@ const TimelineGenerator = () => {
   const styleDropdownRef = useRef(null);
   const [isExportDropdownOpen, setIsExportDropdownOpen] = useState(false);
   const exportDropdownRef = useRef(null);
+  const [isSampleDropdownOpen, setIsSampleDropdownOpen] = useState(false);
+  const sampleDropdownRef = useRef(null);
   const [editingEvent, setEditingEvent] = useState(null); // { index, field: 'date' | 'content' }
+  const [hasLoadedDemo, setHasLoadedDemo] = useState(false);
 
   // Auth & Persistence
   const { user } = useAuth();
@@ -39,6 +43,9 @@ const TimelineGenerator = () => {
       if (exportDropdownRef.current && !exportDropdownRef.current.contains(event.target)) {
         setIsExportDropdownOpen(false);
       }
+      if (sampleDropdownRef.current && !sampleDropdownRef.current.contains(event.target)) {
+        setIsSampleDropdownOpen(false);
+      }
     };
 
     document.addEventListener('mousedown', handleClickOutside);
@@ -46,6 +53,18 @@ const TimelineGenerator = () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, []);
+
+  // Auto-load sample timeline in demo mode
+  useEffect(() => {
+    if (isDemoMode && !hasLoadedDemo && sampleTimelines.length > 0) {
+      const firstSample = sampleTimelines[0];
+      setMarkdownContent(firstSample.content);
+      parseMarkdown(firstSample.content);
+      setTimelineTitle(firstSample.name);
+      setFileName(`${firstSample.name}.md`);
+      setHasLoadedDemo(true);
+    }
+  }, [isDemoMode, hasLoadedDemo]);
 
   // Custom arrow SVG for dropdowns
   const arrowSvg = "data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E";
@@ -217,6 +236,18 @@ const TimelineGenerator = () => {
       alert(`Failed to save timeline: ${error.message || error.data?.message || 'Unknown error'}. Please check your internet connection and ensure the "timelines" collection exists with correct API rules.`);
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleLoadSample = (sampleId) => {
+    const sample = sampleTimelines.find(t => t.id === sampleId);
+    if (sample) {
+      setMarkdownContent(sample.content);
+      parseMarkdown(sample.content);
+      setTimelineTitle(sample.name);
+      setFileName(`${sample.name}.md`);
+      setCurrentTimelineId(null); // Reset ID as this is a new "file"
+      setIsSampleDropdownOpen(false);
     }
   };
 
@@ -426,22 +457,56 @@ const TimelineGenerator = () => {
             <input type="file" accept=".md" onChange={handleFileSelect} className="hidden" />
           </label>
 
-          <button
-            onClick={handleSave}
-            className="inline-flex items-center gap-2 border-2 border-black dark:border-white font-bold py-3 px-6 bg-green-400 text-black shadow-[4px_4px_0px_#000] dark:shadow-[4px_4px_0px_#FFF] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_#000] dark:hover:shadow-[6px_6px_0px_#FFF] transition-all rounded-lg disabled:opacity-50"
-            disabled={isSaving}
-          >
-            <Save size={20} />
-            {isSaving ? 'Saving...' : 'Save'}
-          </button>
+          <div className="relative" ref={sampleDropdownRef}>
+            <button
+              onClick={() => setIsSampleDropdownOpen(!isSampleDropdownOpen)}
+              style={{
+                backgroundImage: `url("${arrowSvg}")`,
+                backgroundRepeat: 'no-repeat',
+                backgroundPosition: 'right 1rem center',
+                backgroundSize: '1.2em'
+              }}
+              className="appearance-none inline-flex items-center gap-2 border-2 border-black dark:border-white font-bold py-3 pl-6 pr-10 bg-yellow-400 text-black shadow-[4px_4px_0px_#000] dark:shadow-[4px_4px_0px_#FFF] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_#000] dark:hover:shadow-[6px_6px_0px_#FFF] transition-all rounded-lg cursor-pointer text-center min-w-[180px] justify-center"
+            >
+              <FileText size={20} />
+              Load Sample
+            </button>
 
-          <button
-            onClick={fetchTimelines}
-            className="inline-flex items-center gap-2 border-2 border-black dark:border-white font-bold py-3 px-6 bg-pink-400 text-black shadow-[4px_4px_0px_#000] dark:shadow-[4px_4px_0px_#FFF] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_#000] dark:hover:shadow-[6px_6px_0px_#FFF] transition-all rounded-lg"
-          >
-            <FolderOpen size={20} />
-            My Files
-          </button>
+            {isSampleDropdownOpen && (
+              <div className="absolute top-full left-0 mt-2 w-full bg-white dark:bg-gray-800 border-2 border-black dark:border-white shadow-[4px_4px_0px_#000] dark:shadow-[4px_4px_0px_#FFF] rounded-lg overflow-hidden z-50 flex flex-col">
+                {sampleTimelines.map((sample) => (
+                  <button
+                    key={sample.id}
+                    onClick={() => handleLoadSample(sample.id)}
+                    className="py-3 px-4 text-left font-bold text-black dark:text-white hover:bg-yellow-400 hover:text-black transition-colors"
+                  >
+                    {sample.name}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {user && (
+            <>
+              <button
+                onClick={handleSave}
+                className="inline-flex items-center gap-2 border-2 border-black dark:border-white font-bold py-3 px-6 bg-green-400 text-black shadow-[4px_4px_0px_#000] dark:shadow-[4px_4px_0px_#FFF] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_#000] dark:hover:shadow-[6px_6px_0px_#FFF] transition-all rounded-lg disabled:opacity-50"
+                disabled={isSaving}
+              >
+                <Save size={20} />
+                {isSaving ? 'Saving...' : 'Save'}
+              </button>
+
+              <button
+                onClick={fetchTimelines}
+                className="inline-flex items-center gap-2 border-2 border-black dark:border-white font-bold py-3 px-6 bg-pink-400 text-black shadow-[4px_4px_0px_#000] dark:shadow-[4px_4px_0px_#FFF] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_#000] dark:hover:shadow-[6px_6px_0px_#FFF] transition-all rounded-lg"
+              >
+                <FolderOpen size={20} />
+                My Files
+              </button>
+            </>
+          )}
 
           {events.length > 0 && (
             <>

@@ -29,5 +29,7 @@ dist-ssr
 .env.*.local
 
 # PocketBase
-pocketbase*
+# PocketBase
+/pocketbase
+/pocketbase.exe
 pb_data

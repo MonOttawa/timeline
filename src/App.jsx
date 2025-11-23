@@ -3,7 +3,7 @@ import LandingPage from './components/LandingPage';
 import TimelineGenerator from './components/TimelineGenerator';
 import TermsAndPrivacy from './components/TermsAndPrivacy';
 import AuthModal from './components/AuthModal';
-import { Header } from './components/poemlearning/Header';
+import { Header } from './components/Header';
 import { useAuth } from './contexts/AuthContext';
 
 function App() {
@@ -12,6 +12,7 @@ function App() {
   const [showLegal, setShowLegal] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [theme, setTheme] = useState('light');
+  const [isDemoMode, setIsDemoMode] = useState(false);
 
   useEffect(() => {
     if (theme === 'dark') {
@@ -28,10 +29,17 @@ function App() {
   const handleLogout = async () => {
     await signOut();
     setShowApp(false);
+    setIsDemoMode(false);
   };
 
   const handleAuthSuccess = () => {
     setShowApp(true);
+    setIsDemoMode(false);
+  };
+
+  const handleStartDemo = () => {
+    setShowApp(true);
+    setIsDemoMode(true);
   };
 
   const toggleTheme = () => {
@@ -55,13 +63,13 @@ function App() {
           <TermsAndPrivacy onBack={() => setShowLegal(false)} />
         ) : !showApp ? (
           <LandingPage
-            onStart={() => setShowApp(true)}
+            onStart={user ? () => setShowApp(true) : handleStartDemo}
             onLogin={handleLogin}
             isLoggedIn={!!user}
             onShowLegal={() => setShowLegal(true)}
           />
         ) : (
-          <TimelineGenerator />
+          <TimelineGenerator isDemoMode={isDemoMode} />
         )}
       </main>
 
