@@ -67,10 +67,24 @@ const TimelineGenerator = () => {
       if (!a.date) return 1;
       if (!b.date) return -1;
 
+      // Helper to extract the first year from a date string
+      const getYear = (dateStr) => {
+        const match = dateStr.match(/\d{4}/);
+        return match ? parseInt(match[0], 10) : null;
+      };
+
+      const yearA = getYear(a.date);
+      const yearB = getYear(b.date);
+
+      // If we can extract years, compare them
+      if (yearA !== null && yearB !== null) {
+        return yearA - yearB;
+      }
+
+      // Fallback to standard date parsing if no year found (or for non-year dates)
       const dateA = new Date(a.date);
       const dateB = new Date(b.date);
 
-      // If date parsing fails, keep original order
       if (isNaN(dateA.getTime()) && isNaN(dateB.getTime())) return 0;
       if (isNaN(dateA.getTime())) return 1;
       if (isNaN(dateB.getTime())) return -1;
