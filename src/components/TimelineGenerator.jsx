@@ -14,11 +14,16 @@ const TimelineGenerator = () => {
   const timelineRef = useRef(null);
   const [isStyleDropdownOpen, setIsStyleDropdownOpen] = useState(false);
   const styleDropdownRef = useRef(null);
+  const [isExportDropdownOpen, setIsExportDropdownOpen] = useState(false);
+  const exportDropdownRef = useRef(null);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (styleDropdownRef.current && !styleDropdownRef.current.contains(event.target)) {
         setIsStyleDropdownOpen(false);
+      }
+      if (exportDropdownRef.current && !exportDropdownRef.current.contains(event.target)) {
+        setIsExportDropdownOpen(false);
       }
     };
 
@@ -293,28 +298,43 @@ const TimelineGenerator = () => {
 
           {events.length > 0 && (
             <>
-              <select
-                value={exportFormat}
-                onChange={async (e) => {
-                  const format = e.target.value;
-                  if (!format) return;
-                  setExportFormat(format);
-                  await handleExport(format);
-                  setExportFormat('');
-                }}
-                style={{
-                  backgroundImage: `url("${arrowSvg}")`,
-                  backgroundRepeat: 'no-repeat',
-                  backgroundPosition: 'right 1rem center',
-                  backgroundSize: '1.2em'
-                }}
-                className="appearance-none inline-flex items-center gap-2 border-2 border-black dark:border-white font-bold py-3 pl-6 pr-10 bg-green-400 text-black shadow-[4px_4px_0px_#000] dark:shadow-[4px_4px_0px_#FFF] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_#000] dark:hover:shadow-[6px_6px_0px_#FFF] transition-all rounded-lg cursor-pointer text-center"
-              >
-                <option value="">Export As...</option>
-                <option value="png">PNG (Transparent)</option>
-                <option value="jpg">JPG</option>
-                <option value="svg">SVG (Transparent)</option>
-              </select>
+              <div className="relative" ref={exportDropdownRef}>
+                <button
+                  onClick={() => setIsExportDropdownOpen(!isExportDropdownOpen)}
+                  style={{
+                    backgroundImage: `url("${arrowSvg}")`,
+                    backgroundRepeat: 'no-repeat',
+                    backgroundPosition: 'right 1rem center',
+                    backgroundSize: '1.2em'
+                  }}
+                  className="appearance-none inline-flex items-center gap-2 border-2 border-black dark:border-white font-bold py-3 pl-6 pr-10 bg-green-400 text-black shadow-[4px_4px_0px_#000] dark:shadow-[4px_4px_0px_#FFF] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_#000] dark:hover:shadow-[6px_6px_0px_#FFF] transition-all rounded-lg cursor-pointer text-center min-w-[180px] justify-center"
+                >
+                  Export As...
+                </button>
+
+                {isExportDropdownOpen && (
+                  <div className="absolute top-full left-0 mt-2 w-full bg-white dark:bg-gray-800 border-2 border-black dark:border-white shadow-[4px_4px_0px_#000] dark:shadow-[4px_4px_0px_#FFF] rounded-lg overflow-hidden z-50 flex flex-col">
+                    {[
+                      { value: 'png', label: 'PNG (Transparent)' },
+                      { value: 'jpg', label: 'JPG' },
+                      { value: 'svg', label: 'SVG (Transparent)' }
+                    ].map((option) => (
+                      <button
+                        key={option.value}
+                        onClick={async () => {
+                          setExportFormat(option.value);
+                          await handleExport(option.value);
+                          setExportFormat('');
+                          setIsExportDropdownOpen(false);
+                        }}
+                        className="py-3 px-4 text-left font-bold text-black dark:text-white hover:bg-green-400 hover:text-black transition-colors"
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
 
               <button
                 onClick={() => setShowEditor(!showEditor)}
