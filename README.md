@@ -37,7 +37,7 @@ This guide assumes you have a Dokploy instance running and access to this GitHub
 #### Step 2: Configure Source (General Tab)
 Once the application is created, you will see the configuration tabs. Stay on the **General** tab.
 
-*   **Provider**: Select **Git**.
+*   **Provider**: Select **GitHub**.
 *   **Github Account**: Select your connected GitHub account (e.g., `Dokploy` or your username).
 *   **Repository**: Select `timeline` (or `MonOttawa/timeline`).
 *   **Branch**: Select `main`.
