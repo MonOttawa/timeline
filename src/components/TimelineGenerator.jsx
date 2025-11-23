@@ -679,16 +679,34 @@ const TimelineGenerator = () => {
                         )}
 
                         {/* Title */}
-                        <div className="text-xl font-bold text-slate-900 dark:text-white">
-                          {event.content.match(/<h[1-6][^>]*>(.*?)<\/h[1-6]>/)?.[1]?.replace(/<[^>]*>/g, '') || 'Event'}
-                        </div>
+                        {editingEvent?.index === index && editingEvent?.field === 'content' ? (
+                          <textarea
+                            value={event.content.replace(/<[^>]*>/g, '')}
+                            onChange={(e) => handleEventUpdate(index, 'content', e.target.value)}
+                            onBlur={() => setEditingEvent(null)}
+                            autoFocus
+                            className="w-full min-h-[120px] text-slate-500 dark:text-slate-400 bg-yellow-100 dark:bg-yellow-900 px-2 py-1 rounded border-2 border-yellow-400 focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                          />
+                        ) : (
+                          <>
+                            <div
+                              onClick={() => setEditingEvent({ index, field: 'content' })}
+                              className="text-xl font-bold text-slate-900 dark:text-white cursor-pointer hover:bg-yellow-50 dark:hover:bg-gray-700 px-2 py-1 rounded transition-colors"
+                            >
+                              {event.content.match(/<h[1-6][^>]*>(.*?)<\/h[1-6]>/)?.[1]?.replace(/<[^>]*>/g, '') || 'Event'}
+                            </div>
+                          </>
+                        )}
                       </div>
 
                       {/* Description */}
-                      <div
-                        className="text-slate-500 dark:text-slate-400 [&>h1]:hidden [&>h2]:hidden [&>h3]:hidden [&>h4]:hidden [&>h5]:hidden [&>h6]:hidden"
-                        dangerouslySetInnerHTML={{ __html: event.content }}
-                      />
+                      {!(editingEvent?.index === index && editingEvent?.field === 'content') && (
+                        <div
+                          onClick={() => setEditingEvent({ index, field: 'content' })}
+                          className="text-slate-500 dark:text-slate-400 [&>h1]:hidden [&>h2]:hidden [&>h3]:hidden [&>h4]:hidden [&>h5]:hidden [&>h6]:hidden cursor-pointer hover:bg-yellow-50 dark:hover:bg-gray-700 px-2 py-1 rounded transition-colors"
+                          dangerouslySetInnerHTML={{ __html: event.content }}
+                        />
+                      )}
                     </div>
                   );
                 })}
