@@ -46,7 +46,7 @@ const TimelineGenerator = () => {
       const content = e.target.result;
       setMarkdownContent(content);
       parseMarkdown(content);
-      setShowEditor(true);
+      setShowEditor(false);
     };
     reader.readAsText(file);
   };
