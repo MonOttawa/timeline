@@ -1,7 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { marked } from 'marked';
-import { Upload, Download, FileText, Palette } from 'lucide-react';
+import { Upload, Download, FileText, Palette, Save, FolderOpen } from 'lucide-react';
 import domtoimage from 'dom-to-image-more';
+import { useAuth } from '../contexts/AuthContext';
+import { pb } from '../lib/pocketbase';
+import AuthModal from './AuthModal';
+import SavedTimelinesModal from './SavedTimelinesModal';
 
 const TimelineGenerator = () => {
   const [events, setEvents] = useState([]);
@@ -17,6 +21,15 @@ const TimelineGenerator = () => {
   const [isExportDropdownOpen, setIsExportDropdownOpen] = useState(false);
   const exportDropdownRef = useRef(null);
   const [editingEvent, setEditingEvent] = useState(null); // { index, field: 'date' | 'content' }
+
+  // Auth & Persistence
+  const { user } = useAuth();
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [showSavedTimelines, setShowSavedTimelines] = useState(false);
+  const [savedTimelines, setSavedTimelines] = useState([]);
+  const [currentTimelineId, setCurrentTimelineId] = useState(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isLoadingTimelines, setIsLoadingTimelines] = useState(false);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -167,6 +180,92 @@ const TimelineGenerator = () => {
 
   const sanitizeFilename = (name) => {
     return name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+  };
+
+  // Persistence Functions
+  const handleSave = async () => {
+    if (!user) {
+      setShowAuthModal(true);
+      return;
+    }
+
+    if (!markdownContent) return;
+
+    setIsSaving(true);
+    try {
+      const data = {
+        user: user.id,
+        title: timelineTitle,
+        content: markdownContent,
+        style: timelineStyle,
+      };
+
+      let record;
+      if (currentTimelineId) {
+        record = await pb.collection('timelines').update(currentTimelineId, data);
+      } else {
+        record = await pb.collection('timelines').create(data);
+        setCurrentTimelineId(record.id);
+      }
+
+      // Show simple success feedback (could be a toast in a real app)
+      const originalTitle = timelineTitle;
+      setTimelineTitle('Saved! ✓');
+      setTimeout(() => setTimelineTitle(originalTitle), 2000);
+    } catch (error) {
+      console.error('Error saving timeline:', error);
+      alert(`Failed to save timeline: ${error.message || error.data?.message || 'Unknown error'}. Please check your internet connection and ensure the "timelines" collection exists with correct API rules.`);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const fetchTimelines = async () => {
+    if (!user) {
+      setShowAuthModal(true);
+      return;
+    }
+
+    setShowSavedTimelines(true);
+    setIsLoadingTimelines(true);
+
+    try {
+      const records = await pb.collection('timelines').getList(1, 50, {
+        sort: '-updated',
+        filter: `user = "${user.id}"`
+      });
+      setSavedTimelines(records.items);
+    } catch (error) {
+      console.error('Error fetching timelines:', error);
+      // Don't alert 404s (collection empty/missing), just show empty list
+      if (error.status !== 404) {
+        alert('Failed to fetch timelines. Make sure the "timelines" collection exists.');
+      }
+    } finally {
+      setIsLoadingTimelines(false);
+    }
+  };
+
+  const handleLoadTimeline = (record) => {
+    setMarkdownContent(record.content);
+    parseMarkdown(record.content);
+    setTimelineTitle(record.title);
+    setTimelineStyle(record.style || 'bauhaus');
+    setCurrentTimelineId(record.id);
+    setShowSavedTimelines(false);
+  };
+
+  const handleDeleteTimeline = async (id) => {
+    try {
+      await pb.collection('timelines').delete(id);
+      setSavedTimelines(savedTimelines.filter(t => t.id !== id));
+      if (currentTimelineId === id) {
+        setCurrentTimelineId(null);
+      }
+    } catch (error) {
+      console.error('Error deleting timeline:', error);
+      alert('Failed to delete timeline.');
+    }
   };
 
   const handleExport = async (format = exportFormat) => {
@@ -326,6 +425,23 @@ const TimelineGenerator = () => {
             </div>
             <input type="file" accept=".md" onChange={handleFileSelect} className="hidden" />
           </label>
+
+          <button
+            onClick={handleSave}
+            className="inline-flex items-center gap-2 border-2 border-black dark:border-white font-bold py-3 px-6 bg-green-400 text-black shadow-[4px_4px_0px_#000] dark:shadow-[4px_4px_0px_#FFF] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_#000] dark:hover:shadow-[6px_6px_0px_#FFF] transition-all rounded-lg disabled:opacity-50"
+            disabled={isSaving}
+          >
+            <Save size={20} />
+            {isSaving ? 'Saving...' : 'Save'}
+          </button>
+
+          <button
+            onClick={fetchTimelines}
+            className="inline-flex items-center gap-2 border-2 border-black dark:border-white font-bold py-3 px-6 bg-pink-400 text-black shadow-[4px_4px_0px_#000] dark:shadow-[4px_4px_0px_#FFF] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_#000] dark:hover:shadow-[6px_6px_0px_#FFF] transition-all rounded-lg"
+          >
+            <FolderOpen size={20} />
+            My Files
+          </button>
 
           {events.length > 0 && (
             <>
@@ -595,27 +711,6 @@ const TimelineGenerator = () => {
                       {/* Event card - alternating sides */}
                       <div className={`relative ${isLeft ? 'pr-[52%]' : 'pl-[52%]'}`}>
                         <div className={`bg-white dark:bg-gray-800 rounded-lg p-4 shadow-[0_8px_30px_rgb(0,0,0,0.12)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.4)] hover:shadow-[0_12px_40px_rgb(0,0,0,0.18)] dark:hover:shadow-[0_12px_40px_rgb(0,0,0,0.5)] transition-all duration-300 relative ${isLeft ? 'text-right' : ''}`} style={{ zIndex: index }}>
-                          {/* Date */}
-                          {event.date && (
-                            editingEvent?.index === index && editingEvent?.field === 'date' ? (
-                              <input
-                                type="text"
-                                value={event.date}
-                                onChange={(e) => handleEventUpdate(index, 'date', e.target.value)}
-                                onBlur={() => setEditingEvent(null)}
-                                autoFocus
-                                className="font-black text-lg text-black dark:text-white mb-1.5 tracking-tight bg-yellow-100 dark:bg-yellow-900 px-2 py-1 rounded border-2 border-yellow-400 focus:outline-none focus:ring-2 focus:ring-yellow-500"
-                              />
-                            ) : (
-                              <div
-                                onClick={() => setEditingEvent({ index, field: 'date' })}
-                                className="font-black text-lg text-black dark:text-white mb-1.5 tracking-tight cursor-pointer hover:bg-yellow-50 dark:hover:bg-gray-700 px-2 py-1 rounded transition-colors"
-                              >
-                                {event.date}
-                              </div>
-                            )
-                          )}
-
                           {/* Content */}
                           {editingEvent?.index === index && editingEvent?.field === 'content' ? (
                             <textarea
@@ -633,6 +728,29 @@ const TimelineGenerator = () => {
                             />
                           )}
                         </div>
+                      </div>
+
+                      {/* Date - Positioned on the opposite side */}
+                      <div className={`absolute top-1/2 -translate-y-1/2 w-[45%] ${isLeft ? 'left-[55%] text-left' : 'right-[55%] text-right'}`}>
+                        {event.date && (
+                          editingEvent?.index === index && editingEvent?.field === 'date' ? (
+                            <input
+                              type="text"
+                              value={event.date}
+                              onChange={(e) => handleEventUpdate(index, 'date', e.target.value)}
+                              onBlur={() => setEditingEvent(null)}
+                              autoFocus
+                              className="font-black text-2xl text-black dark:text-white tracking-tight bg-yellow-100 dark:bg-yellow-900 px-2 py-1 rounded border-2 border-yellow-400 focus:outline-none focus:ring-2 focus:ring-yellow-500 w-full"
+                            />
+                          ) : (
+                            <div
+                              onClick={() => setEditingEvent({ index, field: 'date' })}
+                              className="font-black text-2xl text-black dark:text-white tracking-tight cursor-pointer hover:bg-yellow-50 dark:hover:bg-gray-700 px-2 py-1 rounded transition-colors"
+                            >
+                              {event.date}
+                            </div>
+                          )
+                        )}
                       </div>
                     </div>
                   );
@@ -708,6 +826,26 @@ const TimelineGenerator = () => {
           </div>
         )
       }
+      {/* Modals */}
+      {showAuthModal && (
+        <AuthModal
+          onClose={() => setShowAuthModal(false)}
+          onSuccess={(user) => {
+            setShowAuthModal(false);
+            // If we were trying to save, save now? Or just let user click again.
+          }}
+        />
+      )}
+
+      {showSavedTimelines && (
+        <SavedTimelinesModal
+          timelines={savedTimelines}
+          onClose={() => setShowSavedTimelines(false)}
+          onLoad={handleLoadTimeline}
+          onDelete={handleDeleteTimeline}
+          loading={isLoadingTimelines}
+        />
+      )}
     </div >
   );
 };

@@ -70,3 +70,23 @@ See [PocketBase deployment docs](https://pocketbase.io/docs/going-to-production/
 - The `.env` file is already in `.gitignore`
 - Change the admin password from the default
 - Consider enabling 2FA for admin accounts in production
+
+## 6. Create Timelines Collection
+
+To enable the "Save" functionality, you must create a collection for timelines:
+
+1. Go to the PocketBase Admin Dashboard (`http://127.0.0.1:8090/_/`)
+2. Click **"New Collection"**
+3. Name: `timelines`
+4. Add the following fields:
+   - `user`: **Relation** (Single) -> `users` collection (Required)
+   - `title`: **Text**
+   - `content`: **Text**
+   - `style`: **Text**
+5. **API Rules**:
+   - List/Search: `@request.auth.id != "" && user = @request.auth.id`
+   - View: `@request.auth.id != "" && user = @request.auth.id`
+   - Create: `@request.auth.id != ""`
+   - Update: `@request.auth.id != "" && user = @request.auth.id`
+   - Delete: `@request.auth.id != "" && user = @request.auth.id`
+
