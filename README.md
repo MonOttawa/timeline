@@ -50,6 +50,9 @@ Click **"Save"** if there is a save button, or proceed to the next tab.
 Switch to the **Environment** tab.
 
 1.  **Build Type**: Select **Dockerfile**.
+    *   **Docker File**: Leave empty (defaults to `./Dockerfile`).
+    *   **Docker Context Path**: Leave empty (defaults to `.`).
+    *   **Docker Build Stage**: Leave empty (defaults to the last stage).
     *   *Note: The project includes a `Dockerfile` that handles building the React app and serving it with Nginx.*
 
 2.  **Environment Variables**:
