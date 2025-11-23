@@ -291,7 +291,7 @@ const TimelineGenerator = () => {
           <label className="cursor-pointer">
             <div className="w-auto inline-flex items-center gap-2 border-2 border-black dark:border-white font-bold py-3 px-6 bg-blue-400 text-black shadow-[4px_4px_0px_#000] dark:shadow-[4px_4px_0px_#FFF] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_#000] dark:hover:shadow-[6px_6px_0px_#FFF] transition-all rounded-lg">
               <Upload size={20} />
-              {fileName || 'Choose Markdown File'}
+              {fileName || 'Upload'}
             </div>
             <input type="file" accept=".md" onChange={handleFileSelect} className="hidden" />
           </label>
