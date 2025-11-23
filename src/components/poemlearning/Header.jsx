@@ -1,5 +1,5 @@
 import React from "react";
-import { ChartNoAxesGantt } from "lucide-react";
+import { ChartNoAxesGantt, House, Moon, Sun } from "lucide-react";
 import logo from "../../assets/timelinelogo.svg";
 // import { BurgerMenu } from "./BurgerMenu"; // Commenting out for now as I haven't ported it yet, or will replace with simple menu
 
@@ -45,7 +45,7 @@ export const Header = ({
                             onClick={onNavigateHome}
                             className="px-4 py-2 border-2 border-black dark:border-white bg-blue-300 text-black font-bold rounded-lg shadow-[4px_4px_0px_#000] dark:shadow-[4px_4px_0px_#FFF] hover:bg-black hover:text-blue-300 transition-all focus:outline-none focus:ring-4 focus:ring-yellow-400 focus:ring-offset-2"
                         >
-                            🏠 Home
+                            <House size={20} className="inline" /> Home
                         </button>
                     )}
 
@@ -60,7 +60,7 @@ export const Header = ({
 
                     <button
                         onClick={onToggleTheme}
-                        className="px-4 py-2 border-2 border-black dark:border-white bg-black dark:bg-yellow-400 text-yellow-400 dark:text-black font-bold rounded-lg shadow-[4px_4px_0px_rgba(17,24,39,0.4)] dark:shadow-[4px_4px_0px_rgba(255,255,255,0.5)] hover:bg-yellow-400 hover:text-black dark:hover:bg-black dark:hover:text-yellow-400 transition-all focus:outline-none focus:ring-4 focus:ring-yellow-400 focus:ring-offset-2"
+                        className="px-4 py-2 border-2 border-black dark:border-white bg-yellow-300 dark:bg-yellow-400 text-black font-bold rounded-lg shadow-[4px_4px_0px_#000] dark:shadow-[4px_4px_0px_#FFF] hover:bg-black hover:text-yellow-300 dark:hover:bg-black dark:hover:text-yellow-400 transition-all focus:outline-none focus:ring-4 focus:ring-yellow-400 focus:ring-offset-2"
                         aria-label={
                             theme === "light" ? "Switch to dark mode" : "Switch to light mode"
                         }
@@ -68,7 +68,7 @@ export const Header = ({
                             theme === "light" ? "Switch to dark mode" : "Switch to light mode"
                         }
                     >
-                        {theme === "light" ? "🌙" : "☀️"}
+                        {theme === "light" ? <Moon size={20} /> : <Sun size={20} />}
                     </button>
 
                     {!displayName && onLogin && (
