@@ -362,9 +362,9 @@ const TimelineGenerator = () => {
 
           {timelineStyle === 'bauhaus' ? (
             /* Bauhaus Style */
-            <>
-              {/* Vertical Line - starts at center of first red dot */}
-              <div className="absolute left-10 bottom-8 w-0.5 bg-black dark:bg-white" style={{ top: 'calc(5rem + 3rem + 0.5rem + 0.75rem)' }}></div>
+            <div className="relative">
+              {/* Vertical Line - starts at center of first red dot (top-5 = 1.25rem = top-2 + half h-6) */}
+              <div className="absolute left-0 top-5 bottom-0 w-0.5 bg-black dark:bg-white"></div>
 
               {events.map((event, index) => (
                 <div key={index} className="relative mb-16 pl-16">
@@ -388,7 +388,7 @@ const TimelineGenerator = () => {
                   </div>
                 </div>
               ))}
-            </>
+            </div>
           ) : timelineStyle === 'neo-brutalist' ? (
             /* Neo-Brutalist Style */
             <div className="flex flex-col gap-6">
