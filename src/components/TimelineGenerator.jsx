@@ -655,12 +655,12 @@ const TimelineGenerator = () => {
                           onChange={(e) => handleEventUpdate(index, 'date', e.target.value)}
                           onBlur={() => setEditingEvent(null)}
                           autoFocus
-                          className="absolute left-0 top-8 w-28 text-right pr-4 text-2xl font-handwritten text-slate-600 dark:text-slate-400 bg-yellow-100 dark:bg-yellow-900 px-2 py-1 rounded border-2 border-yellow-400 focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                          className="absolute left-0 top-[2.15rem] w-28 text-right pr-4 text-2xl font-handwritten text-slate-600 dark:text-slate-400 bg-yellow-100 dark:bg-yellow-900 px-2 py-1 rounded border-2 border-yellow-400 focus:outline-none focus:ring-2 focus:ring-yellow-500"
                         />
                       ) : (
                         <div
                           onClick={() => setEditingEvent({ index, field: 'date' })}
-                          className="absolute left-0 top-8 w-28 text-right pr-4 text-2xl font-handwritten text-slate-600 dark:text-slate-400 cursor-pointer hover:bg-yellow-50 dark:hover:bg-gray-700 px-2 py-1 rounded transition-colors"
+                          className="absolute left-0 top-[2.15rem] w-28 text-right pr-4 text-2xl font-handwritten text-slate-600 dark:text-slate-400 cursor-pointer hover:bg-yellow-50 dark:hover:bg-gray-700 px-2 py-1 rounded transition-colors"
                         >
                           {event.date}
                         </div>
