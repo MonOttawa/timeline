@@ -640,76 +640,68 @@ const TimelineGenerator = () => {
               </div>
             ) : timelineStyle === 'handwritten' ? (
               /* Handwritten Style */
-              <div className="relative -my-3">
-                {events.map((event, index) => {
-                  const labels = ['The beginning', 'Milestone', 'Milestone', 'Milestone', 'Latest'];
-                  const label = index === 0 ? labels[0] : index === events.length - 1 ? labels[4] : labels[1];
+              <div className="relative">
+                {/* Vertical Line */}
+                <div className="absolute left-0 top-5 bottom-0 w-0.5 bg-indigo-300 dark:bg-indigo-600"></div>
 
-                  return (
-                    <div
-                      key={index}
-                      className="relative pl-8 sm:pl-36 py-3 group"
-                    >
-                      {/* Handwritten label */}
-                      <div className="font-cursive text-2xl text-indigo-500 dark:text-indigo-400 mb-1 sm:mb-0">
-                        {label}
-                      </div>
+                {events.map((event, index) => (
+                  <div key={index} className="relative mb-12 pl-12">
+                    {/* Dot */}
+                    <div className="absolute left-[-5px] top-2 w-3 h-3 bg-indigo-600 dark:bg-indigo-500 rounded-full z-10 ring-4 ring-white dark:ring-gray-800"></div>
 
-                      {/* Timeline line and dot */}
-                      <div className="flex flex-col sm:flex-row items-start mb-1 group-last:before:hidden before:absolute before:left-2 sm:before:left-0 before:h-full before:px-px before:bg-slate-300 dark:before:bg-slate-600 sm:before:ml-[7.5rem] before:self-start before:-translate-x-1/2 before:translate-y-3 after:absolute after:left-2 sm:after:left-0 after:w-2 after:h-2 after:bg-indigo-600 dark:after:bg-indigo-500 after:border-4 after:box-content after:border-white dark:after:border-gray-800 after:rounded-full sm:after:ml-[7.5rem] after:-translate-x-1/2 after:translate-y-1.5">
-                        {/* Date */}
-                        {event.date && (
-                          editingEvent?.index === index && editingEvent?.field === 'date' ? (
-                            <input
-                              type="text"
-                              value={event.date}
-                              onChange={(e) => handleEventUpdate(index, 'date', e.target.value)}
-                              onBlur={() => setEditingEvent(null)}
-                              autoFocus
-                              className="sm:absolute left-0 translate-y-0.5 text-sm font-bold mb-3 sm:mb-0 text-slate-700 dark:text-slate-300 sm:w-28 sm:pr-4 sm:text-right bg-yellow-100 dark:bg-yellow-900 px-2 py-1 rounded border-2 border-yellow-400 focus:outline-none focus:ring-2 focus:ring-yellow-500"
-                            />
-                          ) : (
-                            <time
-                              onClick={() => setEditingEvent({ index, field: 'date' })}
-                              className="sm:absolute left-0 translate-y-0.5 text-sm font-bold mb-3 sm:mb-0 text-slate-700 dark:text-slate-300 sm:w-28 sm:pr-4 sm:text-right cursor-pointer hover:bg-yellow-50 dark:hover:bg-gray-700 px-2 py-1 rounded transition-colors"
-                            >
-                              {event.date}
-                            </time>
-                          )
-                        )}
-
-                        {/* Title */}
-                        {editingEvent?.index === index && editingEvent?.field === 'content' ? (
-                          <textarea
-                            value={event.content.replace(/<[^>]*>/g, '')}
-                            onChange={(e) => handleEventUpdate(index, 'content', e.target.value)}
+                    {/* Content Container */}
+                    <div className="flex flex-col gap-2">
+                      {/* Date */}
+                      {event.date && (
+                        editingEvent?.index === index && editingEvent?.field === 'date' ? (
+                          <input
+                            type="text"
+                            value={event.date}
+                            onChange={(e) => handleEventUpdate(index, 'date', e.target.value)}
                             onBlur={() => setEditingEvent(null)}
                             autoFocus
-                            className="w-full min-h-[120px] text-slate-500 dark:text-slate-400 bg-yellow-100 dark:bg-yellow-900 px-2 py-1 rounded border-2 border-yellow-400 focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                            className="text-sm font-bold text-slate-600 dark:text-slate-400 mb-1 font-body bg-yellow-100 dark:bg-yellow-900 px-2 py-1 rounded border-2 border-yellow-400 focus:outline-none focus:ring-2 focus:ring-yellow-500"
                           />
                         ) : (
-                          <>
-                            <div
-                              onClick={() => setEditingEvent({ index, field: 'content' })}
-                              className="text-xl font-bold text-slate-900 dark:text-white cursor-pointer hover:bg-yellow-50 dark:hover:bg-gray-700 px-2 py-1 rounded transition-colors"
-                            >
-                              {event.content.match(/<h[1-6][^>]*>(.*?)<\/h[1-6]>/)?.[1]?.replace(/<[^>]*>/g, '') || 'Event'}
-                            </div>
-                          </>
-                        )}
-                      </div>
+                          <div
+                            onClick={() => setEditingEvent({ index, field: 'date' })}
+                            className="text-sm font-bold text-slate-600 dark:text-slate-400 mb-1 font-body cursor-pointer hover:bg-yellow-50 dark:hover:bg-gray-700 px-2 py-1 rounded transition-colors inline-block w-fit"
+                          >
+                            {event.date}
+                          </div>
+                        )
+                      )}
 
-                      {/* Description */}
-                      {!(editingEvent?.index === index && editingEvent?.field === 'content') && (
+                      {/* Event Title - using purple color from old label */}
+                      {editingEvent?.index === index && editingEvent?.field === 'content' ? (
+                        <textarea
+                          value={event.content.replace(/<[^>]*>/g, '')}
+                          onChange={(e) => handleEventUpdate(index, 'content', e.target.value)}
+                          onBlur={() => setEditingEvent(null)}
+                          autoFocus
+                          className="w-full min-h-[100px] font-body text-slate-700 dark:text-slate-300 bg-yellow-100 dark:bg-yellow-900 px-2 py-1 rounded border-2 border-yellow-400 focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                        />
+                      ) : (
                         <div
                           onClick={() => setEditingEvent({ index, field: 'content' })}
-                          className="text-slate-500 dark:text-slate-400 [&>h1]:hidden [&>h2]:hidden [&>h3]:hidden [&>h4]:hidden [&>h5]:hidden [&>h6]:hidden cursor-pointer hover:bg-yellow-50 dark:hover:bg-gray-700 px-2 py-1 rounded transition-colors"
-                          dangerouslySetInnerHTML={{ __html: event.content }}
-                        />
+                          className="font-handwritten text-4xl text-indigo-500 dark:text-indigo-400 leading-tight cursor-pointer hover:bg-yellow-50 dark:hover:bg-gray-700 px-2 py-1 rounded transition-colors"
+                        >
+                          {event.content.replace(/<[^>]*>/g, '').split('\n')[0] || 'Event'}
+                        </div>
+                      )}
+
+                      {/* Event Description */}
+                      {!(editingEvent?.index === index && editingEvent?.field === 'content') && event.content.replace(/<[^>]*>/g, '').split('\n').slice(1).join('\n').trim() && (
+                        <div
+                          onClick={() => setEditingEvent({ index, field: 'content' })}
+                          className="font-body text-slate-600 dark:text-slate-400 leading-relaxed cursor-pointer hover:bg-yellow-50 dark:hover:bg-gray-700 px-2 py-1 rounded transition-colors"
+                        >
+                          {event.content.replace(/<[^>]*>/g, '').split('\n').slice(1).join('\n')}
+                        </div>
                       )}
                     </div>
-                  );
-                })}
+                  </div>
+                ))}
               </div>
             ) : null}
           </div>

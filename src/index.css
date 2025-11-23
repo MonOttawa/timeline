@@ -3,7 +3,8 @@
 @theme {
   --font-sans: 'Inter', sans-serif;
   --font-display: 'Archivo Black', sans-serif;
-  --font-cursive: 'Caveat', cursive;
+  --font-handwritten: 'Just Another Hand', cursive;
+  --font-body: 'Roboto', sans-serif;
 }
 
 @variant dark (.dark &);
