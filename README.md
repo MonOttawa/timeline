@@ -53,22 +53,22 @@ Switch to the **Environment** tab.
     *   *Note: The project includes a `Dockerfile` that handles building the React app and serving it with Nginx.*
 
 2.  **Environment Variables**:
-    You need to tell the app where your database lives.
-    *   Key: `VITE_POCKETBASE_URL`
-    *   Value: `https://timelinedb.rosehilltech.com`
-    *   Click **"Add"** or **"Save"**.
+    You will see a text area to enter variables. Enter them in `KEY=VALUE` format.
+    *   Enter: `VITE_POCKETBASE_URL=https://timelinedb.rosehilltech.com`
+    *   Click **"Save"**.
 
-#### Step 4: Configure Domain (Network/Domains Tab)
-Switch to the **Domains** (or Network) tab to make your site accessible via a URL.
+#### Step 4: Configure Domain (Domains Tab)
+Switch to the **Domains** tab to make your site accessible via a URL.
 
 1.  Click **"Add Domain"**.
-2.  Fill in the fields:
-    *   **Domain Name**: Enter your desired domain (e.g., `timeline.rosehilltech.com`).
+2.  Fill in the fields exactly as follows:
+    *   **Host**: Enter your domain (e.g., `timeline.rosehilltech.com`).
     *   **Path**: Enter `/`.
-    *   **Port**: Enter `80`.
-        *   *Why 80? The `Dockerfile` is configured to serve the app on port 80 internally.*
-    *   **Certificate**: Select **Let's Encrypt** (this gives you free HTTPS/SSL).
-3.  Click **"Create"** or **"Save"**.
+    *   **Internal Path**: Enter `/` (defaults to `/`).
+    *   **Container Port**: Enter `80`.
+        *   *Important: This must be `80` because the `Dockerfile` exposes port 80.*
+    *   **HTTPS**: Toggle **On** (this automatically provisions a free SSL Certificate).
+3.  Click **"Create"**.
 
 #### Step 5: Deploy
 1.  Go back to the top of the page or the main dashboard for this app.
