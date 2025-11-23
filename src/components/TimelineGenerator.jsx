@@ -645,7 +645,7 @@ const TimelineGenerator = () => {
                 <div className="absolute left-[7.5rem] top-5 bottom-0 w-0.5 bg-indigo-300 dark:bg-indigo-600"></div>
 
                 {events.map((event, index) => (
-                  <div key={index} className="relative mb-12 pl-32">
+                  <div key={index} className="relative mb-12 pl-40">
                     {/* Date - positioned on left side of vertical line */}
                     {event.date && (
                       editingEvent?.index === index && editingEvent?.field === 'date' ? (
@@ -668,7 +668,7 @@ const TimelineGenerator = () => {
                     )}
 
                     {/* Dot */}
-                    <div className="absolute left-[7.5rem] top-2 w-3 h-3 bg-indigo-600 dark:bg-indigo-500 rounded-full z-10 ring-4 ring-white dark:ring-gray-800"></div>
+                    <div className="absolute left-[7.35rem] top-2 w-3 h-3 bg-indigo-600 dark:bg-indigo-500 rounded-full z-10 ring-4 ring-white dark:ring-gray-800"></div>
 
                     {/* Content Container */}
                     <div className="flex flex-col gap-2">
