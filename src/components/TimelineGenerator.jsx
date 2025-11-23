@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { marked } from 'marked';
 import { Upload, Download, FileText } from 'lucide-react';
 import domtoimage from 'dom-to-image-more';
@@ -12,6 +12,21 @@ const TimelineGenerator = () => {
   const [timelineStyle, setTimelineStyle] = useState('bauhaus');
   const [exportFormat, setExportFormat] = useState('');
   const timelineRef = useRef(null);
+  const [isStyleDropdownOpen, setIsStyleDropdownOpen] = useState(false);
+  const styleDropdownRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (styleDropdownRef.current && !styleDropdownRef.current.contains(event.target)) {
+        setIsStyleDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   // Custom arrow SVG for dropdowns
   const arrowSvg = "data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E";
@@ -309,22 +324,45 @@ const TimelineGenerator = () => {
                 {showEditor ? 'Hide' : 'Show'} Editor
               </button>
 
-              <select
-                value={timelineStyle}
-                onChange={(e) => setTimelineStyle(e.target.value)}
-                style={{
-                  backgroundImage: `url("${arrowSvg}")`,
-                  backgroundRepeat: 'no-repeat',
-                  backgroundPosition: 'right 1rem center',
-                  backgroundSize: '1.2em'
-                }}
-                className="appearance-none inline-flex items-center gap-2 border-2 border-black dark:border-white font-bold py-3 pl-6 pr-10 bg-purple-400 text-black shadow-[4px_4px_0px_#000] dark:shadow-[4px_4px_0px_#FFF] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_#000] dark:hover:shadow-[6px_6px_0px_#FFF] transition-all rounded-lg cursor-pointer text-center"
-              >
-                <option value="bauhaus">Bauhaus</option>
-                <option value="neo-brutalist">Neo-Brutalist</option>
-                <option value="corporate">Corporate</option>
-                <option value="handwritten">Handwritten</option>
-              </select>
+              <div className="relative" ref={styleDropdownRef}>
+                <button
+                  onClick={() => setIsStyleDropdownOpen(!isStyleDropdownOpen)}
+                  style={{
+                    backgroundImage: `url("${arrowSvg}")`,
+                    backgroundRepeat: 'no-repeat',
+                    backgroundPosition: 'right 1rem center',
+                    backgroundSize: '1.2em'
+                  }}
+                  className="appearance-none inline-flex items-center gap-2 border-2 border-black dark:border-white font-bold py-3 pl-6 pr-10 bg-purple-400 text-black shadow-[4px_4px_0px_#000] dark:shadow-[4px_4px_0px_#FFF] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_#000] dark:hover:shadow-[6px_6px_0px_#FFF] transition-all rounded-lg cursor-pointer text-center min-w-[200px] justify-center"
+                >
+                  {timelineStyle === 'bauhaus' ? 'Bauhaus' :
+                    timelineStyle === 'neo-brutalist' ? 'Neo-Brutalist' :
+                      timelineStyle === 'corporate' ? 'Corporate' :
+                        'Handwritten'}
+                </button>
+
+                {isStyleDropdownOpen && (
+                  <div className="absolute top-full left-0 mt-2 w-full bg-white dark:bg-gray-800 border-2 border-black dark:border-white shadow-[4px_4px_0px_#000] dark:shadow-[4px_4px_0px_#FFF] rounded-lg overflow-hidden z-50 flex flex-col">
+                    {[
+                      { value: 'bauhaus', label: 'Bauhaus' },
+                      { value: 'neo-brutalist', label: 'Neo-Brutalist' },
+                      { value: 'corporate', label: 'Corporate' },
+                      { value: 'handwritten', label: 'Handwritten' }
+                    ].map((option) => (
+                      <button
+                        key={option.value}
+                        onClick={() => {
+                          setTimelineStyle(option.value);
+                          setIsStyleDropdownOpen(false);
+                        }}
+                        className={`py-3 px-4 text-left font-bold hover:bg-purple-400 hover:text-black transition-colors ${timelineStyle === option.value ? 'bg-purple-200 dark:bg-purple-900' : 'text-black dark:text-white'}`}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             </>
           )}
         </div>
