@@ -16,6 +16,7 @@ const TimelineGenerator = () => {
   const styleDropdownRef = useRef(null);
   const [isExportDropdownOpen, setIsExportDropdownOpen] = useState(false);
   const exportDropdownRef = useRef(null);
+  const [editingEvent, setEditingEvent] = useState(null); // { index, field: 'date' | 'content' }
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -116,6 +117,36 @@ const TimelineGenerator = () => {
     });
 
     setEvents(sortedEvents);
+  };
+
+  // Regenerate markdown from events array
+  const regenerateMarkdown = (eventsArray) => {
+    const title = timelineTitle !== 'My Project Timeline' ? `# ${timelineTitle}\n\n` : '';
+    const eventMarkdown = eventsArray.map(event => {
+      const dateLine = event.date ? `*${event.date}*\n\n` : '';
+      // Convert HTML back to markdown (simple approach)
+      const tempDiv = document.createElement('div');
+      tempDiv.innerHTML = event.content;
+      const plainContent = tempDiv.textContent || tempDiv.innerText || '';
+      return `${dateLine}${plainContent.trim()}`;
+    }).join('\n\n---\n\n');
+    return title + eventMarkdown;
+  };
+
+  // Handle event field update
+  const handleEventUpdate = (index, field, value) => {
+    const updatedEvents = [...events];
+    if (field === 'date') {
+      updatedEvents[index].date = value;
+    } else if (field === 'content') {
+      // For content, we'll store as plain text and re-parse as markdown
+      updatedEvents[index].content = marked.parse(value);
+    }
+    setEvents(updatedEvents);
+
+    // Regenerate and update markdown content
+    const newMarkdown = regenerateMarkdown(updatedEvents);
+    setMarkdownContent(newMarkdown);
   };
 
   const handleMarkdownChange = (e) => {
@@ -451,16 +482,41 @@ const TimelineGenerator = () => {
                     <div className="flex flex-col gap-0">
                       {/* Date */}
                       {event.date && (
-                        <div className="text-4xl font-black font-display text-black dark:text-white mb-1 tracking-tighter">
-                          {event.date}
-                        </div>
+                        editingEvent?.index === index && editingEvent?.field === 'date' ? (
+                          <input
+                            type="text"
+                            value={event.date}
+                            onChange={(e) => handleEventUpdate(index, 'date', e.target.value)}
+                            onBlur={() => setEditingEvent(null)}
+                            autoFocus
+                            className="text-4xl font-black font-display text-black dark:text-white mb-1 tracking-tighter bg-yellow-100 dark:bg-yellow-900 px-2 py-1 rounded border-2 border-yellow-400 focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                          />
+                        ) : (
+                          <div
+                            onClick={() => setEditingEvent({ index, field: 'date' })}
+                            className="text-4xl font-black font-display text-black dark:text-white mb-1 tracking-tighter cursor-pointer hover:bg-yellow-50 dark:hover:bg-gray-700 px-2 py-1 rounded transition-colors"
+                          >
+                            {event.date}
+                          </div>
+                        )
                       )}
 
                       {/* Content Body */}
-                      <div
-                        className="markdown-content prose prose-invert max-w-none font-sans text-lg font-medium uppercase tracking-wide text-gray-800 text-gray-200 leading-snug"
-                        dangerouslySetInnerHTML={{ __html: event.content }}
-                      />
+                      {editingEvent?.index === index && editingEvent?.field === 'content' ? (
+                        <textarea
+                          value={event.content.replace(/<[^>]*>/g, '')}
+                          onChange={(e) => handleEventUpdate(index, 'content', e.target.value)}
+                          onBlur={() => setEditingEvent(null)}
+                          autoFocus
+                          className="w-full min-h-[100px] markdown-content prose prose-invert max-w-none font-sans text-lg font-medium uppercase tracking-wide text-gray-800 dark:text-gray-200 leading-snug bg-yellow-100 dark:bg-yellow-900 px-2 py-1 rounded border-2 border-yellow-400 focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                        />
+                      ) : (
+                        <div
+                          onClick={() => setEditingEvent({ index, field: 'content' })}
+                          className="markdown-content prose prose-invert max-w-none font-sans text-lg font-medium uppercase tracking-wide text-gray-800 dark:text-gray-200 leading-snug cursor-pointer hover:bg-yellow-50 dark:hover:bg-gray-700 px-2 py-1 rounded transition-colors"
+                          dangerouslySetInnerHTML={{ __html: event.content }}
+                        />
+                      )}
                     </div>
                   </div>
                 ))}
@@ -479,16 +535,41 @@ const TimelineGenerator = () => {
                       <div className={`${bgColor} border-4 border-black dark:border-white rounded-lg p-6 shadow-[8px_8px_0px_#000] dark:shadow-[8px_8px_0px_#FFF]`}>
                         {/* Date */}
                         {event.date && (
-                          <div className="text-3xl font-black font-display text-black dark:text-white mb-3 tracking-tight">
-                            {event.date}
-                          </div>
+                          editingEvent?.index === index && editingEvent?.field === 'date' ? (
+                            <input
+                              type="text"
+                              value={event.date}
+                              onChange={(e) => handleEventUpdate(index, 'date', e.target.value)}
+                              onBlur={() => setEditingEvent(null)}
+                              autoFocus
+                              className="text-3xl font-black font-display text-black dark:text-white mb-3 tracking-tight bg-yellow-100 dark:bg-yellow-900 px-2 py-1 rounded border-2 border-yellow-400 focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                            />
+                          ) : (
+                            <div
+                              onClick={() => setEditingEvent({ index, field: 'date' })}
+                              className="text-3xl font-black font-display text-black dark:text-white mb-3 tracking-tight cursor-pointer hover:opacity-80 px-2 py-1 rounded transition-opacity"
+                            >
+                              {event.date}
+                            </div>
+                          )
                         )}
 
                         {/* Content Body */}
-                        <div
-                          className="markdown-content prose prose-lg max-w-none font-sans text-black dark:text-white font-medium"
-                          dangerouslySetInnerHTML={{ __html: event.content }}
-                        />
+                        {editingEvent?.index === index && editingEvent?.field === 'content' ? (
+                          <textarea
+                            value={event.content.replace(/<[^>]*>/g, '')}
+                            onChange={(e) => handleEventUpdate(index, 'content', e.target.value)}
+                            onBlur={() => setEditingEvent(null)}
+                            autoFocus
+                            className="w-full min-h-[100px] markdown-content prose prose-lg max-w-none font-sans text-black dark:text-white font-medium bg-yellow-100 dark:bg-yellow-900 px-2 py-1 rounded border-2 border-yellow-400 focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                          />
+                        ) : (
+                          <div
+                            onClick={() => setEditingEvent({ index, field: 'content' })}
+                            className="markdown-content prose prose-lg max-w-none font-sans text-black dark:text-white font-medium cursor-pointer hover:opacity-80 px-2 py-1 rounded transition-opacity"
+                            dangerouslySetInnerHTML={{ __html: event.content }}
+                          />
+                        )}
                       </div>
                     </div>
                   );
@@ -516,16 +597,41 @@ const TimelineGenerator = () => {
                         <div className={`bg-white dark:bg-gray-800 rounded-lg p-4 shadow-[0_8px_30px_rgb(0,0,0,0.12)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.4)] hover:shadow-[0_12px_40px_rgb(0,0,0,0.18)] dark:hover:shadow-[0_12px_40px_rgb(0,0,0,0.5)] transition-all duration-300 relative ${isLeft ? 'text-right' : ''}`} style={{ zIndex: index }}>
                           {/* Date */}
                           {event.date && (
-                            <div className="font-black text-lg text-black dark:text-white mb-1.5 tracking-tight">
-                              {event.date}
-                            </div>
+                            editingEvent?.index === index && editingEvent?.field === 'date' ? (
+                              <input
+                                type="text"
+                                value={event.date}
+                                onChange={(e) => handleEventUpdate(index, 'date', e.target.value)}
+                                onBlur={() => setEditingEvent(null)}
+                                autoFocus
+                                className="font-black text-lg text-black dark:text-white mb-1.5 tracking-tight bg-yellow-100 dark:bg-yellow-900 px-2 py-1 rounded border-2 border-yellow-400 focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                              />
+                            ) : (
+                              <div
+                                onClick={() => setEditingEvent({ index, field: 'date' })}
+                                className="font-black text-lg text-black dark:text-white mb-1.5 tracking-tight cursor-pointer hover:bg-yellow-50 dark:hover:bg-gray-700 px-2 py-1 rounded transition-colors"
+                              >
+                                {event.date}
+                              </div>
+                            )
                           )}
 
                           {/* Content */}
-                          <div
-                            className="markdown-content prose prose-sm dark:prose-invert max-w-none text-gray-700 dark:text-gray-300 [&>*]:my-1"
-                            dangerouslySetInnerHTML={{ __html: event.content }}
-                          />
+                          {editingEvent?.index === index && editingEvent?.field === 'content' ? (
+                            <textarea
+                              value={event.content.replace(/<[^>]*>/g, '')}
+                              onChange={(e) => handleEventUpdate(index, 'content', e.target.value)}
+                              onBlur={() => setEditingEvent(null)}
+                              autoFocus
+                              className="w-full min-h-[80px] markdown-content prose prose-sm dark:prose-invert max-w-none text-gray-700 dark:text-gray-300 bg-yellow-100 dark:bg-yellow-900 px-2 py-1 rounded border-2 border-yellow-400 focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                            />
+                          ) : (
+                            <div
+                              onClick={() => setEditingEvent({ index, field: 'content' })}
+                              className="markdown-content prose prose-sm dark:prose-invert max-w-none text-gray-700 dark:text-gray-300 [&>*]:my-1 cursor-pointer hover:bg-yellow-50 dark:hover:bg-gray-700 px-2 py-1 rounded transition-colors"
+                              dangerouslySetInnerHTML={{ __html: event.content }}
+                            />
+                          )}
                         </div>
                       </div>
                     </div>
@@ -553,9 +659,23 @@ const TimelineGenerator = () => {
                       <div className="flex flex-col sm:flex-row items-start mb-1 group-last:before:hidden before:absolute before:left-2 sm:before:left-0 before:h-full before:px-px before:bg-slate-300 dark:before:bg-slate-600 sm:before:ml-[7.5rem] before:self-start before:-translate-x-1/2 before:translate-y-3 after:absolute after:left-2 sm:after:left-0 after:w-2 after:h-2 after:bg-indigo-600 dark:after:bg-indigo-500 after:border-4 after:box-content after:border-white dark:after:border-gray-800 after:rounded-full sm:after:ml-[7.5rem] after:-translate-x-1/2 after:translate-y-1.5">
                         {/* Date */}
                         {event.date && (
-                          <time className="sm:absolute left-0 translate-y-0.5 text-sm font-bold mb-3 sm:mb-0 text-slate-700 dark:text-slate-300 sm:w-28 sm:pr-4 sm:text-right">
-                            {event.date}
-                          </time>
+                          editingEvent?.index === index && editingEvent?.field === 'date' ? (
+                            <input
+                              type="text"
+                              value={event.date}
+                              onChange={(e) => handleEventUpdate(index, 'date', e.target.value)}
+                              onBlur={() => setEditingEvent(null)}
+                              autoFocus
+                              className="sm:absolute left-0 translate-y-0.5 text-sm font-bold mb-3 sm:mb-0 text-slate-700 dark:text-slate-300 sm:w-28 sm:pr-4 sm:text-right bg-yellow-100 dark:bg-yellow-900 px-2 py-1 rounded border-2 border-yellow-400 focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                            />
+                          ) : (
+                            <time
+                              onClick={() => setEditingEvent({ index, field: 'date' })}
+                              className="sm:absolute left-0 translate-y-0.5 text-sm font-bold mb-3 sm:mb-0 text-slate-700 dark:text-slate-300 sm:w-28 sm:pr-4 sm:text-right cursor-pointer hover:bg-yellow-50 dark:hover:bg-gray-700 px-2 py-1 rounded transition-colors"
+                            >
+                              {event.date}
+                            </time>
+                          )
                         )}
 
                         {/* Title */}
