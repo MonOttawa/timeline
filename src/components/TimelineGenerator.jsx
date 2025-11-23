@@ -13,6 +13,9 @@ const TimelineGenerator = () => {
   const [exportFormat, setExportFormat] = useState('');
   const timelineRef = useRef(null);
 
+  // Custom arrow SVG for dropdowns
+  const arrowSvg = "data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E";
+
   const handleFileSelect = (event) => {
     const file = event.target.files[0];
     if (!file) return;
@@ -284,8 +287,13 @@ const TimelineGenerator = () => {
                   await handleExport(format);
                   setExportFormat('');
                 }}
-                style={{ backgroundPositionX: 'calc(100% - 3rem)' }}
-                className="inline-flex items-center gap-2 border-2 border-black dark:border-white font-bold py-3 px-6 bg-green-400 text-black shadow-[4px_4px_0px_#000] dark:shadow-[4px_4px_0px_#FFF] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_#000] dark:hover:shadow-[6px_6px_0px_#FFF] transition-all rounded-lg cursor-pointer text-center"
+                style={{
+                  backgroundImage: `url("${arrowSvg}")`,
+                  backgroundRepeat: 'no-repeat',
+                  backgroundPosition: 'right 1rem center',
+                  backgroundSize: '1.2em'
+                }}
+                className="appearance-none inline-flex items-center gap-2 border-2 border-black dark:border-white font-bold py-3 pl-6 pr-10 bg-green-400 text-black shadow-[4px_4px_0px_#000] dark:shadow-[4px_4px_0px_#FFF] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_#000] dark:hover:shadow-[6px_6px_0px_#FFF] transition-all rounded-lg cursor-pointer text-center"
               >
                 <option value="">Export As...</option>
                 <option value="png">PNG (Transparent)</option>
@@ -304,8 +312,13 @@ const TimelineGenerator = () => {
               <select
                 value={timelineStyle}
                 onChange={(e) => setTimelineStyle(e.target.value)}
-                style={{ backgroundPositionX: 'calc(100% - 3rem)' }}
-                className="inline-flex items-center gap-2 border-2 border-black dark:border-white font-bold py-3 px-6 bg-purple-400 text-black shadow-[4px_4px_0px_#000] dark:shadow-[4px_4px_0px_#FFF] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_#000] dark:hover:shadow-[6px_6px_0px_#FFF] transition-all rounded-lg cursor-pointer text-center"
+                style={{
+                  backgroundImage: `url("${arrowSvg}")`,
+                  backgroundRepeat: 'no-repeat',
+                  backgroundPosition: 'right 1rem center',
+                  backgroundSize: '1.2em'
+                }}
+                className="appearance-none inline-flex items-center gap-2 border-2 border-black dark:border-white font-bold py-3 pl-6 pr-10 bg-purple-400 text-black shadow-[4px_4px_0px_#000] dark:shadow-[4px_4px_0px_#FFF] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_#000] dark:hover:shadow-[6px_6px_0px_#FFF] transition-all rounded-lg cursor-pointer text-center"
               >
                 <option value="bauhaus">Bauhaus</option>
                 <option value="neo-brutalist">Neo-Brutalist</option>
@@ -324,183 +337,187 @@ const TimelineGenerator = () => {
       </div>
 
       {/* Markdown Editor */}
-      {showEditor && markdownContent && (
-        <div className="bg-white dark:bg-gray-800 p-6 mb-8 border-4 border-black dark:border-white shadow-[8px_8px_0px_#000] dark:shadow-[8px_8px_0px_#FFF] rounded-lg">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-2xl font-black font-display">Edit Markdown</h2>
-            <button
-              onClick={handleDownloadMarkdown}
-              className="inline-flex items-center gap-2 border-2 border-black dark:border-white font-bold py-2 px-4 bg-blue-400 text-black shadow-[4px_4px_0px_#000] dark:shadow-[4px_4px_0px_#FFF] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_#000] transition-all rounded-lg text-sm"
-            >
-              <Download size={16} />
-              Download MD
-            </button>
-          </div>
-          <textarea
-            value={markdownContent}
-            onChange={handleMarkdownChange}
-            className="w-full h-96 p-4 font-mono text-sm border-2 border-black dark:border-white rounded-lg bg-gray-50 dark:bg-gray-900 text-black dark:text-white focus:outline-none focus:ring-4 focus:ring-yellow-400 focus:ring-offset-2"
-            placeholder="Enter your markdown here..."
-          />
-          <p className="mt-2 text-sm text-gray-500 text-gray-400">
-            Changes are reflected in real-time on the timeline below
-          </p>
-        </div>
-      )}
-
-      {events.length > 0 && (
-        <div
-          id="timeline-container"
-          ref={timelineRef}
-          className={`relative max-w-3xl mx-auto p-8 ${timelineStyle === 'bauhaus' ? 'pl-10' : ''}`}
-          style={{ backgroundColor: 'transparent' }}
-        >
-          {/* Timeline Title */}
-          <h2 className={`text-5xl font-black font-display mb-12 text-black dark:text-white tracking-tighter ${timelineStyle === 'bauhaus' ? 'text-left pl-16' : 'text-center'}`}>
-            {timelineTitle}
-          </h2>
-
-          {timelineStyle === 'bauhaus' ? (
-            /* Bauhaus Style */
-            <div className="relative">
-              {/* Vertical Line - starts at center of first red dot (top-5 = 1.25rem = top-2 + half h-6) */}
-              <div className="absolute left-0 top-5 bottom-0 w-0.5 bg-black dark:bg-white"></div>
-
-              {events.map((event, index) => (
-                <div key={index} className="relative mb-16 pl-16">
-                  {/* Dot */}
-                  <div className="absolute left-[-11px] top-2 w-6 h-6 bg-[#C41E3A] rounded-full z-10"></div>
-
-                  {/* Content Container */}
-                  <div className="flex flex-col gap-0">
-                    {/* Date */}
-                    {event.date && (
-                      <div className="text-4xl font-black font-display text-black dark:text-white mb-1 tracking-tighter">
-                        {event.date}
-                      </div>
-                    )}
-
-                    {/* Content Body */}
-                    <div
-                      className="markdown-content prose prose-invert max-w-none font-sans text-lg font-medium uppercase tracking-wide text-gray-800 text-gray-200 leading-snug"
-                      dangerouslySetInnerHTML={{ __html: event.content }}
-                    />
-                  </div>
-                </div>
-              ))}
+      {
+        showEditor && markdownContent && (
+          <div className="bg-white dark:bg-gray-800 p-6 mb-8 border-4 border-black dark:border-white shadow-[8px_8px_0px_#000] dark:shadow-[8px_8px_0px_#FFF] rounded-lg">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-2xl font-black font-display">Edit Markdown</h2>
+              <button
+                onClick={handleDownloadMarkdown}
+                className="inline-flex items-center gap-2 border-2 border-black dark:border-white font-bold py-2 px-4 bg-blue-400 text-black shadow-[4px_4px_0px_#000] dark:shadow-[4px_4px_0px_#FFF] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_#000] transition-all rounded-lg text-sm"
+              >
+                <Download size={16} />
+                Download MD
+              </button>
             </div>
-          ) : timelineStyle === 'neo-brutalist' ? (
-            /* Neo-Brutalist Style */
-            <div className="flex flex-col gap-6">
-              {events.map((event, index) => {
-                const lightColors = ['bg-yellow-300', 'bg-orange-300', 'bg-pink-300', 'bg-purple-300', 'bg-blue-300', 'bg-green-300'];
-                const darkColors = ['dark:bg-yellow-600', 'dark:bg-orange-600', 'dark:bg-pink-600', 'dark:bg-purple-600', 'dark:bg-blue-600', 'dark:bg-green-600'];
-                const bgColor = `${lightColors[index % lightColors.length]} ${darkColors[index % darkColors.length]}`;
+            <textarea
+              value={markdownContent}
+              onChange={handleMarkdownChange}
+              className="w-full h-96 p-4 font-mono text-sm border-2 border-black dark:border-white rounded-lg bg-gray-50 dark:bg-gray-900 text-black dark:text-white focus:outline-none focus:ring-4 focus:ring-yellow-400 focus:ring-offset-2"
+              placeholder="Enter your markdown here..."
+            />
+            <p className="mt-2 text-sm text-gray-500 text-gray-400">
+              Changes are reflected in real-time on the timeline below
+            </p>
+          </div>
+        )
+      }
 
-                return (
-                  <div key={index} className="relative">
-                    {/* Event Card */}
-                    <div className={`${bgColor} border-4 border-black dark:border-white rounded-lg p-6 shadow-[8px_8px_0px_#000] dark:shadow-[8px_8px_0px_#FFF]`}>
+      {
+        events.length > 0 && (
+          <div
+            id="timeline-container"
+            ref={timelineRef}
+            className={`relative max-w-3xl mx-auto p-8 ${timelineStyle === 'bauhaus' ? 'pl-10' : ''}`}
+            style={{ backgroundColor: 'transparent' }}
+          >
+            {/* Timeline Title */}
+            <h2 className={`text-5xl font-black font-display mb-12 text-black dark:text-white tracking-tighter ${timelineStyle === 'bauhaus' ? 'text-left pl-16' : 'text-center'}`}>
+              {timelineTitle}
+            </h2>
+
+            {timelineStyle === 'bauhaus' ? (
+              /* Bauhaus Style */
+              <div className="relative">
+                {/* Vertical Line - starts at center of first red dot (top-5 = 1.25rem = top-2 + half h-6) */}
+                <div className="absolute left-0 top-5 bottom-0 w-0.5 bg-black dark:bg-white"></div>
+
+                {events.map((event, index) => (
+                  <div key={index} className="relative mb-16 pl-16">
+                    {/* Dot */}
+                    <div className="absolute left-[-11px] top-2 w-6 h-6 bg-[#C41E3A] rounded-full z-10"></div>
+
+                    {/* Content Container */}
+                    <div className="flex flex-col gap-0">
                       {/* Date */}
                       {event.date && (
-                        <div className="text-3xl font-black font-display text-black dark:text-white mb-3 tracking-tight">
+                        <div className="text-4xl font-black font-display text-black dark:text-white mb-1 tracking-tighter">
                           {event.date}
                         </div>
                       )}
 
                       {/* Content Body */}
                       <div
-                        className="markdown-content prose prose-lg max-w-none font-sans text-black dark:text-white font-medium"
+                        className="markdown-content prose prose-invert max-w-none font-sans text-lg font-medium uppercase tracking-wide text-gray-800 text-gray-200 leading-snug"
                         dangerouslySetInnerHTML={{ __html: event.content }}
                       />
                     </div>
                   </div>
-                );
-              })}
-            </div>
-          ) : timelineStyle === 'corporate' ? (
-            /* Corporate/Professional Style */
-            <div className="relative">
-              {/* Center vertical line */}
-              <div className="absolute left-1/2 top-0 bottom-0 w-px bg-gray-200 dark:bg-gray-700 transform -translate-x-1/2"></div>
+                ))}
+              </div>
+            ) : timelineStyle === 'neo-brutalist' ? (
+              /* Neo-Brutalist Style */
+              <div className="flex flex-col gap-6">
+                {events.map((event, index) => {
+                  const lightColors = ['bg-yellow-300', 'bg-orange-300', 'bg-pink-300', 'bg-purple-300', 'bg-blue-300', 'bg-green-300'];
+                  const darkColors = ['dark:bg-yellow-600', 'dark:bg-orange-600', 'dark:bg-pink-600', 'dark:bg-purple-600', 'dark:bg-blue-600', 'dark:bg-green-600'];
+                  const bgColor = `${lightColors[index % lightColors.length]} ${darkColors[index % darkColors.length]}`;
 
-              {events.map((event, index) => {
-                const isLeft = index % 2 === 0;
-
-                return (
-                  <div key={index} className={`relative ${index > 0 ? '-mt-16' : ''}`}>
-                    {/* Timeline dot - centered on card */}
-                    <div className="absolute left-1/2 top-1/2 -translate-y-1/2 w-3 h-3 bg-[#C41E3A] rounded-full transform -translate-x-1/2 z-20 ring-3 ring-white dark:ring-gray-800"></div>
-
-                    {/* Connecting line from dot to card */}
-                    <div className={`absolute top-1/2 -translate-y-1/2 h-px bg-black dark:bg-gray-400 z-10 ${isLeft ? 'left-[48%] w-[2%]' : 'left-[50%] w-[2%]'}`}></div>
-
-                    {/* Event card - alternating sides */}
-                    <div className={`relative ${isLeft ? 'pr-[52%]' : 'pl-[52%]'}`}>
-                      <div className={`bg-white dark:bg-gray-800 rounded-lg p-4 shadow-[0_8px_30px_rgb(0,0,0,0.12)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.4)] hover:shadow-[0_12px_40px_rgb(0,0,0,0.18)] dark:hover:shadow-[0_12px_40px_rgb(0,0,0,0.5)] transition-all duration-300 relative ${isLeft ? 'text-right' : ''}`} style={{ zIndex: index }}>
+                  return (
+                    <div key={index} className="relative">
+                      {/* Event Card */}
+                      <div className={`${bgColor} border-4 border-black dark:border-white rounded-lg p-6 shadow-[8px_8px_0px_#000] dark:shadow-[8px_8px_0px_#FFF]`}>
                         {/* Date */}
                         {event.date && (
-                          <div className="font-black text-lg text-black dark:text-white mb-1.5 tracking-tight">
+                          <div className="text-3xl font-black font-display text-black dark:text-white mb-3 tracking-tight">
                             {event.date}
                           </div>
                         )}
 
-                        {/* Content */}
+                        {/* Content Body */}
                         <div
-                          className="markdown-content prose prose-sm dark:prose-invert max-w-none text-gray-700 dark:text-gray-300 [&>*]:my-1"
+                          className="markdown-content prose prose-lg max-w-none font-sans text-black dark:text-white font-medium"
                           dangerouslySetInnerHTML={{ __html: event.content }}
                         />
                       </div>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
-          ) : timelineStyle === 'handwritten' ? (
-            /* Handwritten Style */
-            <div className="relative -my-3">
-              {events.map((event, index) => {
-                const labels = ['The beginning', 'Milestone', 'Milestone', 'Milestone', 'Latest'];
-                const label = index === 0 ? labels[0] : index === events.length - 1 ? labels[4] : labels[1];
+                  );
+                })}
+              </div>
+            ) : timelineStyle === 'corporate' ? (
+              /* Corporate/Professional Style */
+              <div className="relative">
+                {/* Center vertical line */}
+                <div className="absolute left-1/2 top-0 bottom-0 w-px bg-gray-200 dark:bg-gray-700 transform -translate-x-1/2"></div>
 
-                return (
-                  <div
-                    key={index}
-                    className="relative pl-8 sm:pl-36 py-3 group"
-                  >
-                    {/* Handwritten label */}
-                    <div className="font-cursive text-2xl text-indigo-500 dark:text-indigo-400 mb-1 sm:mb-0">
-                      {label}
-                    </div>
+                {events.map((event, index) => {
+                  const isLeft = index % 2 === 0;
 
-                    {/* Timeline line and dot */}
-                    <div className="flex flex-col sm:flex-row items-start mb-1 group-last:before:hidden before:absolute before:left-2 sm:before:left-0 before:h-full before:px-px before:bg-slate-300 dark:before:bg-slate-600 sm:before:ml-[7.5rem] before:self-start before:-translate-x-1/2 before:translate-y-3 after:absolute after:left-2 sm:after:left-0 after:w-2 after:h-2 after:bg-indigo-600 dark:after:bg-indigo-500 after:border-4 after:box-content after:border-white dark:after:border-gray-800 after:rounded-full sm:after:ml-[7.5rem] after:-translate-x-1/2 after:translate-y-1.5">
-                      {/* Date */}
-                      {event.date && (
-                        <time className="sm:absolute left-0 translate-y-0.5 text-sm font-bold mb-3 sm:mb-0 text-slate-700 dark:text-slate-300 sm:w-28 sm:pr-4 sm:text-right">
-                          {event.date}
-                        </time>
-                      )}
+                  return (
+                    <div key={index} className={`relative ${index > 0 ? '-mt-16' : ''}`}>
+                      {/* Timeline dot - centered on card */}
+                      <div className="absolute left-1/2 top-1/2 -translate-y-1/2 w-3 h-3 bg-[#C41E3A] rounded-full transform -translate-x-1/2 z-20 ring-3 ring-white dark:ring-gray-800"></div>
 
-                      {/* Title */}
-                      <div className="text-xl font-bold text-slate-900 dark:text-white">
-                        {event.content.match(/<h[1-6][^>]*>(.*?)<\/h[1-6]>/)?.[1]?.replace(/<[^>]*>/g, '') || 'Event'}
+                      {/* Connecting line from dot to card */}
+                      <div className={`absolute top-1/2 -translate-y-1/2 h-px bg-black dark:bg-gray-400 z-10 ${isLeft ? 'left-[48%] w-[2%]' : 'left-[50%] w-[2%]'}`}></div>
+
+                      {/* Event card - alternating sides */}
+                      <div className={`relative ${isLeft ? 'pr-[52%]' : 'pl-[52%]'}`}>
+                        <div className={`bg-white dark:bg-gray-800 rounded-lg p-4 shadow-[0_8px_30px_rgb(0,0,0,0.12)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.4)] hover:shadow-[0_12px_40px_rgb(0,0,0,0.18)] dark:hover:shadow-[0_12px_40px_rgb(0,0,0,0.5)] transition-all duration-300 relative ${isLeft ? 'text-right' : ''}`} style={{ zIndex: index }}>
+                          {/* Date */}
+                          {event.date && (
+                            <div className="font-black text-lg text-black dark:text-white mb-1.5 tracking-tight">
+                              {event.date}
+                            </div>
+                          )}
+
+                          {/* Content */}
+                          <div
+                            className="markdown-content prose prose-sm dark:prose-invert max-w-none text-gray-700 dark:text-gray-300 [&>*]:my-1"
+                            dangerouslySetInnerHTML={{ __html: event.content }}
+                          />
+                        </div>
                       </div>
                     </div>
+                  );
+                })}
+              </div>
+            ) : timelineStyle === 'handwritten' ? (
+              /* Handwritten Style */
+              <div className="relative -my-3">
+                {events.map((event, index) => {
+                  const labels = ['The beginning', 'Milestone', 'Milestone', 'Milestone', 'Latest'];
+                  const label = index === 0 ? labels[0] : index === events.length - 1 ? labels[4] : labels[1];
 
-                    {/* Description */}
+                  return (
                     <div
-                      className="text-slate-500 dark:text-slate-400 [&>h1]:hidden [&>h2]:hidden [&>h3]:hidden [&>h4]:hidden [&>h5]:hidden [&>h6]:hidden"
-                      dangerouslySetInnerHTML={{ __html: event.content }}
-                    />
-                  </div>
-                );
-              })}
-            </div>
-          ) : null}
-        </div>
-      )}
-    </div>
+                      key={index}
+                      className="relative pl-8 sm:pl-36 py-3 group"
+                    >
+                      {/* Handwritten label */}
+                      <div className="font-cursive text-2xl text-indigo-500 dark:text-indigo-400 mb-1 sm:mb-0">
+                        {label}
+                      </div>
+
+                      {/* Timeline line and dot */}
+                      <div className="flex flex-col sm:flex-row items-start mb-1 group-last:before:hidden before:absolute before:left-2 sm:before:left-0 before:h-full before:px-px before:bg-slate-300 dark:before:bg-slate-600 sm:before:ml-[7.5rem] before:self-start before:-translate-x-1/2 before:translate-y-3 after:absolute after:left-2 sm:after:left-0 after:w-2 after:h-2 after:bg-indigo-600 dark:after:bg-indigo-500 after:border-4 after:box-content after:border-white dark:after:border-gray-800 after:rounded-full sm:after:ml-[7.5rem] after:-translate-x-1/2 after:translate-y-1.5">
+                        {/* Date */}
+                        {event.date && (
+                          <time className="sm:absolute left-0 translate-y-0.5 text-sm font-bold mb-3 sm:mb-0 text-slate-700 dark:text-slate-300 sm:w-28 sm:pr-4 sm:text-right">
+                            {event.date}
+                          </time>
+                        )}
+
+                        {/* Title */}
+                        <div className="text-xl font-bold text-slate-900 dark:text-white">
+                          {event.content.match(/<h[1-6][^>]*>(.*?)<\/h[1-6]>/)?.[1]?.replace(/<[^>]*>/g, '') || 'Event'}
+                        </div>
+                      </div>
+
+                      {/* Description */}
+                      <div
+                        className="text-slate-500 dark:text-slate-400 [&>h1]:hidden [&>h2]:hidden [&>h3]:hidden [&>h4]:hidden [&>h5]:hidden [&>h6]:hidden"
+                        dangerouslySetInnerHTML={{ __html: event.content }}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+            ) : null}
+          </div>
+        )
+      }
+    </div >
   );
 };
 
