@@ -14,3 +14,17 @@ The React Compiler is not enabled on this template because of its impact on dev 
 ## Expanding the ESLint configuration
 
 If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+
+## Deployment
+
+### Deploying to Dokploy
+
+This project includes a `Dockerfile` configured for multi-stage builds (Node.js builder -> Nginx runner), making it ready for deployment on platforms like Dokploy.
+
+1.  **Connect Repository**: In your Dokploy dashboard, connect this repository.
+2.  **Select Dockerfile**: Choose "Dockerfile" as the build type.
+3.  **Environment Variables**:
+    *   Add `VITE_POCKETBASE_URL` with your production PocketBase URL (e.g., `https://timelinedb.rosehilltech.com`).
+4.  **Deploy**: Click "Deploy".
+
+The `Dockerfile` will automatically build the React app and serve it using Nginx.
