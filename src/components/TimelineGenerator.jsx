@@ -1,11 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { marked } from 'marked';
-import { Upload, Download, FileText, Palette, Save, FolderOpen, ChevronDown } from 'lucide-react';
+import { Upload, Download, FileText, Palette, Save, FolderOpen, ChevronDown, Sparkles } from 'lucide-react';
 import domtoimage from 'dom-to-image-more';
 import { useAuth } from '../contexts/AuthContext';
 import { pb } from '../lib/pocketbase';
 import AuthModal from './AuthModal';
 import SavedTimelinesModal from './SavedTimelinesModal';
+import AIGenerateModal from './AIGenerateModal';
 import { sampleTimelines } from '../data/sampleTimelines';
 
 const TimelineGenerator = ({ isDemoMode = false }) => {
@@ -34,6 +35,7 @@ const TimelineGenerator = ({ isDemoMode = false }) => {
   const [currentTimelineId, setCurrentTimelineId] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isLoadingTimelines, setIsLoadingTimelines] = useState(false);
+  const [showAIModal, setShowAIModal] = useState(false);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -249,6 +251,13 @@ const TimelineGenerator = ({ isDemoMode = false }) => {
       setCurrentTimelineId(null); // Reset ID as this is a new "file"
       setIsSampleDropdownOpen(false);
     }
+  };
+
+  const handleAIGenerate = (generatedContent) => {
+    setMarkdownContent(generatedContent);
+    parseMarkdown(generatedContent);
+    setFileName('AI Generated Timeline.md');
+    setCurrentTimelineId(null); // Reset ID as this is a new "file"
   };
 
   const fetchTimelines = async () => {
@@ -486,6 +495,14 @@ const TimelineGenerator = ({ isDemoMode = false }) => {
               </div>
             )}
           </div>
+
+          <button
+            onClick={() => setShowAIModal(true)}
+            className="inline-flex items-center gap-2 border-2 border-black dark:border-white font-bold py-3 px-6 bg-purple-400 text-black shadow-[4px_4px_0px_#000] dark:shadow-[4px_4px_0px_#FFF] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_#000] dark:hover:shadow-[6px_6px_0px_#FFF] transition-all rounded-lg"
+          >
+            <Sparkles size={20} />
+            Generate with AI
+          </button>
 
           {user && (
             <>
@@ -909,6 +926,13 @@ const TimelineGenerator = ({ isDemoMode = false }) => {
           onLoad={handleLoadTimeline}
           onDelete={handleDeleteTimeline}
           loading={isLoadingTimelines}
+        />
+      )}
+
+      {showAIModal && (
+        <AIGenerateModal
+          onClose={() => setShowAIModal(false)}
+          onGenerate={handleAIGenerate}
         />
       )}
     </div >
