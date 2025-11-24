@@ -766,7 +766,7 @@ const TimelineGenerator = ({ isDemoMode = false }) => {
                   const isLeft = index % 2 === 0;
 
                   return (
-                    <div key={index} className={`relative ${index > 0 ? '-mt-16' : ''}`}>
+                    <div key={index} className={`relative ${index > 0 ? 'mt-2' : ''}`}>
                       {/* Timeline dot - centered on card */}
                       <div className="absolute left-1/2 top-1/2 -translate-y-1/2 w-3 h-3 bg-[#C41E3A] rounded-full transform -translate-x-1/2 z-20 ring-3 ring-white dark:ring-gray-800"></div>
 
@@ -796,7 +796,7 @@ const TimelineGenerator = ({ isDemoMode = false }) => {
                       </div>
 
                       {/* Date - Positioned on the opposite side */}
-                      <div className={`absolute top-1/2 -translate-y-1/2 w-[45%] ${isLeft ? 'left-[55%] text-left' : 'right-[55%] text-right'}`}>
+                      <div className={`absolute top-1/2 -translate-y-1/2 w-[45%] ${isLeft ? 'left-[52%] text-left' : 'right-[52%] text-right'}`}>
                         {event.date && (
                           editingEvent?.index === index && editingEvent?.field === 'date' ? (
                             <input
