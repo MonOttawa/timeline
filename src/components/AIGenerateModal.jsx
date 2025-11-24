@@ -1,19 +1,17 @@
-import React, { useState, useEffect } from 'react';
-import { X, Sparkles, Key, MessageSquare } from 'lucide-react';
-
-const AI_MODELS = [
-  { id: 'anthropic/claude-3.5-sonnet', name: 'Claude 3.5 Sonnet', provider: 'Anthropic' },
-  { id: 'openai/gpt-4-turbo', name: 'GPT-4 Turbo', provider: 'OpenAI' },
-  { id: 'openai/gpt-4o', name: 'GPT-4o', provider: 'OpenAI' },
-  { id: 'google/gemini-pro-1.5', name: 'Gemini Pro 1.5', provider: 'Google' },
-];
+import React, { useState, useEffect, useRef } from 'react';
+import { X, Sparkles, Key, MessageSquare, Search, ChevronDown } from 'lucide-react';
 
 const AIGenerateModal = ({ onClose, onGenerate }) => {
   const [apiKey, setApiKey] = useState('');
   const [prompt, setPrompt] = useState('');
-  const [selectedModel, setSelectedModel] = useState(AI_MODELS[0].id);
+  const [selectedModel, setSelectedModel] = useState('');
   const [saveKey, setSaveKey] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [modelSearch, setModelSearch] = useState('');
+  const [isModelDropdownOpen, setIsModelDropdownOpen] = useState(false);
+  const [models, setModels] = useState([]);
+  const [isLoadingModels, setIsLoadingModels] = useState(true);
+  const modelDropdownRef = useRef(null);
 
   useEffect(() => {
     // Load saved API key if exists
@@ -22,7 +20,86 @@ const AIGenerateModal = ({ onClose, onGenerate }) => {
       setApiKey(savedKey);
       setSaveKey(true);
     }
+
+    // Fetch available models from OpenRouter
+    fetchModels();
   }, []);
+
+  const fetchModels = async () => {
+    setIsLoadingModels(true);
+    try {
+      const response = await fetch('https://openrouter.ai/api/v1/models');
+      const data = await response.json();
+
+      // Process and format models
+      const formattedModels = data.data.map(model => ({
+        id: model.id,
+        name: model.name || model.id.split('/').pop(),
+        provider: model.id.split('/')[0],
+        free: model.pricing?.prompt === '0' || model.id.includes(':free'),
+        contextLength: model.context_length,
+      }));
+
+      // Sort: free models first, then by provider
+      formattedModels.sort((a, b) => {
+        if (a.free !== b.free) return a.free ? -1 : 1;
+        return a.provider.localeCompare(b.provider);
+      });
+
+      setModels(formattedModels);
+
+      // Set default to first free model if available
+      const firstFree = formattedModels.find(m => m.free);
+      if (firstFree) {
+        setSelectedModel(firstFree.id);
+      } else if (formattedModels.length > 0) {
+        setSelectedModel(formattedModels[0].id);
+      }
+    } catch (error) {
+      console.error('Failed to fetch models:', error);
+      // Fallback to a basic model list if fetch fails
+      const fallbackModels = [
+        { id: 'meta-llama/llama-3.2-3b-instruct:free', name: 'Llama 3.2 3B Instruct', provider: 'Meta', free: true },
+        { id: 'google/gemini-flash-1.5', name: 'Gemini Flash 1.5', provider: 'Google', free: true },
+      ];
+      setModels(fallbackModels);
+      setSelectedModel(fallbackModels[0].id);
+    } finally {
+      setIsLoadingModels(false);
+    }
+  };
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (modelDropdownRef.current && !modelDropdownRef.current.contains(event.target)) {
+        setIsModelDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  // Filter models based on search
+  const filteredModels = models.filter(model => {
+    const searchLower = modelSearch.toLowerCase();
+    return (
+      model.name.toLowerCase().includes(searchLower) ||
+      model.provider.toLowerCase().includes(searchLower) ||
+      model.id.toLowerCase().includes(searchLower)
+    );
+  });
+
+  // Get selected model display name
+  const selectedModelObj = models.find(m => m.id === selectedModel);
+  const selectedModelDisplay = isLoadingModels
+    ? 'Loading models...'
+    : selectedModelObj
+      ? `${selectedModelObj.name} (${selectedModelObj.provider})${selectedModelObj.free ? ' - FREE' : ''}`
+      : 'Select a model';
 
   const handleGenerate = async () => {
     if (!apiKey.trim()) {
@@ -58,33 +135,89 @@ const AIGenerateModal = ({ onClose, onGenerate }) => {
           messages: [
             {
               role: 'system',
-              content: 'You are a helpful assistant that generates timeline content in markdown format. Generate timelines with dates in *YYYY-MM-DD* format (or *Month YYYY* for less specific dates), followed by event descriptions. Separate each event with ---. Start with a title line using # if appropriate. Be concise and factual.'
+              content: `You are a helpful assistant that generates timeline content in markdown format. Follow this EXACT format:
+
+1. Start with an optional title using # (e.g., "# History of the Internet")
+2. For each event, use this structure:
+   - Date in asterisks: *YYYY-MM-DD* or *Month YYYY* for less specific dates
+   - Optional heading with ### (e.g., "### Project Kickoff")
+   - Event description (can be bullet points with - or paragraphs)
+   - Empty line
+   - Three dashes: ---
+   - Empty line
+
+EXAMPLE FORMAT:
+*2024-01-15*
+### Project Kickoff
+- Team assembly
+- Initial requirements gathering
+
+---
+
+*2024-02-01*
+### Design Phase
+UI/UX wireframes completed and system architecture finalized.
+
+---
+
+IMPORTANT: Always follow this exact structure. Use asterisks around dates, include the --- separator, and add empty lines before and after separators. Be concise and factual.`
             },
             {
               role: 'user',
-              content: `Create a timeline for: ${prompt}\n\nFormat each event as:\n*Date*\nEvent description\n\n---\n\nBe specific with dates when possible.`
+              content: `Create a timeline for: ${prompt}\n\nRemember to use the exact format with *dates*, optional ### headings, descriptions, and --- separators.`
             }
           ]
         })
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error?.message || 'API request failed');
+        const errorData = await response.json();
+        console.error('OpenRouter API Error:', errorData);
+
+        // Extract detailed error message
+        let errorMessage = 'API request failed';
+        if (errorData.error?.message) {
+          errorMessage = errorData.error.message;
+        } else if (errorData.message) {
+          errorMessage = errorData.message;
+        }
+
+        // Add metadata if available
+        if (errorData.metadata?.provider_name) {
+          errorMessage += ` (Provider: ${errorData.metadata.provider_name})`;
+        }
+
+        throw new Error(errorMessage);
       }
 
       const data = await response.json();
+      console.log('OpenRouter API Response:', data);
+
       const generatedContent = data.choices[0]?.message?.content;
 
       if (generatedContent) {
         onGenerate(generatedContent);
         onClose();
       } else {
-        throw new Error('No content generated');
+        throw new Error('No content generated from the AI model');
       }
     } catch (error) {
       console.error('AI Generation error:', error);
-      alert(`Failed to generate timeline: ${error.message}`);
+
+      // Provide more helpful error messages
+      let userMessage = error.message;
+
+      if (error.message.includes('insufficient_quota') || error.message.includes('credits')) {
+        userMessage = 'This model requires credits. Please add credits to your OpenRouter account or try a free model.';
+      } else if (error.message.includes('invalid_api_key') || error.message.includes('authentication')) {
+        userMessage = 'Invalid API key. Please check your OpenRouter API key.';
+      } else if (error.message.includes('model_not_found') || error.message.includes('not found')) {
+        userMessage = 'Model not available. Please try a different model.';
+      } else if (error.message.includes('rate_limit')) {
+        userMessage = 'Rate limit exceeded. Please wait a moment and try again.';
+      }
+
+      alert(`Failed to generate timeline: ${userMessage}`);
     } finally {
       setIsGenerating(false);
     }
@@ -142,17 +275,99 @@ const AIGenerateModal = ({ onClose, onGenerate }) => {
           {/* Model Selection */}
           <div>
             <label className="font-bold mb-2 block">AI Model</label>
-            <select
-              value={selectedModel}
-              onChange={(e) => setSelectedModel(e.target.value)}
-              className="w-full p-3 border-2 border-black dark:border-white rounded-lg bg-gray-50 dark:bg-gray-900 font-bold focus:outline-none focus:ring-4 focus:ring-purple-400"
-            >
-              {AI_MODELS.map(model => (
-                <option key={model.id} value={model.id}>
-                  {model.name} ({model.provider})
-                </option>
-              ))}
-            </select>
+            <div className="relative" ref={modelDropdownRef}>
+              <button
+                onClick={() => setIsModelDropdownOpen(!isModelDropdownOpen)}
+                disabled={isLoadingModels}
+                className="w-full p-3 border-2 border-black dark:border-white rounded-lg bg-gray-50 dark:bg-gray-900 font-bold focus:outline-none focus:ring-4 focus:ring-purple-400 flex items-center justify-between text-left disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <span className="truncate">{selectedModelDisplay}</span>
+                <ChevronDown size={20} className={`transition-transform ${isModelDropdownOpen ? 'rotate-180' : ''}`} />
+              </button>
+
+              {isModelDropdownOpen && !isLoadingModels && (
+                <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-gray-800 border-2 border-black dark:border-white shadow-[4px_4px_0px_#000] dark:shadow-[4px_4px_0px_#FFF] rounded-lg overflow-hidden z-50">
+                  {/* Search Input */}
+                  <div className="p-3 border-b-2 border-black dark:border-white">
+                    <div className="relative">
+                      <Search size={18} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                      <input
+                        type="text"
+                        placeholder="Search models..."
+                        value={modelSearch}
+                        onChange={(e) => setModelSearch(e.target.value)}
+                        className="w-full pl-10 pr-3 py-2 border-2 border-black dark:border-white rounded-lg bg-gray-50 dark:bg-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Model List */}
+                  <div className="max-h-64 overflow-y-auto">
+                    {filteredModels.length > 0 ? (
+                      <>
+                        {/* Free Models Section */}
+                        {filteredModels.some(m => m.free) && (
+                          <>
+                            <div className="px-3 py-2 bg-green-100 dark:bg-green-900 text-xs font-bold text-green-800 dark:text-green-200">
+                              FREE MODELS
+                            </div>
+                            {filteredModels.filter(m => m.free).map((model) => (
+                              <button
+                                key={model.id}
+                                onClick={() => {
+                                  setSelectedModel(model.id);
+                                  setIsModelDropdownOpen(false);
+                                  setModelSearch('');
+                                }}
+                                className={`w-full text-left px-4 py-3 hover:bg-purple-100 dark:hover:bg-purple-900 transition-colors border-b border-gray-200 dark:border-gray-700 ${selectedModel === model.id ? 'bg-purple-200 dark:bg-purple-800' : ''}`}
+                              >
+                                <div className="font-bold text-sm">{model.name}</div>
+                                <div className="text-xs text-gray-600 dark:text-gray-400">
+                                  {model.provider} • <span className="text-green-600 dark:text-green-400 font-bold">FREE</span>
+                                </div>
+                              </button>
+                            ))}
+                          </>
+                        )}
+
+                        {/* Premium Models Section */}
+                        {filteredModels.some(m => !m.free) && (
+                          <>
+                            <div className="px-3 py-2 bg-orange-100 dark:bg-orange-900 text-xs font-bold text-orange-800 dark:text-orange-200">
+                              PREMIUM MODELS
+                            </div>
+                            {filteredModels.filter(m => !m.free).map((model) => (
+                              <button
+                                key={model.id}
+                                onClick={() => {
+                                  setSelectedModel(model.id);
+                                  setIsModelDropdownOpen(false);
+                                  setModelSearch('');
+                                }}
+                                className={`w-full text-left px-4 py-3 hover:bg-purple-100 dark:hover:bg-purple-900 transition-colors border-b border-gray-200 dark:border-gray-700 ${selectedModel === model.id ? 'bg-purple-200 dark:bg-purple-800' : ''}`}
+                              >
+                                <div className="font-bold text-sm">{model.name}</div>
+                                <div className="text-xs text-gray-600 dark:text-gray-400">
+                                  {model.provider} • <span className="text-orange-600 dark:text-orange-400 font-bold">PAID</span>
+                                </div>
+                              </button>
+                            ))}
+                          </>
+                        )}
+                      </>
+                    ) : (
+                      <div className="px-4 py-6 text-center text-gray-500 dark:text-gray-400 text-sm">
+                        No models found
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+            <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+              {isLoadingModels ? 'Fetching latest models from OpenRouter...' : 'Free models available with API key • Premium models require credits'}
+            </p>
           </div>
 
           {/* Prompt Input */}
