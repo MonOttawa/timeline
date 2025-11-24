@@ -1,12 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { marked } from 'marked';
-import { Upload, Download, FileText, Palette, Save, FolderOpen, ChevronDown, Sparkles } from 'lucide-react';
+import { Upload, Download, FileText, Palette, Save, FolderOpen, ChevronDown, Sparkles, Layout } from 'lucide-react';
 import domtoimage from 'dom-to-image-more';
 import { useAuth } from '../contexts/AuthContext';
 import { pb } from '../lib/pocketbase';
 import AuthModal from './AuthModal';
 import SavedTimelinesModal from './SavedTimelinesModal';
 import AIGenerateModal from './AIGenerateModal';
+import TemplatesModal from './TemplatesModal';
 import { sampleTimelines } from '../data/sampleTimelines';
 
 const TimelineGenerator = ({ isDemoMode = false }) => {
@@ -36,6 +37,7 @@ const TimelineGenerator = ({ isDemoMode = false }) => {
   const [isSaving, setIsSaving] = useState(false);
   const [isLoadingTimelines, setIsLoadingTimelines] = useState(false);
   const [showAIModal, setShowAIModal] = useState(false);
+  const [showTemplatesModal, setShowTemplatesModal] = useState(false);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -270,6 +272,14 @@ const TimelineGenerator = ({ isDemoMode = false }) => {
     setMarkdownContent(generatedContent);
     parseMarkdown(generatedContent);
     setFileName('AI Generated Timeline.md');
+    setCurrentTimelineId(null); // Reset ID as this is a new "file"
+  };
+
+  const handleSelectTemplate = (template) => {
+    setMarkdownContent(template.content);
+    parseMarkdown(template.content);
+    setTimelineTitle(template.name);
+    setFileName(`${template.name}.md`);
     setCurrentTimelineId(null); // Reset ID as this is a new "file"
   };
 
@@ -508,6 +518,14 @@ const TimelineGenerator = ({ isDemoMode = false }) => {
               </div>
             )}
           </div>
+
+          <button
+            onClick={() => setShowTemplatesModal(true)}
+            className="inline-flex items-center gap-2 border-2 border-black dark:border-white font-bold py-3 px-6 bg-orange-400 text-black shadow-[4px_4px_0px_#000] dark:shadow-[4px_4px_0px_#FFF] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_#000] dark:hover:shadow-[6px_6px_0px_#FFF] transition-all rounded-lg"
+          >
+            <Layout size={20} />
+            Templates
+          </button>
 
           <button
             onClick={() => setShowAIModal(true)}
@@ -946,6 +964,13 @@ const TimelineGenerator = ({ isDemoMode = false }) => {
         <AIGenerateModal
           onClose={() => setShowAIModal(false)}
           onGenerate={handleAIGenerate}
+        />
+      )}
+
+      {showTemplatesModal && (
+        <TemplatesModal
+          onClose={() => setShowTemplatesModal(false)}
+          onSelectTemplate={handleSelectTemplate}
         />
       )}
     </div >
