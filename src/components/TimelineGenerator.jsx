@@ -87,15 +87,28 @@ const TimelineGenerator = ({ isDemoMode = false }) => {
   };
 
   const parseMarkdown = (markdownContent) => {
-    // Extract title from first line if it starts with #
+    // Extract title from first non-empty line if it starts with #
     let title = 'My Project Timeline';
     let contentToProcess = markdownContent;
 
     const lines = markdownContent.split('\n');
-    if (lines[0] && lines[0].trim().startsWith('#')) {
-      title = lines[0].replace(/^#+\s*/, '').trim();
-      // Remove the title line from content to process
-      contentToProcess = lines.slice(1).join('\n');
+
+    // Find first non-empty line
+    let titleLineIndex = -1;
+    for (let i = 0; i < lines.length; i++) {
+      const trimmedLine = lines[i].trim();
+      if (trimmedLine) {
+        if (trimmedLine.startsWith('#')) {
+          title = trimmedLine.replace(/^#+\s*/, '').trim();
+          titleLineIndex = i;
+        }
+        break; // Stop after first non-empty line
+      }
+    }
+
+    // Remove title line from content if found
+    if (titleLineIndex >= 0) {
+      contentToProcess = lines.slice(titleLineIndex + 1).join('\n');
     }
 
     setTimelineTitle(title);

@@ -137,8 +137,9 @@ const AIGenerateModal = ({ onClose, onGenerate }) => {
               role: 'system',
               content: `You are a helpful assistant that generates timeline content in markdown format. Follow this EXACT format:
 
-1. Start with an optional title using # (e.g., "# History of the Internet")
-2. For each event, use this structure:
+CRITICAL: Your response MUST start with a title line using # (e.g., "# History of Space Exploration")
+
+Then for each event, use this structure:
    - Date in asterisks: *YYYY-MM-DD* or *Month YYYY* for less specific dates
    - Optional heading with ### (e.g., "### Project Kickoff")
    - Event description (can be bullet points with - or paragraphs)
@@ -147,24 +148,30 @@ const AIGenerateModal = ({ onClose, onGenerate }) => {
    - Empty line
 
 EXAMPLE FORMAT:
-*2024-01-15*
-### Project Kickoff
-- Team assembly
-- Initial requirements gathering
+# History of the Internet
+
+*1969-10-29*
+### ARPANET
+The first message sent over ARPANET, precursor to the modern Internet.
 
 ---
 
-*2024-02-01*
-### Design Phase
-UI/UX wireframes completed and system architecture finalized.
+*1989-03-12*
+### World Wide Web
+Tim Berners-Lee proposes the World Wide Web project at CERN.
 
 ---
 
-IMPORTANT: Always follow this exact structure. Use asterisks around dates, include the --- separator, and add empty lines before and after separators. Be concise and factual.`
+IMPORTANT:
+1. ALWAYS start with a # title as the FIRST line
+2. Use asterisks around dates
+3. Include the --- separator between events
+4. Add empty lines before and after separators
+5. Be concise and factual`
             },
             {
               role: 'user',
-              content: `Create a timeline for: ${prompt}\n\nRemember to use the exact format with *dates*, optional ### headings, descriptions, and --- separators.`
+              content: `Create a timeline for: ${prompt}\n\nIMPORTANT: Start your response with a # title based on the topic, then include timeline events with *dates*, optional ### headings, descriptions, and --- separators.`
             }
           ]
         })
