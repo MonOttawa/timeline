@@ -12,10 +12,10 @@ const LandingPage = ({ onStart, onLogin, isLoggedIn, onShowLegal }) => {
                     <span className="bg-yellow-400 px-4 inline-block transform -rotate-1">Beautiful Timelines</span>
                 </h1>
                 <p className="text-xl md:text-2xl max-w-2xl mx-auto mb-8 text-gray-600 dark:text-gray-300 font-sans">
-                    Stop fighting with design tools. Write simple markdown, get a stunning timeline instantly.
+                    Skip the design tools. Write markdown, get a professional timeline in seconds.
                 </p>
                 <p className="text-lg max-w-xl mx-auto mb-12 text-gray-500 dark:text-gray-400 font-sans">
-                    Choose from 3 professional styles: Bauhaus, Neo-Brutalist, or Corporate
+                    Beautiful, export-ready styles from minimalist to handwritten
                 </p>
 
                 {isLoggedIn ? (
