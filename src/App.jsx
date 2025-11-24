@@ -4,7 +4,7 @@ import TimelineGenerator from './components/TimelineGenerator';
 import TermsAndPrivacy from './components/TermsAndPrivacy';
 import AuthModal from './components/AuthModal';
 import { Header } from './components/Header';
-import { useAuth } from './contexts/AuthContext';
+import { useAuth } from './hooks/useAuth';
 
 function App() {
   const { user, signOut } = useAuth();

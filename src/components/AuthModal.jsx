@@ -23,7 +23,7 @@ const AuthModal = ({ onClose, onSuccess }) => {
           throw new Error('Passwords do not match');
         }
 
-        const data = await pb.collection('users').create({
+        await pb.collection('users').create({
           email,
           password,
           passwordConfirm,

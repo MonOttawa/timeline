@@ -1,8 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { marked } from 'marked';
 import { Upload, Download, FileText, Palette, Save, FolderOpen, ChevronDown, Sparkles, Layout } from 'lucide-react';
 import domtoimage from 'dom-to-image-more';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../hooks/useAuth';
+import { sanitizeMarkdownHtml } from '../lib/sanitizeMarkdown';
 import { pb } from '../lib/pocketbase';
 import AuthModal from './AuthModal';
 import SavedTimelinesModal from './SavedTimelinesModal';
@@ -19,12 +21,21 @@ const TimelineGenerator = ({ isDemoMode = false }) => {
   const [timelineStyle, setTimelineStyle] = useState('bauhaus');
   const [exportFormat, setExportFormat] = useState('');
   const timelineRef = useRef(null);
-  const [isStyleDropdownOpen, setIsStyleDropdownOpen] = useState(false);
-  const styleDropdownRef = useRef(null);
-  const [isExportDropdownOpen, setIsExportDropdownOpen] = useState(false);
-  const exportDropdownRef = useRef(null);
+  const [isFileMenuOpen, setIsFileMenuOpen] = useState(false);
+  const [isCreateMenuOpen, setIsCreateMenuOpen] = useState(false);
+  const [isStyleMenuOpen, setIsStyleMenuOpen] = useState(false);
+  const [isSampleMenuOpen, setIsSampleMenuOpen] = useState(false);
+  const [isFileExportMenuOpen, setIsFileExportMenuOpen] = useState(false);
   const [isSampleDropdownOpen, setIsSampleDropdownOpen] = useState(false);
+  const [isExportDropdownOpen, setIsExportDropdownOpen] = useState(false);
+  const [isStyleDropdownOpen, setIsStyleDropdownOpen] = useState(false);
+  const fileMenuRef = useRef(null);
+  const createMenuRef = useRef(null);
+  const styleMenuRef = useRef(null);
   const sampleDropdownRef = useRef(null);
+  const exportDropdownRef = useRef(null);
+  const styleDropdownRef = useRef(null);
+  const [toolbarContainer, setToolbarContainer] = useState(null);
   const [editingEvent, setEditingEvent] = useState(null); // { index, field: 'date' | 'content' }
   const [hasLoadedDemo, setHasLoadedDemo] = useState(false);
 
@@ -39,16 +50,32 @@ const TimelineGenerator = ({ isDemoMode = false }) => {
   const [showAIModal, setShowAIModal] = useState(false);
   const [showTemplatesModal, setShowTemplatesModal] = useState(false);
 
+  // SVG arrow for dropdown buttons
+  const arrowSvg = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>';
+
+
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (styleDropdownRef.current && !styleDropdownRef.current.contains(event.target)) {
-        setIsStyleDropdownOpen(false);
+      if (fileMenuRef.current && !fileMenuRef.current.contains(event.target)) {
+        setIsFileMenuOpen(false);
+        setIsSampleMenuOpen(false);
+        setIsFileExportMenuOpen(false);
+      }
+      if (createMenuRef.current && !createMenuRef.current.contains(event.target)) {
+        setIsCreateMenuOpen(false);
+      }
+      if (styleMenuRef.current && !styleMenuRef.current.contains(event.target)) {
+        setIsStyleMenuOpen(false);
+      }
+      // New dropdowns
+      if (sampleDropdownRef.current && !sampleDropdownRef.current.contains(event.target)) {
+        setIsSampleDropdownOpen(false);
       }
       if (exportDropdownRef.current && !exportDropdownRef.current.contains(event.target)) {
         setIsExportDropdownOpen(false);
       }
-      if (sampleDropdownRef.current && !sampleDropdownRef.current.contains(event.target)) {
-        setIsSampleDropdownOpen(false);
+      if (styleDropdownRef.current && !styleDropdownRef.current.contains(event.target)) {
+        setIsStyleDropdownOpen(false);
       }
     };
 
@@ -56,6 +83,20 @@ const TimelineGenerator = ({ isDemoMode = false }) => {
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
+  }, []);
+
+  useEffect(() => {
+    if (!isFileMenuOpen) {
+      setIsSampleMenuOpen(false);
+      setIsFileExportMenuOpen(false);
+    }
+  }, [isFileMenuOpen]);
+
+  useEffect(() => {
+    if (typeof document === 'undefined') return undefined;
+    const slot = document.getElementById('header-toolbar-slot');
+    setToolbarContainer(slot);
+    return () => setToolbarContainer(null);
   }, []);
 
   // Auto-load sample timeline in demo mode
@@ -69,9 +110,6 @@ const TimelineGenerator = ({ isDemoMode = false }) => {
       setHasLoadedDemo(true);
     }
   }, [isDemoMode, hasLoadedDemo]);
-
-  // Custom arrow SVG for dropdowns
-  const arrowSvg = "data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E";
 
   const handleFileSelect = (event) => {
     const file = event.target.files[0];
@@ -128,9 +166,10 @@ const TimelineGenerator = ({ isDemoMode = false }) => {
         contentMarkdown = eventMarkdown.replace(dateMatch[0], '').trim();
       }
 
+      const htmlContent = marked.parse(contentMarkdown.trim());
       return {
         date,
-        content: marked.parse(contentMarkdown.trim())
+        content: sanitizeMarkdownHtml(htmlContent)
       };
     });
 
@@ -188,8 +227,8 @@ const TimelineGenerator = ({ isDemoMode = false }) => {
     if (field === 'date') {
       updatedEvents[index].date = value;
     } else if (field === 'content') {
-      // For content, we'll store as plain text and re-parse as markdown
-      updatedEvents[index].content = marked.parse(value);
+      const htmlContent = marked.parse(value);
+      updatedEvents[index].content = sanitizeMarkdownHtml(htmlContent);
     }
     setEvents(updatedEvents);
 
@@ -491,7 +530,11 @@ const TimelineGenerator = ({ isDemoMode = false }) => {
 
           <div className="relative" ref={sampleDropdownRef}>
             <button
-              onClick={() => setIsSampleDropdownOpen(!isSampleDropdownOpen)}
+              onClick={() => {
+                setIsSampleDropdownOpen(!isSampleDropdownOpen);
+                setIsExportDropdownOpen(false);
+                setIsStyleDropdownOpen(false);
+              }}
               style={{
                 backgroundImage: `url("${arrowSvg}")`,
                 backgroundRepeat: 'no-repeat',
@@ -560,7 +603,11 @@ const TimelineGenerator = ({ isDemoMode = false }) => {
             <>
               <div className="relative" ref={exportDropdownRef}>
                 <button
-                  onClick={() => setIsExportDropdownOpen(!isExportDropdownOpen)}
+                  onClick={() => {
+                    setIsExportDropdownOpen(!isExportDropdownOpen);
+                    setIsSampleDropdownOpen(false);
+                    setIsStyleDropdownOpen(false);
+                  }}
                   style={{
                     backgroundImage: `url("${arrowSvg}")`,
                     backgroundRepeat: 'no-repeat',
@@ -607,7 +654,11 @@ const TimelineGenerator = ({ isDemoMode = false }) => {
 
               <div className="relative" ref={styleDropdownRef}>
                 <button
-                  onClick={() => setIsStyleDropdownOpen(!isStyleDropdownOpen)}
+                  onClick={() => {
+                    setIsStyleDropdownOpen(!isStyleDropdownOpen);
+                    setIsSampleDropdownOpen(false);
+                    setIsExportDropdownOpen(false);
+                  }}
                   style={{
                     backgroundImage: `url("${arrowSvg}")`,
                     backgroundRepeat: 'no-repeat',
