@@ -854,7 +854,7 @@ const TimelineGenerator = ({ isDemoMode = false }) => {
                     <div className="absolute left-[7.3rem] top-8 w-3 h-3 bg-slate-600 dark:bg-slate-500 rounded-full z-10 ring-4 ring-white dark:ring-gray-800"></div>
 
                     {/* Content Container - positioned above dot */}
-                    <div className="flex flex-col gap-1">
+                    <div className="flex flex-col gap-0">
 
                       {/* Event Title - using purple color from old label */}
                       {editingEvent?.index === index && editingEvent?.field === 'content' ? (
