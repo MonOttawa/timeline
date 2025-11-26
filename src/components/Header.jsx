@@ -42,13 +42,13 @@ export const Header = ({
             <div className="max-w-7xl mx-auto">
                 <div className="flex flex-wrap md:flex-nowrap items-center gap-4">
                     <div
-                        className="flex items-center cursor-pointer"
+                        className="flex items-center cursor-pointer bg-white dark:bg-gray-800 border-2 border-black dark:border-white rounded-lg px-4 py-2 shadow-[4px_4px_0px_#000] dark:shadow-[4px_4px_0px_#FFF] hover:shadow-[6px_6px_0px_#000] dark:hover:shadow-[6px_6px_0px_#FFF] hover:translate-x-[-2px] hover:translate-y-[-2px] transition-all"
                         onClick={onNavigateHome}
                     >
                         <img
                             src={logo}
                             alt="Markdown Timeline logo"
-                            className="h-[60px] md:h-[70px] w-auto"
+                            className="h-[32px] md:h-[36px] w-auto"
                         />
                     </div>
 
