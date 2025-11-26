@@ -8,20 +8,20 @@ const LandingPage = ({ onStart, onLogin, isLoggedIn, onShowLegal }) => {
             {/* Hero */}
             <header className="py-24 text-center">
                 <h1 className="text-5xl md:text-7xl font-black mb-6 leading-tight uppercase font-display">
-                    Turn Markdown into <br />
-                    <span className="bg-yellow-400 px-4 inline-block transform -rotate-1">Beautiful Timelines</span>
+                    Markdown Timelines <br />
+                    <span className="bg-yellow-400 px-4 inline-block transform -rotate-1">+ AI Learning</span>
                 </h1>
                 <p className="text-xl md:text-2xl max-w-2xl mx-auto mb-8 text-gray-600 dark:text-gray-300 font-sans">
-                    Skip the design tools. Write markdown, get a professional timeline in seconds.
+                    Create beautiful timelines from markdown. Learn anything with AI-powered assistance.
                 </p>
                 <p className="text-lg max-w-xl mx-auto mb-12 text-gray-500 dark:text-gray-400 font-sans">
-                    Beautiful, export-ready styles from minimalist to handwritten
+                    Professional timeline styles + personalized learning sessions
                 </p>
 
                 {isLoggedIn ? (
                     <div className="flex justify-center gap-4">
                         <button onClick={onStart} className="bg-green-400 text-black !w-auto flex items-center gap-2 px-8 shadow-[4px_4px_0px_#000] dark:shadow-[4px_4px_0px_#FFF] border-2 border-black dark:border-white font-bold rounded-lg py-3 hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_#000] dark:hover:shadow-[6px_6px_0px_#FFF] transition-all">
-                            Go to Timeline <ArrowRight size={20} />
+                            Get Started <ArrowRight size={20} />
                         </button>
                     </div>
                 ) : (
@@ -82,25 +82,25 @@ const LandingPage = ({ onStart, onLogin, isLoggedIn, onShowLegal }) => {
 
             {/* Features */}
             <section className="py-16 text-black dark:text-white">
-                <h2 className="text-3xl md:text-4xl font-black text-center mb-12 font-display">Why Timeline.MD?</h2>
+                <h2 className="text-3xl md:text-4xl font-black text-center mb-12 font-display">Why Substantifique?</h2>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                     {/* Feature 1 */}
                     <div className="bg-white dark:bg-gray-800 p-8 border-4 border-black dark:border-white shadow-[8px_8px_0px_#000] dark:shadow-[8px_8px_0px_#FFF] rounded-lg">
                         <Zap size={48} className="mb-4 text-yellow-500" />
-                        <h3 className="text-xl font-bold mb-2 font-display">Lightning Fast</h3>
-                        <p>Upload your markdown file and see your timeline instantly. Live editing with real-time preview. No configuration needed.</p>
+                        <h3 className="text-xl font-bold mb-2 font-display">Beautiful Timelines</h3>
+                        <p>Transform markdown into professional timelines instantly. Choose from Bauhaus, Neo-Brutalist, or Corporate styles. Export as SVG or PNG.</p>
                     </div>
                     {/* Feature 2 */}
                     <div className="bg-white dark:bg-gray-800 p-8 border-4 border-black dark:border-white shadow-[8px_8px_0px_#000] dark:shadow-[8px_8px_0px_#FFF] rounded-lg">
                         <Layout size={48} className="mb-4 text-purple-500" />
-                        <h3 className="text-xl font-bold mb-2 font-display">3 Professional Styles</h3>
-                        <p>Bauhaus minimalism, bold Neo-Brutalist cards, or elegant Corporate design. Switch between styles instantly.</p>
+                        <h3 className="text-xl font-bold mb-2 font-display">AI Learning Assistant</h3>
+                        <p>Learn any topic with personalized AI tutoring. Interactive Q&A, custom study plans, and session history. Powered by advanced language models.</p>
                     </div>
                     {/* Feature 3 */}
                     <div className="bg-white dark:bg-gray-800 p-8 border-4 border-black dark:border-white shadow-[8px_8px_0px_#000] dark:shadow-[8px_8px_0px_#FFF] rounded-lg">
                         <Check size={48} className="mb-4 text-green-500" />
-                        <h3 className="text-xl font-bold mb-2 font-display">Export Ready</h3>
-                        <p>Download as SVG or convert to PNG. Perfect for presentations, social media, or documentation. Dark mode supported.</p>
+                        <h3 className="text-xl font-bold mb-2 font-display">Simple & Powerful</h3>
+                        <p>No account needed to try. Live editing with instant previews. Dark mode throughout. Export-ready outputs for any use case.</p>
                     </div>
                 </div>
             </section>
@@ -109,7 +109,7 @@ const LandingPage = ({ onStart, onLogin, isLoggedIn, onShowLegal }) => {
             <footer className="py-8 mt-16 border-t border-gray-200 dark:border-gray-700">
                 <div className="flex flex-col items-center gap-2 text-sm text-gray-500 dark:text-gray-400 text-center">
                     <div>
-                        <span className="font-semibold">Timeline.MD</span> &copy; 2025
+                        <span className="font-semibold">Substantifique</span> &copy; 2025
                     </div>
                     <button
                         onClick={onShowLegal}

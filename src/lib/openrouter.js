@@ -52,7 +52,37 @@ export const generateContent = async (apiKey, model, messages) => {
 
     if (!response.ok) {
         const errorData = await response.json();
-        let errorMessage = errorData.error?.message || errorData.message || 'API request failed';
+
+        // OpenRouter returns errors in this structure:
+        // { error: { message, code, type, metadata, provider } }
+        const error = errorData.error || errorData;
+
+        let errorMessage = error.message || 'API request failed';
+
+        // Add error code if available
+        if (error.code) {
+            errorMessage = `[${error.code}] ${errorMessage}`;
+        }
+
+        // Add provider-specific error if available
+        if (error.metadata?.raw) {
+            const providerError = error.metadata.raw;
+            if (providerError.error?.message) {
+                errorMessage += `\n\nProvider says: ${providerError.error.message}`;
+            }
+        }
+
+        // Add helpful suggestions based on error type
+        if (error.code === 'rate_limited' || errorMessage.includes('rate limit')) {
+            errorMessage += '\n\n💡 Tip: Try switching to a different free model in settings, or wait a few moments and retry.';
+        } else if (error.code === 'insufficient_credits' || errorMessage.includes('credits')) {
+            errorMessage += '\n\n💡 Tip: This model requires credits. Switch to a FREE model in settings (look for the green "FREE" badge).';
+        } else if (error.code === 'invalid_api_key' || errorMessage.includes('API key')) {
+            errorMessage += '\n\n💡 Tip: Check your API key in settings. Get a valid key at openrouter.ai/keys';
+        } else if (errorMessage.includes('model')) {
+            errorMessage += '\n\n💡 Tip: This model may be offline or unavailable. Try selecting a different model in settings.';
+        }
+
         throw new Error(errorMessage);
     }
 
