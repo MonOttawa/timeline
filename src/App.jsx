@@ -4,11 +4,13 @@ import TimelineGenerator from './components/TimelineGenerator';
 import TermsAndPrivacy from './components/TermsAndPrivacy';
 import AuthModal from './components/AuthModal';
 import { Header } from './components/Header';
+import { LearningAssistant } from './components/LearningAssistant';
 import { useAuth } from './hooks/useAuth';
 
 function App() {
   const { user, signOut } = useAuth();
   const [showApp, setShowApp] = useState(false);
+  const [showLearning, setShowLearning] = useState(false);
   const [showLegal, setShowLegal] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [theme, setTheme] = useState('light');
@@ -29,6 +31,7 @@ function App() {
   const handleLogout = async () => {
     await signOut();
     setShowApp(false);
+    setShowLearning(false);
     setIsDemoMode(false);
   };
 
@@ -46,6 +49,21 @@ function App() {
     setTheme(prev => prev === 'light' ? 'dark' : 'light');
   };
 
+  const handleNavigateHome = () => {
+    setShowApp(false);
+    setShowLearning(false);
+  };
+
+  const handleNavigateTimeline = () => {
+    setShowApp(true);
+    setShowLearning(false);
+  };
+
+  const handleNavigateLearning = () => {
+    setShowLearning(true);
+    setShowApp(false);
+  };
+
   return (
     <div className={`min-h-screen bg-white dark:bg-gray-800 text-black dark:text-white transition-colors duration-200`}>
       <Header
@@ -53,14 +71,17 @@ function App() {
         onToggleTheme={toggleTheme}
         userEmail={user?.email || null}
         onLogout={user ? handleLogout : null}
-        onNavigateHome={showApp ? () => setShowApp(false) : null}
-        onNavigateTimeline={!showApp && user ? () => setShowApp(true) : null}
+        onNavigateHome={showApp || showLearning ? handleNavigateHome : null}
+        onNavigateTimeline={(!showApp && user) || showLearning ? handleNavigateTimeline : null}
+        onNavigateLearning={!showLearning ? handleNavigateLearning : null}
         onLogin={!user ? handleLogin : null}
       />
 
       <main className="container mx-auto px-4 pb-12">
         {showLegal ? (
           <TermsAndPrivacy onBack={() => setShowLegal(false)} />
+        ) : showLearning ? (
+          <LearningAssistant />
         ) : !showApp ? (
           <LandingPage
             onStart={user ? () => setShowApp(true) : handleStartDemo}

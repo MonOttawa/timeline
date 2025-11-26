@@ -1,5 +1,5 @@
 import React from "react";
-import { ChartNoAxesGantt, Moon, Sun } from "lucide-react";
+import { ChartNoAxesGantt, Moon, Sun, Sparkles } from "lucide-react";
 import logo from "../assets/timelinelogo.svg";
 import { BurgerMenu } from "./BurgerMenu";
 
@@ -11,6 +11,7 @@ export const Header = ({
     onLogout,
     onNavigateHome,
     onNavigateTimeline,
+    onNavigateLearning,
     onLogin,
 }) => {
     const displayName =
@@ -60,6 +61,15 @@ export const Header = ({
                                 className="px-4 py-2 border-2 border-black dark:border-white bg-purple-300 text-black font-bold rounded-lg shadow-[4px_4px_0px_#000] dark:shadow-[4px_4px_0px_#FFF] hover:bg-black hover:text-purple-300 transition-all focus:outline-none focus:ring-4 focus:ring-yellow-400 focus:ring-offset-2"
                             >
                                 <ChartNoAxesGantt size={20} className="inline" /> Timeline
+                            </button>
+                        )}
+
+                        {onNavigateLearning && (
+                            <button
+                                onClick={onNavigateLearning}
+                                className="px-4 py-2 border-2 border-black dark:border-white bg-pink-300 text-black font-bold rounded-lg shadow-[4px_4px_0px_#000] dark:shadow-[4px_4px_0px_#FFF] hover:bg-black hover:text-pink-300 transition-all focus:outline-none focus:ring-4 focus:ring-yellow-400 focus:ring-offset-2"
+                            >
+                                <Sparkles size={20} className="inline" /> Learning
                             </button>
                         )}
 
