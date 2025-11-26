@@ -1,6 +1,6 @@
 import React from "react";
 import { ChartNoAxesGantt, Moon, Sun, Sparkles } from "lucide-react";
-import logo from "../assets/timelinelogo.svg";
+import logo from "../assets/substantifique-logo.png";
 import { BurgerMenu } from "./BurgerMenu";
 
 export const Header = ({
