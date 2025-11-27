@@ -24,7 +24,7 @@ This guide assumes you have a Dokploy instance running and access to this GitHub
 #### Prerequisites
 1.  **Dokploy Account**: Access to your Dokploy dashboard.
 2.  **GitHub Account**: Your GitHub account connected to Dokploy.
-3.  **PocketBase URL**: The URL of your live PocketBase instance (e.g., `https://timelinedb.rosehilltech.com`).
+3.  **PocketBase URL**: The URL of your live PocketBase instance (e.g., `https://substantifique.rosehilltech.com`).
 
 #### Step 1: Create Application
 1.  Go to your Dokploy Dashboard.
@@ -57,7 +57,7 @@ Switch to the **Environment** tab.
 
 2.  **Environment Variables**:
     You will see a text area to enter variables. Enter them in `KEY=VALUE` format.
-    *   Enter: `VITE_POCKETBASE_URL=https://timelinedb.rosehilltech.com`
+    *   Enter: `VITE_POCKETBASE_URL=https://substantifique.rosehilltech.com`
     *   Click **"Save"**.
 
 #### Step 4: Configure Domain (Domains Tab)
@@ -65,7 +65,7 @@ Switch to the **Domains** tab to make your site accessible via a URL.
 
 1.  Click **"Add Domain"**.
 2.  Fill in the fields exactly as follows:
-    *   **Host**: Enter your domain (e.g., `timeline.rosehilltech.com`).
+    *   **Host**: Enter your domain (e.g., `substantifique.rosehilltech.com`).
     *   **Path**: Enter `/`.
     *   **Internal Path**: Enter `/` (defaults to `/`).
     *   **Container Port**: Enter `80`.
