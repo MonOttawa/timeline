@@ -5,6 +5,7 @@ import TermsAndPrivacy from './components/TermsAndPrivacy';
 import AuthModal from './components/AuthModal';
 import { Header } from './components/Header';
 import { LearningAssistant } from './components/LearningAssistant';
+import PublicTimeline from './components/PublicTimeline';
 import { useAuth } from './hooks/useAuth';
 
 function App() {
@@ -15,6 +16,7 @@ function App() {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [theme, setTheme] = useState('light');
   const [isDemoMode, setIsDemoMode] = useState(false);
+  const [publicSlug, setPublicSlug] = useState(null);
 
   useEffect(() => {
     if (theme === 'dark') {
@@ -23,6 +25,15 @@ function App() {
       document.documentElement.classList.remove('dark');
     }
   }, [theme]);
+
+  // Check for public timeline URL on mount
+  useEffect(() => {
+    const path = window.location.pathname;
+    const match = path.match(/^\/timeline\/([^/]+)$/);
+    if (match) {
+      setPublicSlug(match[1]);
+    }
+  }, []);
 
   const handleLogin = () => {
     setShowAuthModal(true);
@@ -78,7 +89,16 @@ function App() {
       />
 
       <main className="container mx-auto px-4 pb-12">
-        {showLegal ? (
+        {publicSlug ? (
+          <PublicTimeline
+            slug={publicSlug}
+            onCreateOwn={() => {
+              setPublicSlug(null);
+              window.history.pushState({}, '', '/');
+              setShowApp(false);
+            }}
+          />
+        ) : showLegal ? (
           <TermsAndPrivacy onBack={() => setShowLegal(false)} />
         ) : showLearning ? (
           <LearningAssistant />

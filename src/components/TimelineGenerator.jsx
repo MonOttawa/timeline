@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { marked } from 'marked';
-import { Upload, Download, FileText, Palette, Save, FolderOpen, ChevronDown, Sparkles, Layout } from 'lucide-react';
+import { Upload, Download, FileText, Palette, Save, FolderOpen, ChevronDown, Sparkles, Layout, Share2 } from 'lucide-react';
 import domtoimage from 'dom-to-image-more';
 import { useAuth } from '../hooks/useAuth';
 import { sanitizeMarkdownHtml } from '../lib/sanitizeMarkdown';
@@ -10,6 +10,8 @@ import AuthModal from './AuthModal';
 import SavedTimelinesModal from './SavedTimelinesModal';
 import AIGenerateModal from './AIGenerateModal';
 import TemplatesModal from './TemplatesModal';
+import ShareModal from './ShareModal';
+import { slugify, makeUniqueSlug } from '../lib/slugify';
 import { sampleTimelines } from '../data/sampleTimelines';
 
 const TimelineGenerator = ({ isDemoMode = false }) => {
@@ -49,6 +51,12 @@ const TimelineGenerator = ({ isDemoMode = false }) => {
   const [isLoadingTimelines, setIsLoadingTimelines] = useState(false);
   const [showAIModal, setShowAIModal] = useState(false);
   const [showTemplatesModal, setShowTemplatesModal] = useState(false);
+
+  // Sharing state
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [isPublic, setIsPublic] = useState(false);
+  const [currentSlug, setCurrentSlug] = useState('');
+  const [viewCount, setViewCount] = useState(0);
 
   // SVG arrow for dropdown buttons
   const arrowSvg = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>';
@@ -275,6 +283,23 @@ const TimelineGenerator = ({ isDemoMode = false }) => {
         style: timelineStyle,
       };
 
+      // Generate slug for new timelines
+      if (!currentTimelineId && !currentSlug) {
+        const baseSlug = slugify(timelineTitle);
+        const uniqueSlug = makeUniqueSlug(baseSlug);
+        data.slug = uniqueSlug;
+        data.public = false;
+        data.viewCount = 0;
+        setCurrentSlug(uniqueSlug);
+        setIsPublic(false);
+        setViewCount(0);
+      } else if (currentSlug) {
+        // Keep existing slug and public status
+        data.slug = currentSlug;
+        data.public = isPublic;
+        data.viewCount = viewCount;
+      }
+
       let record;
       if (currentTimelineId) {
         record = await pb.collection('timelines').update(currentTimelineId, data);
@@ -282,6 +307,11 @@ const TimelineGenerator = ({ isDemoMode = false }) => {
         record = await pb.collection('timelines').create(data);
         setCurrentTimelineId(record.id);
       }
+
+      // Update state with saved data
+      if (record.slug) setCurrentSlug(record.slug);
+      if (typeof record.public !== 'undefined') setIsPublic(record.public);
+      if (typeof record.viewCount !== 'undefined') setViewCount(record.viewCount);
 
       // Show simple success feedback (could be a toast in a real app)
       const originalTitle = timelineTitle;
@@ -354,6 +384,10 @@ const TimelineGenerator = ({ isDemoMode = false }) => {
     setTimelineTitle(record.title);
     setTimelineStyle(record.style || 'bauhaus');
     setCurrentTimelineId(record.id);
+    // Load sharing state
+    setCurrentSlug(record.slug || '');
+    setIsPublic(record.public || false);
+    setViewCount(record.viewCount || 0);
     setShowSavedTimelines(false);
   };
 
@@ -367,6 +401,29 @@ const TimelineGenerator = ({ isDemoMode = false }) => {
     } catch (error) {
       console.error('Error deleting timeline:', error);
       alert('Failed to delete timeline.');
+    }
+  };
+
+  // Sharing Functions
+  const handleTogglePublic = async () => {
+    if (!currentTimelineId) return;
+
+    setIsSaving(true);
+    try {
+      const newPublicStatus = !isPublic;
+      const record = await pb.collection('timelines').update(currentTimelineId, {
+        public: newPublicStatus
+      });
+
+      setIsPublic(newPublicStatus);
+      if (typeof record.viewCount !== 'undefined') {
+        setViewCount(record.viewCount);
+      }
+    } catch (error) {
+      console.error('Error toggling public status:', error);
+      alert('Failed to update sharing settings.');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -596,6 +653,16 @@ const TimelineGenerator = ({ isDemoMode = false }) => {
                 <FolderOpen size={20} />
                 My Files
               </button>
+
+              {currentTimelineId && (
+                <button
+                  onClick={() => setShowShareModal(true)}
+                  className="inline-flex items-center gap-2 border-2 border-black dark:border-white font-bold py-3 px-6 bg-cyan-400 text-black shadow-[4px_4px_0px_#000] dark:shadow-[4px_4px_0px_#FFF] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_#000] dark:hover:shadow-[6px_6px_0px_#FFF] transition-all rounded-lg"
+                >
+                  <Share2 size={20} />
+                  Share
+                </button>
+              )}
             </>
           )}
 
@@ -1022,6 +1089,18 @@ const TimelineGenerator = ({ isDemoMode = false }) => {
         <TemplatesModal
           onClose={() => setShowTemplatesModal(false)}
           onSelectTemplate={handleSelectTemplate}
+        />
+      )}
+
+      {showShareModal && (
+        <ShareModal
+          isOpen={showShareModal}
+          onClose={() => setShowShareModal(false)}
+          isPublic={isPublic}
+          onTogglePublic={handleTogglePublic}
+          shareUrl={currentSlug ? `${window.location.origin}/timeline/${currentSlug}` : ''}
+          viewCount={viewCount}
+          isSaving={isSaving}
         />
       )}
     </div >

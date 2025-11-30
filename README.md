@@ -17,6 +17,8 @@ If you are developing a production application, we recommend using TypeScript wi
 
 
 
+### [View Roadmap](./ROADMAP.md)
+
 ### Deploying to Dokploy (Beginner's Guide)
 
 This guide assumes you have a Dokploy instance running and access to this GitHub repository.
@@ -24,22 +26,22 @@ This guide assumes you have a Dokploy instance running and access to this GitHub
 #### Prerequisites
 1.  **Dokploy Account**: Access to your Dokploy dashboard.
 2.  **GitHub Account**: Your GitHub account connected to Dokploy.
-3.  **PocketBase URL**: The URL of your live PocketBase instance (e.g., `https://substantifique.rosehilltech.com`).
+3.  **PocketBase URL**: The URL of your live PocketBase instance (e.g., `https://substantifiquedb.rosehilltech.com`).
 
 #### Step 1: Create Application
 1.  Go to your Dokploy Dashboard.
 2.  Click on your Project.
 3.  Click **"Create Application"**.
 4.  Fill in the details:
-    *   **Name**: `timeline` (or any name you prefer)
-    *   **Description**: `Markdown Timeline Frontend`
+    *   **Name**: `substantifique` (or any name you prefer)
+    *   **Description**: `Substantifique - Markdown Timelines + AI Learning`
 
 #### Step 2: Configure Source (General Tab)
 Once the application is created, you will see the configuration tabs. Stay on the **General** tab.
 
 *   **Provider**: Select **GitHub**.
 *   **Github Account**: Select your connected GitHub account (e.g., `Dokploy` or your username).
-*   **Repository**: Select `timeline` (or `MonOttawa/timeline`).
+*   **Repository**: Select `substantifique` (or `MonOttawa/substantifique`).
 *   **Branch**: Select `main`.
 *   **Build Path**: Leave as `/` (this is the root directory of your project).
 *   **Trigger Type**: Select **On Push** (this ensures the app redeploys automatically when you push code changes).
@@ -57,7 +59,7 @@ Switch to the **Environment** tab.
 
 2.  **Environment Variables**:
     You will see a text area to enter variables. Enter them in `KEY=VALUE` format.
-    *   Enter: `VITE_POCKETBASE_URL=https://substantifique.rosehilltech.com`
+    *   Enter: `VITE_POCKETBASE_URL=https://substantifiquedb.rosehilltech.com`
     *   Click **"Save"**.
 
 #### Step 4: Configure Domain (Domains Tab)

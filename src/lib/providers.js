@@ -59,12 +59,23 @@ export const PROVIDERS = {
         requiresApiKey: true,
         hasFreeModels: true,
         format: 'gemini' // Uses Google-specific format
+    },
+    MOONSHOT: {
+        id: 'moonshot',
+        name: 'Z.AI (GLM)',
+        description: 'GLM-4.6 and other advanced models',
+        endpoint: 'https://api.z.ai/api/paas/v4',
+        docsUrl: 'https://docs.z.ai',
+        requiresApiKey: true,
+        hasFreeModels: false,
+        format: 'openai'
     }
 };
 
 // Get stored provider selection
 export const getSelectedProvider = () => {
-    return localStorage.getItem('ai_provider') || 'openrouter';
+    // Default to Z.AI - now using Coding API endpoint that works with Pro plan
+    return localStorage.getItem('ai_provider') || 'moonshot';
 };
 
 // Set provider selection
@@ -80,7 +91,8 @@ export const getProviderApiKey = (providerId) => {
         'cerebras': import.meta.env.VITE_CEREBRAS_API_KEY,
         'openai': import.meta.env.VITE_OPENAI_API_KEY,
         'anthropic': import.meta.env.VITE_ANTHROPIC_API_KEY,
-        'gemini': import.meta.env.VITE_GEMINI_API_KEY
+        'gemini': import.meta.env.VITE_GEMINI_API_KEY,
+        'moonshot': import.meta.env.VITE_MOONSHOT_API_KEY
     };
 
     return envKeys[providerId] || localStorage.getItem(`${providerId}_api_key`) || '';
@@ -130,6 +142,9 @@ export const getProviderClient = async (providerId) => {
         case 'gemini':
             const { default: GeminiClient } = await import('./providers/gemini.js');
             return new GeminiClient();
+        case 'moonshot':
+            const { default: MoonshotClient } = await import('./providers/moonshot.js');
+            return new MoonshotClient();
         default:
             throw new Error(`Unknown provider: ${providerId}`);
     }

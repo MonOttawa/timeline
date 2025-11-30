@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Sparkles, BookOpen, Brain, List, HelpCircle, Layers, ArrowRight, AlertTriangle, Settings, Key, X, Save, ChevronDown, Search, Edit2, Eye, FolderPlus, History, Trash2, Calendar } from 'lucide-react';
+import { Sparkles, BookOpen, Brain, List, HelpCircle, Layers, ArrowRight, AlertTriangle, Settings, Key, X, Save, ChevronDown, Search, Edit2, Eye, FolderPlus, History, Trash2, Calendar, GraduationCap } from 'lucide-react';
 import { marked } from 'marked';
 import { PROVIDERS, getSelectedProvider, setSelectedProvider, getProviderApiKey, setProviderApiKey, getProviderModel, setProviderModel, getProviderClient } from '../lib/providers';
 import { sanitizeMarkdownHtml } from '../lib/sanitizeMarkdown';
@@ -24,6 +24,14 @@ export const LearningAssistant = () => {
     const [showHistory, setShowHistory] = useState(false);
     const [historyItems, setHistoryItems] = useState([]);
     const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+
+    // Interactive Mode State
+    const [flashcardIndex, setFlashcardIndex] = useState(0);
+    const [isFlipped, setIsFlipped] = useState(false);
+    const [quizState, setQuizState] = useState({
+        answers: {}, // questionIndex -> selectedOptionIndex
+        showResults: false
+    });
 
     // Provider Settings State
     const [selectedProvider, setSelectedProviderState] = useState(getSelectedProvider());
@@ -146,6 +154,42 @@ export const LearningAssistant = () => {
         setError('');
     };
 
+    const checkCache = async (mode, topic) => {
+        try {
+            // Normalize topic for better cache hits (lowercase, trimmed)
+            const normalizedTopic = topic.trim().toLowerCase();
+
+            const records = await pb.collection('learning_cache').getList(1, 1, {
+                filter: `topic = "${normalizedTopic}" && mode = "${mode}"`,
+                sort: '-created'
+            });
+
+            if (records.items.length > 0) {
+                console.log('Cache hit!');
+                return records.items[0].content;
+            }
+        } catch (err) {
+            // If collection doesn't exist or other error, just ignore and proceed to AI
+            console.warn('Cache lookup failed:', err);
+        }
+        return null;
+    };
+
+    const saveToCache = async (mode, topic, content) => {
+        try {
+            const normalizedTopic = topic.trim().toLowerCase();
+
+            await pb.collection('learning_cache').create({
+                topic: normalizedTopic,
+                mode: mode,
+                content: content
+            });
+            console.log('Saved to cache');
+        } catch (err) {
+            console.warn('Failed to save to cache:', err);
+        }
+    };
+
     const handleAction = async (mode) => {
         if (!topic.trim()) return;
 
@@ -172,14 +216,74 @@ export const LearningAssistant = () => {
         setIsEditing(false);
         setSaveSuccess(false);
 
+        // Reset interactive states
+        setFlashcardIndex(0);
+        setIsFlipped(false);
+        setQuizState({ answers: {}, showResults: false });
+
+        // Try cache first
+        try {
+            const cachedContent = await checkCache(mode, topic);
+            if (cachedContent) {
+                setResult(cachedContent);
+                setLoading(false);
+                return;
+            }
+        } catch (e) {
+            console.warn('Cache check error', e);
+        }
+
         try {
             const PROMPTS = {
                 explain: (t) => `Explain "${t}" to me like I'm 12 years old. Use simple analogies and clear language. Keep it under 200 words.`,
                 summary: (t) => `Provide a 5-point summary of "${t}". Format the output as a bulleted list. Keep each point concise.`,
-                flashcards: (t) => `Create 5 study flashcards for "${t}". Format them as "Q: [Question] \n A: [Answer]".`,
-                quiz: (t) => `Create a short 3-question multiple choice quiz about "${t}". Include the correct answer at the end of the quiz.`,
+                flashcards: (t) => `Create 5 study flashcards for "${t}". You MUST respond with a valid JSON object with this structure:
+{
+  "flashcards": [
+    {"question": "Question text", "answer": "Answer text"}
+  ]
+}`,
+                quiz: (t) => `Create a short 3-question multiple choice quiz about "${t}". You MUST respond with a valid JSON object with this structure:
+{
+  "quiz": [
+    {
+      "question": "Question text",
+      "options": ["Option A", "Option B", "Option C", "Option D"],
+      "correctAnswer": "The full text of the correct option"
+    }
+  ]
+}`,
                 missing: (t) => `What are some key concepts or nuances about "${t}" that people often miss or misunderstand? Provide 3 distinct points.`,
-                stepByStep: (t) => `Provide a step-by-step guide to learning or mastering "${t}". Break it down into 5 actionable steps.`
+                stepByStep: (t) => `Provide a step-by-step guide to learning or mastering "${t}". Break it down into 5 actionable steps.`,
+                deepDive: (t) => `Provide a comprehensive deep dive on "${t}". You MUST respond with a valid JSON object with the following structure:
+
+{
+  "eli5": "Simple explanation using analogies (2-3 sentences)",
+  "keyConcepts": [
+    {"concept": "Concept name", "explanation": "Brief explanation"}
+  ],
+  "buzzwords": [
+    {"term": "Term", "definition": "Definition"}
+  ],
+  "misconceptions": [
+    {"misconception": "Common misconception", "reality": "The actual truth"}
+  ],
+  "pathToMastery": [
+    {"step": "Step description", "focus": "What to focus on"}
+  ],
+  "books": [
+    {"title": "Book Title", "author": "Author Name", "description": "Brief description of why this book is essential"}
+  ],
+  "experts": [
+    {"name": "Expert Name", "expertise": "What they're known for"}
+  ]
+}
+
+IMPORTANT: 
+- Include 5-7 books in the "books" array
+- Ensure all JSON is valid and properly escaped
+- Do not include any text outside the JSON object
+- Make sure to close all brackets and braces properly`
             };
 
             const messages = [
@@ -196,6 +300,9 @@ export const LearningAssistant = () => {
             const client = await getProviderClient(selectedProvider);
             const content = await client.generateContent(currentKey, currentModel, messages);
             setResult(content);
+
+            // Save to cache in background
+            saveToCache(mode, topic, content);
         } catch (err) {
             setError(err.message);
             if (err.message.includes('API key')) {
@@ -204,6 +311,111 @@ export const LearningAssistant = () => {
         } finally {
             setLoading(false);
         }
+    };
+
+    const handleNextCard = (total) => {
+        if (flashcardIndex < total - 1) {
+            setFlashcardIndex(flashcardIndex + 1);
+            setIsFlipped(false);
+        }
+    };
+
+    const handlePrevCard = () => {
+        if (flashcardIndex > 0) {
+            setFlashcardIndex(flashcardIndex - 1);
+            setIsFlipped(false);
+        }
+    };
+
+    const handleQuizAnswer = (questionIndex, optionIndex) => {
+        setQuizState(prev => ({
+            ...prev,
+            answers: {
+                ...prev.answers,
+                [questionIndex]: optionIndex
+            }
+        }));
+    };
+
+    const handleRateCard = async (rating) => {
+        if (!user) return;
+
+        try {
+            const cleanResult = result.replace(/```json\n?|```/g, '').trim();
+            const json = JSON.parse(cleanResult);
+            const cards = json.flashcards || [];
+            const card = cards[flashcardIndex];
+
+            // Simple deterministic ID
+            const cardId = btoa(unescape(encodeURIComponent(`${topic}-${card.question}`))).substring(0, 15);
+
+            await pb.collection('flashcard_reviews').create({
+                user: user.id,
+                topic: topic,
+                card_id: cardId,
+                rating: rating,
+                reviewed_at: new Date().toISOString()
+            });
+            console.log('Review saved');
+        } catch (e) {
+            console.warn('Failed to save review', e);
+        }
+
+        // Move to next card
+        const total = JSON.parse(result.replace(/```json\n?|```/g, '').trim()).flashcards.length;
+        handleNextCard(total);
+    };
+
+    const handleToggleEdit = () => {
+        if (!isEditing && activeMode === 'deepDive') {
+            try {
+                // Clean markdown code blocks if present
+                const cleanResult = result.replace(/```json\n?|```/g, '').trim();
+                const json = JSON.parse(cleanResult);
+
+                // Convert JSON to Markdown for editing
+                let md = `# Deep Dive: ${topic}\n\n`;
+                md += `## ELI5\n${json.eli5}\n\n`;
+
+                md += `## Key Concepts\n`;
+                json.keyConcepts.forEach(item => {
+                    md += `### ${item.concept}\n${item.explanation}\n\n`;
+                });
+
+                md += `## Buzzwords\n`;
+                json.buzzwords.forEach(item => {
+                    md += `**${item.term}**: ${item.definition}\n\n`;
+                });
+
+                md += `## Common Misconceptions\n`;
+                json.misconceptions.forEach(item => {
+                    md += `**Misconception**: ${item.misconception}\n`;
+                    md += `**Reality**: ${item.reality}\n\n`;
+                });
+
+                md += `## Path to Mastery\n`;
+                json.pathToMastery.forEach((item, i) => {
+                    md += `${i + 1}. **${item.step}**: ${item.focus}\n`;
+                });
+                md += `\n`;
+
+                md += `## Recommended Books\n`;
+                json.books.forEach((book, i) => {
+                    md += `${i + 1}. **${book.title}** by *${book.author}*\n${book.description}\n\n`;
+                });
+
+                md += `## Known Experts\n`;
+                json.experts.forEach(expert => {
+                    md += `- **${expert.name}**: ${expert.expertise}\n`;
+                });
+
+                setResult(md);
+            } catch (e) {
+                console.error('Failed to convert JSON to Markdown for editing', e);
+                // Fallback: just leave it as is (JSON string)
+            }
+        }
+        setIsEditing(!isEditing);
     };
 
     const handleSaveToFiles = async () => {
@@ -220,7 +432,8 @@ export const LearningAssistant = () => {
                     activeMode === 'flashcards' ? 'Study Cards' :
                         activeMode === 'quiz' ? 'Knowledge Check' :
                             activeMode === 'missing' ? 'Blind Spots' :
-                                activeMode === 'stepByStep' ? 'Action Plan' : 'Custom';
+                                activeMode === 'stepByStep' ? 'Action Plan' :
+                                    activeMode === 'deepDive' ? 'Deep Dive' : 'Custom';
 
             // Truncate topic if too long to prevent 400 errors (max 255 usually)
             const safeTopic = topic.length > 150 ? topic.substring(0, 150) + '...' : topic;
@@ -273,11 +486,236 @@ export const LearningAssistant = () => {
         ? `${selectedModelObj.name} (${selectedModelObj.provider})${selectedModelObj.free ? ' - FREE' : ''}`
         : selectedModel || 'Select a model';
 
-    // Render markdown safely
+
+    // Render content based on mode
     const renderContent = () => {
         if (!result) return null;
+
+        // Interactive Flashcards
+        if (activeMode === 'flashcards') {
+            try {
+                const cleanResult = result.replace(/```json\n?|```/g, '').trim();
+                const json = JSON.parse(cleanResult);
+                const cards = json.flashcards || [];
+
+                if (cards.length === 0) return <p>No flashcards found.</p>;
+
+                const card = cards[flashcardIndex];
+
+                return (
+                    <div className="flex flex-col items-center space-y-6">
+                        <div
+                            className="w-full max-w-xl h-80 perspective-1000 cursor-pointer group"
+                            onClick={() => setIsFlipped(!isFlipped)}
+                        >
+                            <div className={`relative w-full h-full transition-transform duration-500 transform-style-3d ${isFlipped ? 'rotate-y-180' : ''}`}>
+                                {/* Front */}
+                                <div className="absolute w-full h-full backface-hidden bg-white dark:bg-gray-800 border-4 border-black dark:border-white rounded-xl flex flex-col items-center justify-center p-8 text-center shadow-[8px_8px_0px_#000] dark:shadow-[8px_8px_0px_#FFF]">
+                                    <h3 className="text-xl font-bold text-gray-500 mb-4">Question {flashcardIndex + 1}/{cards.length}</h3>
+                                    <p className="text-2xl font-bold">{card.question}</p>
+                                    <p className="mt-8 text-sm text-gray-400 animate-pulse">(Click to flip)</p>
+                                </div>
+
+                                {/* Back */}
+                                <div className="absolute w-full h-full backface-hidden bg-purple-100 dark:bg-purple-900/30 border-4 border-purple-500 rounded-xl flex flex-col items-center justify-center p-8 text-center shadow-[8px_8px_0px_#000] dark:shadow-[8px_8px_0px_#FFF] rotate-y-180">
+                                    <h3 className="text-xl font-bold text-purple-500 mb-4">Answer</h3>
+                                    <p className="text-2xl font-bold">{card.answer}</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {isFlipped && (
+                            <div className="grid grid-cols-4 gap-2 w-full max-w-xl animate-in fade-in slide-in-from-bottom-4 duration-300">
+                                <button onClick={(e) => { e.stopPropagation(); handleRateCard(1); }} className="p-3 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 font-bold rounded-lg hover:bg-red-200 dark:hover:bg-red-900/50 border-2 border-red-200 dark:border-red-800">Again</button>
+                                <button onClick={(e) => { e.stopPropagation(); handleRateCard(2); }} className="p-3 bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 font-bold rounded-lg hover:bg-orange-200 dark:hover:bg-orange-900/50 border-2 border-orange-200 dark:border-orange-800">Hard</button>
+                                <button onClick={(e) => { e.stopPropagation(); handleRateCard(3); }} className="p-3 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 font-bold rounded-lg hover:bg-blue-200 dark:hover:bg-blue-900/50 border-2 border-blue-200 dark:border-blue-800">Good</button>
+                                <button onClick={(e) => { e.stopPropagation(); handleRateCard(4); }} className="p-3 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 font-bold rounded-lg hover:bg-green-200 dark:hover:bg-green-900/50 border-2 border-green-200 dark:border-green-800">Easy</button>
+                            </div>
+                        )}
+
+                        <div className="flex gap-4">
+                            <button
+                                onClick={() => handlePrevCard()}
+                                disabled={flashcardIndex === 0}
+                                className="px-6 py-2 font-bold border-2 border-black dark:border-white rounded-lg disabled:opacity-50 hover:bg-gray-100 dark:hover:bg-gray-800"
+                            >
+                                Previous
+                            </button>
+                            <button
+                                onClick={() => handleNextCard(cards.length)}
+                                disabled={flashcardIndex === cards.length - 1}
+                                className="px-6 py-2 font-bold bg-black text-white dark:bg-white dark:text-black border-2 border-black dark:border-white rounded-lg disabled:opacity-50 hover:translate-y-[-2px] transition-transform"
+                            >
+                                Next
+                            </button>
+                        </div>
+                    </div>
+                );
+            } catch (e) {
+                console.error('Flashcard parsing error', e);
+                return <div dangerouslySetInnerHTML={{ __html: sanitizeMarkdownHtml(marked.parse(result)) }} />;
+            }
+        }
+
+        // Interactive Quiz
+        if (activeMode === 'quiz') {
+            try {
+                const cleanResult = result.replace(/```json\n?|```/g, '').trim();
+                const json = JSON.parse(cleanResult);
+                const questions = json.quiz || [];
+
+                return (
+                    <div className="space-y-8">
+                        {questions.map((q, qIdx) => {
+                            const selected = quizState.answers[qIdx];
+
+                            return (
+                                <div key={qIdx} className="bg-white dark:bg-gray-800 border-4 border-black dark:border-white rounded-xl p-6 shadow-[4px_4px_0px_#000] dark:shadow-[4px_4px_0px_#FFF]">
+                                    <h3 className="text-xl font-bold mb-4">{qIdx + 1}. {q.question}</h3>
+                                    <div className="space-y-3">
+                                        {q.options.map((opt, optIdx) => {
+                                            let btnClass = "w-full text-left p-4 border-2 border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors font-medium";
+
+                                            if (selected !== undefined) {
+                                                if (opt === q.correctAnswer) {
+                                                    btnClass = "w-full text-left p-4 border-2 border-green-500 bg-green-100 dark:bg-green-900/30 rounded-lg font-bold text-green-700 dark:text-green-300";
+                                                } else if (selected === optIdx) {
+                                                    btnClass = "w-full text-left p-4 border-2 border-red-500 bg-red-100 dark:bg-red-900/30 rounded-lg font-bold text-red-700 dark:text-red-300";
+                                                } else {
+                                                    btnClass += " opacity-50";
+                                                }
+                                            }
+
+                                            return (
+                                                <button
+                                                    key={optIdx}
+                                                    onClick={() => handleQuizAnswer(qIdx, optIdx)}
+                                                    disabled={selected !== undefined}
+                                                    className={btnClass}
+                                                >
+                                                    {opt}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                    {selected !== undefined && (
+                                        <div className={`mt-4 p-3 rounded-lg font-bold ${q.options[selected] === q.correctAnswer ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                                            {q.options[selected] === q.correctAnswer ? '✅ Correct!' : `❌ Incorrect. The answer is: ${q.correctAnswer}`}
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })}
+                    </div>
+                );
+            } catch (e) {
+                console.error('Quiz parsing error', e);
+                return <div dangerouslySetInnerHTML={{ __html: sanitizeMarkdownHtml(marked.parse(result)) }} />;
+            }
+        }
+
+        // Check if this is a Deep Dive mode with JSON response
+        if (activeMode === 'deepDive') {
+            try {
+                // Clean the result of markdown code blocks if present
+                const cleanResult = result.replace(/```json\n?|```/g, '').trim();
+
+                // Try to parse as JSON
+                const jsonData = JSON.parse(cleanResult);
+
+                // Render structured Deep Dive content
+                return (
+                    <div className="space-y-6">
+                        <section>
+                            <h2 className="text-2xl font-bold mb-3 border-b-2 border-black dark:border-white pb-2">🧒 ELI5 (Explain Like I'm 5)</h2>
+                            <p className="text-lg">{jsonData.eli5}</p>
+                        </section>
+
+                        <section>
+                            <h2 className="text-2xl font-bold mb-3 border-b-2 border-black dark:border-white pb-2">🔑 Key Concepts</h2>
+                            <div className="space-y-3">
+                                {jsonData.keyConcepts.map((item, index) => (
+                                    <div key={index} className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border-2 border-blue-200 dark:border-blue-800">
+                                        <h3 className="font-bold text-lg mb-1">{item.concept}</h3>
+                                        <p>{item.explanation}</p>
+                                    </div>
+                                ))}
+                            </div>
+                        </section>
+
+                        <section>
+                            <h2 className="text-2xl font-bold mb-3 border-b-2 border-black dark:border-white pb-2">💬 Buzzwords & Definitions</h2>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                {jsonData.buzzwords.map((item, index) => (
+                                    <div key={index} className="bg-purple-50 dark:bg-purple-900/20 p-3 rounded-lg border-2 border-purple-200 dark:border-purple-800">
+                                        <h3 className="font-bold">{item.term}</h3>
+                                        <p className="text-sm">{item.definition}</p>
+                                    </div>
+                                ))}
+                            </div>
+                        </section>
+
+                        <section>
+                            <h2 className="text-2xl font-bold mb-3 border-b-2 border-black dark:border-white pb-2">❌ Common Misconceptions</h2>
+                            <div className="space-y-3">
+                                {jsonData.misconceptions.map((item, index) => (
+                                    <div key={index} className="bg-red-50 dark:bg-red-900/20 p-4 rounded-lg border-2 border-red-200 dark:border-red-800">
+                                        <h3 className="font-bold text-red-700 dark:text-red-300 mb-1">Misconception: {item.misconception}</h3>
+                                        <p className="text-green-700 dark:text-green-300"><strong>Reality:</strong> {item.reality}</p>
+                                    </div>
+                                ))}
+                            </div>
+                        </section>
+
+                        <section>
+                            <h2 className="text-2xl font-bold mb-3 border-b-2 border-black dark:border-white pb-2">🎯 Path to Mastery</h2>
+                            <div className="space-y-3">
+                                {jsonData.pathToMastery.map((item, idx) => (
+                                    <div key={idx} className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border-2 border-green-200 dark:border-green-800">
+                                        <h3 className="font-bold text-lg mb-1">Step {idx + 1}: {item.step}</h3>
+                                        <p className="text-sm"><strong>Focus:</strong> {item.focus}</p>
+                                    </div>
+                                ))}
+                            </div>
+                        </section>
+
+                        <section>
+                            <h2 className="text-2xl font-bold mb-3 border-b-2 border-black dark:border-white pb-2">📚 Recommended Books</h2>
+                            <div className="space-y-4">
+                                {jsonData.books.map((book, idx) => (
+                                    <div key={idx} className="bg-yellow-50 dark:bg-yellow-900/20 p-4 rounded-lg border-2 border-yellow-200 dark:border-yellow-800">
+                                        <h3 className="font-bold text-lg mb-1">{idx + 1}. {book.title}</h3>
+                                        <p className="text-sm italic mb-2">by {book.author}</p>
+                                        <p>{book.description}</p>
+                                    </div>
+                                ))}
+                            </div>
+                        </section>
+
+                        <section>
+                            <h2 className="text-2xl font-bold mb-3 border-b-2 border-black dark:border-white pb-2">👤 Known Experts</h2>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                {jsonData.experts.map((expert, index) => (
+                                    <div key={index} className="bg-cyan-50 dark:bg-cyan-900/20 p-3 rounded-lg border-2 border-cyan-200 dark:border-cyan-800">
+                                        <h3 className="font-bold">{expert.name}</h3>
+                                        <p className="text-sm">{expert.expertise}</p>
+                                    </div>
+                                ))}
+                            </div>
+                        </section>
+                    </div>
+                );
+            } catch (e) {
+                // If JSON parsing fails, fall back to markdown
+                console.error('Failed to parse Deep Dive JSON:', e);
+                const html = marked.parse(result);
+                return <div dangerouslySetInnerHTML={{ __html: sanitizeMarkdownHtml(html) }} />;
+            }
+        }
+
+        // For all other modes, use markdown
         const html = marked.parse(result);
-        return { __html: sanitizeMarkdownHtml(html) };
+        return <div dangerouslySetInnerHTML={{ __html: sanitizeMarkdownHtml(html) }} />;
     };
 
     return (
@@ -384,6 +822,15 @@ export const LearningAssistant = () => {
                     color="bg-orange-300"
                 />
             </div>
+            <div className="col-span-1 md:col-span-2">
+                <ActionButton
+                    icon={<GraduationCap />}
+                    label="Deep Dive (Complete Guide)"
+                    onClick={() => handleAction('deepDive')}
+                    disabled={!topic || loading}
+                    color="bg-cyan-300"
+                />
+            </div>
 
             {loading && (
                 <div className="text-center py-12">
@@ -402,6 +849,7 @@ export const LearningAssistant = () => {
                             {activeMode === 'quiz' && "Knowledge Check"}
                             {activeMode === 'missing' && "Blind Spots"}
                             {activeMode === 'stepByStep' && "Action Plan"}
+                            {activeMode === 'deepDive' && "Deep Dive"}
                         </h3>
                         <div className="flex gap-2">
                             {user && (
@@ -418,7 +866,7 @@ export const LearningAssistant = () => {
                                 </button>
                             )}
                             <button
-                                onClick={() => setIsEditing(!isEditing)}
+                                onClick={handleToggleEdit}
                                 className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors flex items-center gap-2 text-sm font-bold"
                             >
                                 {isEditing ? <><Eye size={18} /> View</> : <><Edit2 size={18} /> Edit</>}
@@ -433,10 +881,9 @@ export const LearningAssistant = () => {
                             className="w-full h-96 p-4 font-mono text-sm border-2 border-black dark:border-white rounded-lg bg-gray-50 dark:bg-gray-900 text-black dark:text-white focus:outline-none focus:ring-4 focus:ring-purple-400"
                         />
                     ) : (
-                        <div
-                            className="prose dark:prose-invert max-w-none text-lg font-medium"
-                            dangerouslySetInnerHTML={renderContent()}
-                        />
+                        <div className="prose dark:prose-invert max-w-none text-lg font-medium">
+                            {renderContent()}
+                        </div>
                     )}
                 </div>
             )}
