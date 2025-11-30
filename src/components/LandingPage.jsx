@@ -1,5 +1,6 @@
 import React from 'react';
 import { ArrowRight, Check, Zap, Layout, Upload, Palette, Download } from 'lucide-react';
+import packageJson from '../../package.json';
 
 
 const LandingPage = ({ onStart, onLogin, isLoggedIn, onShowLegal }) => {
@@ -110,6 +111,10 @@ const LandingPage = ({ onStart, onLogin, isLoggedIn, onShowLegal }) => {
                 <div className="flex flex-col items-center gap-2 text-sm text-gray-500 dark:text-gray-400 text-center">
                     <div>
                         <span className="font-semibold">Substantifique</span> &copy; 2025
+                        <span className="mx-2">•</span>
+                        <span className="font-mono text-xs">
+                            {import.meta.env?.VITE_COMMIT_HASH || 'dev'} @ {packageJson.version}
+                        </span>
                     </div>
                     <button
                         onClick={onShowLegal}
