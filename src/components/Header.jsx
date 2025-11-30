@@ -46,7 +46,7 @@ export const Header = ({
                         onClick={onNavigateHome}
                     >
                         <img
-                            src="/logo.png"
+                            src="/newlogo.png"
                             alt="Substantifique Logo"
                             className="h-[32px] md:h-[36px] w-auto"
                         />
