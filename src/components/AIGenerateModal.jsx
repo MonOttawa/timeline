@@ -1,141 +1,52 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { X, Sparkles, Key, MessageSquare, Search, ChevronDown } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, Sparkles, Settings, MessageSquare, ChevronDown } from 'lucide-react';
+import { PROVIDERS, getProviderClient, getProviderApiKey, getProviderModel } from '../lib/providers';
 
 const AIGenerateModal = ({ onClose, onGenerate }) => {
-  const [apiKey, setApiKey] = useState('');
+  const [selectedProvider, setSelectedProvider] = useState('openrouter');
   const [prompt, setPrompt] = useState('');
-  const [selectedModel, setSelectedModel] = useState('');
-  const [saveKey, setSaveKey] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [modelSearch, setModelSearch] = useState('');
-  const [isModelDropdownOpen, setIsModelDropdownOpen] = useState(false);
-  const [models, setModels] = useState([]);
-  const [isLoadingModels, setIsLoadingModels] = useState(true);
-  const modelDropdownRef = useRef(null);
+  const [isProviderDropdownOpen, setIsProviderDropdownOpen] = useState(false);
 
   useEffect(() => {
-    // Load saved API key if exists
-    const savedKey = localStorage.getItem('openrouter_api_key');
-    if (savedKey) {
-      setApiKey(savedKey);
-      setSaveKey(true);
-    }
+    // Set default provider to first one with API key configured
+    const configuredProvider = Object.keys(PROVIDERS).find(key => {
+      const provider = key.toLowerCase();
+      return getProviderApiKey(provider);
+    });
 
-    // Fetch available models from OpenRouter
-    fetchModels();
+    if (configuredProvider) {
+      setSelectedProvider(configuredProvider.toLowerCase());
+    }
   }, []);
 
-  const fetchModels = async () => {
-    setIsLoadingModels(true);
-    try {
-      const response = await fetch('https://openrouter.ai/api/v1/models');
-      const data = await response.json();
-
-      // Process and format models
-      const formattedModels = data.data.map(model => ({
-        id: model.id,
-        name: model.name || model.id.split('/').pop(),
-        provider: model.id.split('/')[0],
-        free: model.pricing?.prompt === '0' || model.id.includes(':free'),
-        contextLength: model.context_length,
-      }));
-
-      // Sort: free models first, then by provider
-      formattedModels.sort((a, b) => {
-        if (a.free !== b.free) return a.free ? -1 : 1;
-        return a.provider.localeCompare(b.provider);
-      });
-
-      setModels(formattedModels);
-
-      // Set default to first free model if available
-      const firstFree = formattedModels.find(m => m.free);
-      if (firstFree) {
-        setSelectedModel(firstFree.id);
-      } else if (formattedModels.length > 0) {
-        setSelectedModel(formattedModels[0].id);
-      }
-    } catch (error) {
-      console.error('Failed to fetch models:', error);
-      // Fallback to a basic model list if fetch fails
-      const fallbackModels = [
-        { id: 'meta-llama/llama-3.2-3b-instruct:free', name: 'Llama 3.2 3B Instruct', provider: 'Meta', free: true },
-        { id: 'google/gemini-flash-1.5', name: 'Gemini Flash 1.5', provider: 'Google', free: true },
-      ];
-      setModels(fallbackModels);
-      setSelectedModel(fallbackModels[0].id);
-    } finally {
-      setIsLoadingModels(false);
-    }
-  };
-
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (modelDropdownRef.current && !modelDropdownRef.current.contains(event.target)) {
-        setIsModelDropdownOpen(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, []);
-
-  // Filter models based on search
-  const filteredModels = models.filter(model => {
-    const searchLower = modelSearch.toLowerCase();
-    return (
-      model.name.toLowerCase().includes(searchLower) ||
-      model.provider.toLowerCase().includes(searchLower) ||
-      model.id.toLowerCase().includes(searchLower)
-    );
-  });
-
-  // Get selected model display name
-  const selectedModelObj = models.find(m => m.id === selectedModel);
-  const selectedModelDisplay = isLoadingModels
-    ? 'Loading models...'
-    : selectedModelObj
-      ? `${selectedModelObj.name} (${selectedModelObj.provider})${selectedModelObj.free ? ' - FREE' : ''}`
-      : 'Select a model';
+  const currentProvider = PROVIDERS[selectedProvider.toUpperCase()];
+  const hasApiKey = !!getProviderApiKey(selectedProvider);
+  const hasModel = !!getProviderModel(selectedProvider);
 
   const handleGenerate = async () => {
-    if (!apiKey.trim()) {
-      alert('Please enter your OpenRouter API key');
-      return;
-    }
     if (!prompt.trim()) {
       alert('Please enter a prompt describing your timeline');
+      return;
+    }
+
+    if (!hasApiKey) {
+      alert(`Please configure your ${currentProvider?.name || selectedProvider} API key in Settings first.`);
+      return;
+    }
+
+    if (!hasModel) {
+      alert(`Please select a model for ${currentProvider?.name || selectedProvider} in Settings.`);
       return;
     }
 
     setIsGenerating(true);
 
     try {
-      // Save API key if requested
-      if (saveKey) {
-        localStorage.setItem('openrouter_api_key', apiKey);
-      } else {
-        localStorage.removeItem('openrouter_api_key');
-      }
-
-      // Call OpenRouter API
-      const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
-          'HTTP-Referer': window.location.origin,
-          'X-Title': 'Timeline.MD'
-        },
-        body: JSON.stringify({
-          model: selectedModel,
-          messages: [
-            {
-              role: 'system',
-              content: `You are a helpful assistant that generates timeline content in markdown format. Follow this EXACT format:
+      const messages = [
+        {
+          role: 'system',
+          content: `You are a helpful assistant that generates timeline content in markdown format. Follow this EXACT format:
 
 CRITICAL: Your response MUST start with a title line using # (e.g., "# History of Space Exploration")
 
@@ -168,39 +79,18 @@ IMPORTANT:
 3. Include the --- separator between events
 4. Add empty lines before and after separators
 5. Be concise and factual`
-            },
-            {
-              role: 'user',
-              content: `Create a timeline for: ${prompt}\n\nIMPORTANT: Start your response with a # title based on the topic, then include timeline events with *dates*, optional ### headings, descriptions, and --- separators.`
-            }
-          ]
-        })
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error('OpenRouter API Error:', errorData);
-
-        // Extract detailed error message
-        let errorMessage = 'API request failed';
-        if (errorData.error?.message) {
-          errorMessage = errorData.error.message;
-        } else if (errorData.message) {
-          errorMessage = errorData.message;
+        },
+        {
+          role: 'user',
+          content: `Create a timeline for: ${prompt}\n\nIMPORTANT: Start your response with a # title based on the topic, then include timeline events with *dates*, optional ### headings, descriptions, and --- separators.`
         }
+      ];
 
-        // Add metadata if available
-        if (errorData.metadata?.provider_name) {
-          errorMessage += ` (Provider: ${errorData.metadata.provider_name})`;
-        }
+      const client = await getProviderClient(selectedProvider);
+      const apiKey = getProviderApiKey(selectedProvider);
+      const model = getProviderModel(selectedProvider);
 
-        throw new Error(errorMessage);
-      }
-
-      const data = await response.json();
-      console.log('OpenRouter API Response:', data);
-
-      const generatedContent = data.choices[0]?.message?.content;
+      const generatedContent = await client.generateContent(apiKey, model, messages);
 
       if (generatedContent) {
         onGenerate(generatedContent);
@@ -211,15 +101,14 @@ IMPORTANT:
     } catch (error) {
       console.error('AI Generation error:', error);
 
-      // Provide more helpful error messages
       let userMessage = error.message;
 
       if (error.message.includes('insufficient_quota') || error.message.includes('credits')) {
-        userMessage = 'This model requires credits. Please add credits to your OpenRouter account or try a free model.';
+        userMessage = 'This model requires credits. Please add credits to your account or try a different model/provider.';
       } else if (error.message.includes('invalid_api_key') || error.message.includes('authentication')) {
-        userMessage = 'Invalid API key. Please check your OpenRouter API key.';
+        userMessage = 'Invalid API key. Please check your API key in Settings.';
       } else if (error.message.includes('model_not_found') || error.message.includes('not found')) {
-        userMessage = 'Model not available. Please try a different model.';
+        userMessage = 'Model not available. Please select a different model in Settings.';
       } else if (error.message.includes('rate_limit')) {
         userMessage = 'Rate limit exceeded. Please wait a moment and try again.';
       }
@@ -249,133 +138,73 @@ IMPORTANT:
 
         {/* Content */}
         <div className="p-6 space-y-6">
-          {/* API Key Input */}
+          {/* Provider Selection */}
           <div>
-            <label className="flex items-center gap-2 font-bold mb-2">
-              <Key size={20} />
-              OpenRouter API Key
-            </label>
-            <input
-              type="password"
-              value={apiKey}
-              onChange={(e) => setApiKey(e.target.value)}
-              placeholder="sk-or-v1-..."
-              className="w-full p-3 border-2 border-black dark:border-white rounded-lg bg-gray-50 dark:bg-gray-900 font-mono text-sm focus:outline-none focus:ring-4 focus:ring-purple-400"
-            />
-            <div className="mt-2 flex items-center gap-2">
-              <input
-                type="checkbox"
-                id="saveKey"
-                checked={saveKey}
-                onChange={(e) => setSaveKey(e.target.checked)}
-                className="w-4 h-4"
-              />
-              <label htmlFor="saveKey" className="text-sm text-gray-600 dark:text-gray-400">
-                Save API key in browser (stored locally only)
-              </label>
-            </div>
-            <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-              Get your API key from <a href="https://openrouter.ai/keys" target="_blank" rel="noopener noreferrer" className="text-purple-500 hover:underline">openrouter.ai/keys</a>
-            </p>
-          </div>
-
-          {/* Model Selection */}
-          <div>
-            <label className="font-bold mb-2 block">AI Model</label>
-            <div className="relative" ref={modelDropdownRef}>
+            <label className="font-bold mb-2 block">AI Provider</label>
+            <div className="relative">
               <button
-                onClick={() => setIsModelDropdownOpen(!isModelDropdownOpen)}
-                disabled={isLoadingModels}
-                className="w-full p-3 border-2 border-black dark:border-white rounded-lg bg-gray-50 dark:bg-gray-900 font-bold focus:outline-none focus:ring-4 focus:ring-purple-400 flex items-center justify-between text-left disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={() => setIsProviderDropdownOpen(!isProviderDropdownOpen)}
+                className="w-full p-3 border-2 border-black dark:border-white rounded-lg bg-gray-50 dark:bg-gray-900 font-bold focus:outline-none focus:ring-4 focus:ring-purple-400 flex items-center justify-between text-left"
               >
-                <span className="truncate">{selectedModelDisplay}</span>
-                <ChevronDown size={20} className={`transition-transform ${isModelDropdownOpen ? 'rotate-180' : ''}`} />
+                <span className="flex items-center gap-2">
+                  {currentProvider?.name || selectedProvider}
+                  {!hasApiKey && <span className="text-xs text-red-500">(Not configured)</span>}
+                </span>
+                <ChevronDown size={20} className={`transition-transform ${isProviderDropdownOpen ? 'rotate-180' : ''}`} />
               </button>
 
-              {isModelDropdownOpen && !isLoadingModels && (
+              {isProviderDropdownOpen && (
                 <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-gray-800 border-2 border-black dark:border-white shadow-[4px_4px_0px_#000] dark:shadow-[4px_4px_0px_#FFF] rounded-lg overflow-hidden z-50">
-                  {/* Search Input */}
-                  <div className="p-3 border-b-2 border-black dark:border-white">
-                    <div className="relative">
-                      <Search size={18} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                      <input
-                        type="text"
-                        placeholder="Search models..."
-                        value={modelSearch}
-                        onChange={(e) => setModelSearch(e.target.value)}
-                        className="w-full pl-10 pr-3 py-2 border-2 border-black dark:border-white rounded-lg bg-gray-50 dark:bg-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
-                        onClick={(e) => e.stopPropagation()}
-                      />
-                    </div>
-                  </div>
+                  {Object.entries(PROVIDERS).map(([key, provider]) => {
+                    const providerKey = key.toLowerCase();
+                    const configured = !!getProviderApiKey(providerKey);
 
-                  {/* Model List */}
-                  <div className="max-h-64 overflow-y-auto">
-                    {filteredModels.length > 0 ? (
-                      <>
-                        {/* Free Models Section */}
-                        {filteredModels.some(m => m.free) && (
-                          <>
-                            <div className="px-3 py-2 bg-green-100 dark:bg-green-900 text-xs font-bold text-green-800 dark:text-green-200">
-                              FREE MODELS
-                            </div>
-                            {filteredModels.filter(m => m.free).map((model) => (
-                              <button
-                                key={model.id}
-                                onClick={() => {
-                                  setSelectedModel(model.id);
-                                  setIsModelDropdownOpen(false);
-                                  setModelSearch('');
-                                }}
-                                className={`w-full text-left px-4 py-3 hover:bg-purple-100 dark:hover:bg-purple-900 transition-colors border-b border-gray-200 dark:border-gray-700 ${selectedModel === model.id ? 'bg-purple-200 dark:bg-purple-800' : ''}`}
-                              >
-                                <div className="font-bold text-sm">{model.name}</div>
-                                <div className="text-xs text-gray-600 dark:text-gray-400">
-                                  {model.provider} • <span className="text-green-600 dark:text-green-400 font-bold">FREE</span>
-                                </div>
-                              </button>
-                            ))}
-                          </>
-                        )}
-
-                        {/* Premium Models Section */}
-                        {filteredModels.some(m => !m.free) && (
-                          <>
-                            <div className="px-3 py-2 bg-orange-100 dark:bg-orange-900 text-xs font-bold text-orange-800 dark:text-orange-200">
-                              PREMIUM MODELS
-                            </div>
-                            {filteredModels.filter(m => !m.free).map((model) => (
-                              <button
-                                key={model.id}
-                                onClick={() => {
-                                  setSelectedModel(model.id);
-                                  setIsModelDropdownOpen(false);
-                                  setModelSearch('');
-                                }}
-                                className={`w-full text-left px-4 py-3 hover:bg-purple-100 dark:hover:bg-purple-900 transition-colors border-b border-gray-200 dark:border-gray-700 ${selectedModel === model.id ? 'bg-purple-200 dark:bg-purple-800' : ''}`}
-                              >
-                                <div className="font-bold text-sm">{model.name}</div>
-                                <div className="text-xs text-gray-600 dark:text-gray-400">
-                                  {model.provider} • <span className="text-orange-600 dark:text-orange-400 font-bold">PAID</span>
-                                </div>
-                              </button>
-                            ))}
-                          </>
-                        )}
-                      </>
-                    ) : (
-                      <div className="px-4 py-6 text-center text-gray-500 dark:text-gray-400 text-sm">
-                        No models found
-                      </div>
-                    )}
-                  </div>
+                    return (
+                      <button
+                        key={key}
+                        onClick={() => {
+                          setSelectedProvider(providerKey);
+                          setIsProviderDropdownOpen(false);
+                        }}
+                        className={`w-full text-left px-4 py-3 hover:bg-purple-100 dark:hover:bg-purple-900 transition-colors border-b border-gray-200 dark:border-gray-700 ${selectedProvider === providerKey ? 'bg-purple-200 dark:bg-purple-800' : ''
+                          }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold">{provider.name}</span>
+                          {configured ? (
+                            <span className="text-xs text-green-600 dark:text-green-400 font-bold">✓ CONFIGURED</span>
+                          ) : (
+                            <span className="text-xs text-gray-400">Not set up</span>
+                          )}
+                        </div>
+                      </button>
+                    );
+                  })}
                 </div>
               )}
             </div>
-            <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-              {isLoadingModels ? 'Fetching latest models from OpenRouter...' : 'Free models available with API key • Premium models require credits'}
-            </p>
+
+            {!hasApiKey && (
+              <div className="mt-3 p-3 bg-yellow-50 dark:bg-yellow-900/20 border-2 border-yellow-400 rounded-lg">
+                <p className="text-sm font-bold text-yellow-800 dark:text-yellow-200 mb-2">
+                  ⚠️ Provider not configured
+                </p>
+                <p className="text-sm text-yellow-700 dark:text-yellow-300">
+                  Please configure your {currentProvider?.name || selectedProvider} API key and model in the Learning Assistant settings.
+                </p>
+              </div>
+            )}
           </div>
+
+          {/* Current Model Display */}
+          {hasApiKey && hasModel && (
+            <div className="p-3 bg-gray-50 dark:bg-gray-900 border-2 border-black dark:border-white rounded-lg">
+              <div className="text-sm">
+                <span className="font-bold">Model: </span>
+                <span className="font-mono text-xs">{getProviderModel(selectedProvider)}</span>
+              </div>
+            </div>
+          )}
 
           {/* Prompt Input */}
           <div>
@@ -393,6 +222,12 @@ IMPORTANT:
               Be specific about the topic, time period, and any key events you want included
             </p>
           </div>
+
+          {/* Settings Link */}
+          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+            <Settings size={16} />
+            <span>Configure providers in the Learning Assistant settings (⚙️ icon in header)</span>
+          </div>
         </div>
 
         {/* Footer */}
@@ -405,7 +240,7 @@ IMPORTANT:
           </button>
           <button
             onClick={handleGenerate}
-            disabled={isGenerating}
+            disabled={isGenerating || !hasApiKey || !hasModel}
             className="px-6 py-3 border-2 border-black dark:border-white font-bold rounded-lg bg-purple-400 text-black hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[4px_4px_0px_#000] dark:hover:shadow-[4px_4px_0px_#FFF] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >
             <Sparkles size={20} />

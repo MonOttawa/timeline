@@ -9,6 +9,8 @@
 - **PocketBase Integration**: Set up authentication and database persistence.
 - **Timeline Styles**: Implemented Bauhaus, Neo-Brutalist, Corporate, and Handwritten styles.
 
+- **Deep Dive Mode**: Implemented comprehensive learning mode with ELI5, Key Concepts, Buzzwords, Misconceptions, and Expert recommendations.
+
 ## 🚀 Upcoming Features (Todo)
 
 - [ ] **User Dashboard Enhancements**: Improved UI for managing multiple timelines.
@@ -25,9 +27,3 @@
 - **Interactive Presentations**: Presentation mode for showcasing timelines step-by-step.
 - **Integrations**: Connect with Notion, Trello, and Jira for auto-updating timelines.
 - **Backend Migration**: Migrate from PocketBase to Supabase for enhanced scalability and features.
-- **Premium Learning Mode**: "Deep Dive" mode where users enter a subject to receive a comprehensive breakdown including:
-    - Key concepts & Fundamentals
-    - Industry Buzzwords & Insights
-    - Common Misconceptions ("What people don't understand")
-    - ELI12 ("Explain like I'm 12") summaries
-    - *Goal: High-value content worth paying for.*

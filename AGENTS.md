@@ -17,6 +17,7 @@
 - Use Tailwind utility classes for layout; reserve custom CSS for app-wide tweaks in `App.css`.
 - Keep 2-space indentation, single-quoted strings, and descriptive prop names.
 - Run `npm run lint` prior to committing and prefer code fixes over disabling rules.
+- Design constraints: never use solid black buttons; rely on alternative background colors. When adding icons, use only the Lucide icon set.
 
 ## Testing Guidelines
 - No automated suite yet—exercise flows manually via `npm run dev`, covering auth, AI generation, templates, exports, and PocketBase sync.

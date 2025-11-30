@@ -6,17 +6,21 @@ import AuthModal from './components/AuthModal';
 import { Header } from './components/Header';
 import { LearningAssistant } from './components/LearningAssistant';
 import PublicTimeline from './components/PublicTimeline';
+import Dashboard from './components/Dashboard';
 import { useAuth } from './hooks/useAuth';
 
 function App() {
   const { user, signOut } = useAuth();
-  const [showApp, setShowApp] = useState(false);
-  const [showLearning, setShowLearning] = useState(false);
+  const [currentView, setCurrentView] = useState('landing'); // 'landing', 'dashboard', 'editor', 'learning'
   const [showLegal, setShowLegal] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [theme, setTheme] = useState('light');
   const [isDemoMode, setIsDemoMode] = useState(false);
   const [publicSlug, setPublicSlug] = useState(null);
+  const [publicRecordId, setPublicRecordId] = useState(null);
+  const [publicStyle, setPublicStyle] = useState(null);
+  const [embedMode, setEmbedMode] = useState(false);
+  const [editingTimeline, setEditingTimeline] = useState(null);
 
   useEffect(() => {
     if (theme === 'dark') {
@@ -29,11 +33,60 @@ function App() {
   // Check for public timeline URL on mount
   useEffect(() => {
     const path = window.location.pathname;
-    const match = path.match(/^\/timeline\/([^/]+)$/);
-    if (match) {
-      setPublicSlug(match[1]);
+    const timelineMatch = path.match(/^\/timeline\/([^/]+)\/?$/);
+    const embedMatch = path.match(/^\/embed\/([^/]+)\/?$/);
+    const params = new URLSearchParams(window.location.search);
+    const recordIdParam = params.get('rid');
+    const embedParam = params.get('embed');
+    const styleParamRaw = params.get('style');
+    const styleParam = styleParamRaw ? styleParamRaw.toLowerCase() : null;
+
+    if (timelineMatch) {
+      setPublicSlug(timelineMatch[1]);
+    } else if (embedMatch) {
+      setPublicSlug(embedMatch[1]);
+      setEmbedMode(true);
+    }
+
+    if (recordIdParam) {
+      setPublicRecordId(recordIdParam);
+    }
+
+    if (embedParam === '1') {
+      setEmbedMode(true);
+    }
+
+    if (styleParam) {
+      const allowed = ['bauhaus', 'neo-brutalist', 'corporate', 'handwritten'];
+      if (allowed.includes(styleParam)) {
+        setPublicStyle(styleParam);
+      }
     }
   }, []);
+
+  // Tweak page chrome for embeds (transparent background, no overflow tweaks)
+  useEffect(() => {
+    if (embedMode) {
+      const originalBodyBg = document.body.style.backgroundColor;
+      const originalHtmlBg = document.documentElement.style.backgroundColor;
+      document.body.style.backgroundColor = 'transparent';
+      document.documentElement.style.backgroundColor = 'transparent';
+      return () => {
+        document.body.style.backgroundColor = originalBodyBg;
+        document.documentElement.style.backgroundColor = originalHtmlBg;
+      };
+    }
+    return undefined;
+  }, [embedMode]);
+
+  // Redirect to dashboard on login
+  useEffect(() => {
+    if (user && currentView === 'landing') {
+      setCurrentView('dashboard');
+    } else if (!user && currentView === 'dashboard') {
+      setCurrentView('landing');
+    }
+  }, [user, currentView]);
 
   const handleLogin = () => {
     setShowAuthModal(true);
@@ -41,18 +94,17 @@ function App() {
 
   const handleLogout = async () => {
     await signOut();
-    setShowApp(false);
-    setShowLearning(false);
+    setCurrentView('landing');
     setIsDemoMode(false);
   };
 
   const handleAuthSuccess = () => {
-    setShowApp(true);
+    setCurrentView('dashboard');
     setIsDemoMode(false);
   };
 
   const handleStartDemo = () => {
-    setShowApp(true);
+    setCurrentView('editor');
     setIsDemoMode(true);
   };
 
@@ -61,56 +113,92 @@ function App() {
   };
 
   const handleNavigateHome = () => {
-    setShowApp(false);
-    setShowLearning(false);
+    if (user) {
+      setCurrentView('dashboard');
+    } else {
+      setCurrentView('landing');
+    }
   };
 
   const handleNavigateTimeline = () => {
-    setShowApp(true);
-    setShowLearning(false);
+    setCurrentView('editor');
+    setEditingTimeline(null); // Reset editing state for new timeline
   };
 
   const handleNavigateLearning = () => {
-    setShowLearning(true);
-    setShowApp(false);
+    setCurrentView('learning');
   };
 
-  return (
-    <div className={`min-h-screen bg-white dark:bg-gray-800 text-black dark:text-white transition-colors duration-200`}>
-      <Header
-        theme={theme}
-        onToggleTheme={toggleTheme}
-        userEmail={user?.email || null}
-        onLogout={user ? handleLogout : null}
-        onNavigateHome={showApp || showLearning ? handleNavigateHome : null}
-        onNavigateTimeline={(!showApp && user) || showLearning ? handleNavigateTimeline : null}
-        onNavigateLearning={!showLearning ? handleNavigateLearning : null}
-        onLogin={!user ? handleLogin : null}
-      />
+  const handleEditTimeline = (timeline) => {
+    setEditingTimeline(timeline);
+    setCurrentView('editor');
+  };
 
-      <main className="container mx-auto px-4 pb-12">
-        {publicSlug ? (
+  const handleCreateTimeline = () => {
+    setEditingTimeline(null);
+    setCurrentView('editor');
+  };
+
+  const appShell = (
+    <div className={`min-h-screen bg-white dark:bg-gray-800 text-black dark:text-white transition-colors duration-200`}>
+      {(!(publicSlug || publicRecordId) && !embedMode) && (
+        <Header
+          theme={theme}
+          onToggleTheme={toggleTheme}
+          userEmail={user?.email || null}
+          onLogout={user ? handleLogout : null}
+          onNavigateHome={handleNavigateHome}
+          onNavigateTimeline={currentView !== 'editor' ? handleNavigateTimeline : null}
+          onNavigateLearning={currentView !== 'learning' ? handleNavigateLearning : null}
+          onLogin={!user ? handleLogin : null}
+          showDashboard={!!user}
+        />
+      )}
+
+      <main className={`${embedMode ? '' : 'container mx-auto px-4 pb-12'}`}>
+        {publicSlug || publicRecordId ? (
           <PublicTimeline
             slug={publicSlug}
+            recordId={publicRecordId}
+            embedMode={embedMode}
+            styleOverride={publicStyle}
             onCreateOwn={() => {
               setPublicSlug(null);
+              setPublicRecordId(null);
+              setPublicStyle(null);
               window.history.pushState({}, '', '/');
-              setShowApp(false);
+              setCurrentView('landing');
+              setEmbedMode(false);
             }}
           />
         ) : showLegal ? (
           <TermsAndPrivacy onBack={() => setShowLegal(false)} />
-        ) : showLearning ? (
+        ) : currentView === 'learning' ? (
           <LearningAssistant />
-        ) : !showApp ? (
+        ) : currentView === 'dashboard' && user ? (
+          <Dashboard
+            user={user}
+            onEdit={handleEditTimeline}
+            onCreate={handleCreateTimeline}
+            onShare={(t) => {
+              // For now, just open editor to share. 
+              // Ideally Dashboard would have its own share modal, but we can reuse the editor's for now or implement later.
+              handleEditTimeline(t);
+            }}
+          />
+        ) : currentView === 'editor' ? (
+          <TimelineGenerator
+            isDemoMode={isDemoMode}
+            initialTimeline={editingTimeline}
+            onBack={() => setCurrentView('dashboard')}
+          />
+        ) : (
           <LandingPage
-            onStart={user ? () => setShowApp(true) : handleStartDemo}
+            onStart={user ? () => setCurrentView('dashboard') : handleStartDemo}
             onLogin={handleLogin}
             isLoggedIn={!!user}
             onShowLegal={() => setShowLegal(true)}
           />
-        ) : (
-          <TimelineGenerator isDemoMode={isDemoMode} />
         )}
       </main>
 
@@ -122,6 +210,8 @@ function App() {
       )}
     </div>
   );
+
+  return appShell;
 }
 
 export default App;

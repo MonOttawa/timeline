@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import { ChartNoAxesGantt, Moon, Sun, Sparkles, ChevronDown, Settings, LogOut } from "lucide-react";
+import { ChartNoAxesGantt, Moon, Sun, Sparkles, ChevronDown, Settings, LogOut, LayoutGrid } from "lucide-react";
 import { BurgerMenu } from "./BurgerMenu";
 
 export const Header = ({
@@ -13,6 +13,7 @@ export const Header = ({
     onNavigateLearning,
     onLogin,
     onNavigateSettings,
+    showDashboard
 }) => {
     const [userMenuOpen, setUserMenuOpen] = useState(false);
     const userMenuRef = useRef(null);
@@ -59,6 +60,15 @@ export const Header = ({
                         />
 
                         <BurgerMenu>
+                            {showDashboard && onNavigateHome && (
+                                <button
+                                    onClick={onNavigateHome}
+                                    className="px-4 py-2 border-2 border-black dark:border-white bg-blue-300 text-black font-bold rounded-lg shadow-[4px_4px_0px_#000] dark:shadow-[4px_4px_0px_#FFF] hover:bg-black hover:text-blue-300 transition-all focus:outline-none focus:ring-4 focus:ring-yellow-400 focus:ring-offset-2"
+                                >
+                                    <LayoutGrid size={20} className="inline" /> Dashboard
+                                </button>
+                            )}
+
                             {onNavigateTimeline && (
                                 <button
                                     onClick={onNavigateTimeline}

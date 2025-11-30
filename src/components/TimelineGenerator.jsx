@@ -14,7 +14,7 @@ import ShareModal from './ShareModal';
 import { slugify, makeUniqueSlug } from '../lib/slugify';
 import { sampleTimelines } from '../data/sampleTimelines';
 
-const TimelineGenerator = ({ isDemoMode = false }) => {
+const TimelineGenerator = ({ isDemoMode = false, initialTimeline = null, onBack = null }) => {
   const [events, setEvents] = useState([]);
   const [fileName, setFileName] = useState('');
   const [markdownContent, setMarkdownContent] = useState('');
@@ -107,9 +107,36 @@ const TimelineGenerator = ({ isDemoMode = false }) => {
     return () => setToolbarContainer(null);
   }, []);
 
+  // Load initial timeline if provided
+  useEffect(() => {
+    console.log('initialTimeline changed:', initialTimeline);
+    if (initialTimeline) {
+      const content = initialTimeline.content || '';
+      console.log('Loading timeline:', initialTimeline.title, 'Content length:', content.length);
+
+      // Set all timeline properties first
+      setTimelineTitle(initialTimeline.title || 'My Project Timeline');
+      setTimelineStyle(initialTimeline.style || 'bauhaus');
+      setCurrentTimelineId(initialTimeline.id);
+      setCurrentSlug(initialTimeline.slug || '');
+      setIsPublic(initialTimeline.public || false);
+      setViewCount(initialTimeline.viewCount || 0);
+      setMarkdownContent(content);
+
+      // Parse markdown to extract events (without overwriting title)
+      if (content) {
+        console.log('Parsing events from content');
+        parseMarkdownEvents(content);
+      } else {
+        console.log('No content to parse');
+        setEvents([]);
+      }
+    }
+  }, [initialTimeline?.id]); // Use id as dependency to detect changes
+
   // Auto-load sample timeline in demo mode
   useEffect(() => {
-    if (isDemoMode && !hasLoadedDemo && sampleTimelines.length > 0) {
+    if (isDemoMode && !hasLoadedDemo && sampleTimelines.length > 0 && !initialTimeline) {
       const firstSample = sampleTimelines[0];
       setMarkdownContent(firstSample.content);
       parseMarkdown(firstSample.content);
@@ -117,7 +144,7 @@ const TimelineGenerator = ({ isDemoMode = false }) => {
       setFileName(`${firstSample.name}.md`);
       setHasLoadedDemo(true);
     }
-  }, [isDemoMode, hasLoadedDemo]);
+  }, [isDemoMode, hasLoadedDemo, initialTimeline]);
 
   const handleFileSelect = (event) => {
     const file = event.target.files[0];
@@ -134,7 +161,92 @@ const TimelineGenerator = ({ isDemoMode = false }) => {
     reader.readAsText(file);
   };
 
+  // Parse markdown to extract events only (without changing title)
+  const parseMarkdownEvents = (markdownContent) => {
+    console.log('parseMarkdownEvents called with content length:', markdownContent?.length);
+    if (!markdownContent) {
+      setEvents([]);
+      return;
+    }
+
+    let contentToProcess = markdownContent;
+    const lines = markdownContent.split('\n');
+
+    // Skip title line if it exists
+    let titleLineIndex = -1;
+    for (let i = 0; i < lines.length; i++) {
+      const trimmedLine = lines[i].trim();
+      if (trimmedLine) {
+        if (trimmedLine.startsWith('#')) {
+          titleLineIndex = i;
+        }
+        break;
+      }
+    }
+
+    if (titleLineIndex >= 0) {
+      contentToProcess = lines.slice(titleLineIndex + 1).join('\n');
+    }
+
+    const rawEvents = contentToProcess.split('---').filter(event => event.trim() !== '');
+    console.log('Found raw events:', rawEvents.length);
+
+    const parsedEvents = rawEvents.map((eventMarkdown) => {
+      let date = '';
+      const dateRegex = /\*(.*?)\*/;
+      const dateMatch = eventMarkdown.match(dateRegex);
+
+      let contentMarkdown = eventMarkdown;
+      if (dateMatch) {
+        date = dateMatch[1];
+        contentMarkdown = eventMarkdown.replace(dateMatch[0], '').trim();
+      }
+
+      const htmlContent = marked.parse(contentMarkdown.trim());
+      return {
+        date,
+        content: sanitizeMarkdownHtml(htmlContent)
+      };
+    });
+
+    // Sort events by date
+    const sortedEvents = parsedEvents.sort((a, b) => {
+      if (!a.date && !b.date) return 0;
+      if (!a.date) return 1;
+      if (!b.date) return -1;
+
+      const getYear = (dateStr) => {
+        const match = dateStr.match(/\d{4}/);
+        return match ? parseInt(match[0], 10) : null;
+      };
+
+      const yearA = getYear(a.date);
+      const yearB = getYear(b.date);
+
+      if (yearA !== null && yearB !== null) {
+        return yearA - yearB;
+      }
+
+      const dateA = new Date(a.date);
+      const dateB = new Date(b.date);
+
+      if (isNaN(dateA.getTime()) && isNaN(dateB.getTime())) return 0;
+      if (isNaN(dateA.getTime())) return 1;
+      if (isNaN(dateB.getTime())) return -1;
+
+      return dateA - dateB;
+    });
+
+    console.log('Setting events:', sortedEvents.length);
+    setEvents(sortedEvents);
+  };
+
   const parseMarkdown = (markdownContent) => {
+    if (!markdownContent) {
+      setEvents([]);
+      return;
+    }
+
     // Extract title from first non-empty line if it starts with #
     let title = 'My Project Timeline';
     let contentToProcess = markdownContent;
@@ -269,12 +381,13 @@ const TimelineGenerator = ({ isDemoMode = false }) => {
   const handleSave = async () => {
     if (!user) {
       setShowAuthModal(true);
-      return;
+      return null;
     }
 
-    if (!markdownContent) return;
+    if (!markdownContent) return null;
 
     setIsSaving(true);
+    let record = null;
     try {
       const data = {
         user: user.id,
@@ -283,24 +396,24 @@ const TimelineGenerator = ({ isDemoMode = false }) => {
         style: timelineStyle,
       };
 
-      // Generate slug for new timelines
-      if (!currentTimelineId && !currentSlug) {
-        const baseSlug = slugify(timelineTitle);
-        const uniqueSlug = makeUniqueSlug(baseSlug);
-        data.slug = uniqueSlug;
-        data.public = false;
-        data.viewCount = 0;
-        setCurrentSlug(uniqueSlug);
-        setIsPublic(false);
-        setViewCount(0);
-      } else if (currentSlug) {
-        // Keep existing slug and public status
-        data.slug = currentSlug;
-        data.public = isPublic;
-        data.viewCount = viewCount;
+      // Ensure every saved timeline has a slug, even for older records
+      let slugToUse = currentSlug;
+      if (!slugToUse) {
+        const baseSlug = slugify(timelineTitle || 'timeline');
+        slugToUse = makeUniqueSlug(baseSlug);
+        setCurrentSlug(slugToUse);
+
+        // If this is a brand-new timeline, reset share state
+        if (!currentTimelineId) {
+          setIsPublic(false);
+          setViewCount(0);
+        }
       }
 
-      let record;
+      data.slug = slugToUse;
+      data.public = typeof isPublic === 'boolean' ? isPublic : false;
+      data.viewCount = typeof viewCount === 'number' ? viewCount : 0;
+
       if (currentTimelineId) {
         record = await pb.collection('timelines').update(currentTimelineId, data);
       } else {
@@ -323,6 +436,8 @@ const TimelineGenerator = ({ isDemoMode = false }) => {
     } finally {
       setIsSaving(false);
     }
+
+    return record;
   };
 
   const handleLoadSample = (sampleId) => {
@@ -405,14 +520,31 @@ const TimelineGenerator = ({ isDemoMode = false }) => {
   };
 
   // Sharing Functions
+  const handleShareClick = async () => {
+    if (!currentTimelineId || !currentSlug) {
+      const savedRecord = await handleSave();
+      if (!savedRecord?.id) return;
+    }
+    setShowShareModal(true);
+  };
+
   const handleTogglePublic = async () => {
     if (!currentTimelineId) return;
 
     setIsSaving(true);
     try {
+      // Ensure we have a slug before making public
+      let slugToUse = currentSlug;
+      if (!slugToUse) {
+        const baseSlug = slugify(timelineTitle || 'timeline');
+        slugToUse = makeUniqueSlug(baseSlug);
+        setCurrentSlug(slugToUse);
+      }
+
       const newPublicStatus = !isPublic;
       const record = await pb.collection('timelines').update(currentTimelineId, {
-        public: newPublicStatus
+        public: newPublicStatus,
+        slug: slugToUse
       });
 
       setIsPublic(newPublicStatus);
@@ -646,23 +778,19 @@ const TimelineGenerator = ({ isDemoMode = false }) => {
                 {isSaving ? 'Saving...' : 'Save'}
               </button>
 
-              <button
-                onClick={fetchTimelines}
-                className="inline-flex items-center gap-2 border-2 border-black dark:border-white font-bold py-3 px-6 bg-pink-400 text-black shadow-[4px_4px_0px_#000] dark:shadow-[4px_4px_0px_#FFF] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_#000] dark:hover:shadow-[6px_6px_0px_#FFF] transition-all rounded-lg"
-              >
-                <FolderOpen size={20} />
-                My Files
-              </button>
-
-              {currentTimelineId && (
+              {onBack && (
                 <button
-                  onClick={() => setShowShareModal(true)}
-                  className="inline-flex items-center gap-2 border-2 border-black dark:border-white font-bold py-3 px-6 bg-cyan-400 text-black shadow-[4px_4px_0px_#000] dark:shadow-[4px_4px_0px_#FFF] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_#000] dark:hover:shadow-[6px_6px_0px_#FFF] transition-all rounded-lg"
+                  onClick={onBack}
+                  className="inline-flex items-center gap-2 border-2 border-black dark:border-white font-bold py-3 px-6 bg-gray-200 dark:bg-gray-700 text-black dark:text-white shadow-[4px_4px_0px_#000] dark:shadow-[4px_4px_0px_#FFF] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_#000] dark:hover:shadow-[6px_6px_0px_#FFF] transition-all rounded-lg"
                 >
-                  <Share2 size={20} />
-                  Share
+                  <ChevronDown className="rotate-90" size={20} />
+                  Back
                 </button>
               )}
+
+
+
+
             </>
           )}
 
@@ -1057,6 +1185,21 @@ const TimelineGenerator = ({ isDemoMode = false }) => {
           </div>
         )
       }
+
+      {/* Bottom Share Button */}
+      {events.length > 0 && (
+        <div className="max-w-3xl mx-auto px-8 pb-12 flex justify-center">
+          <button
+            onClick={handleShareClick}
+            className="inline-flex items-center gap-3 border-4 border-black dark:border-white font-black text-xl py-4 px-8 bg-cyan-400 text-black shadow-[8px_8px_0px_#000] dark:shadow-[8px_8px_0px_#FFF] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[12px_12px_0px_#000] dark:hover:shadow-[12px_12px_0px_#FFF] transition-all rounded-xl transform hover:scale-105 disabled:opacity-60 disabled:cursor-not-allowed"
+            disabled={isSaving}
+          >
+            <Share2 size={28} />
+            Share Timeline
+          </button>
+        </div>
+      )}
+
       {/* Modals */}
       {showAuthModal && (
         <AuthModal
@@ -1098,7 +1241,15 @@ const TimelineGenerator = ({ isDemoMode = false }) => {
           onClose={() => setShowShareModal(false)}
           isPublic={isPublic}
           onTogglePublic={handleTogglePublic}
-          shareUrl={currentSlug ? `${window.location.origin}/timeline/${currentSlug}` : ''}
+          shareUrl={(() => {
+            if (!(currentSlug || currentTimelineId)) return '';
+            const base = `${(import.meta.env.VITE_APP_URL || window.location.origin).replace(/\/$/, '')}/timeline/${currentSlug || currentTimelineId}`;
+            const params = new URLSearchParams();
+            if (currentTimelineId) params.set('rid', currentTimelineId);
+            if (timelineStyle) params.set('style', timelineStyle);
+            const query = params.toString();
+            return query ? `${base}?${query}` : base;
+          })()}
           viewCount={viewCount}
           isSaving={isSaving}
         />

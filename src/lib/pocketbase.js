@@ -7,24 +7,39 @@ export const pb = new PocketBase(pocketbaseUrl)
 /**
  * Get public timeline by slug
  * @param {string} slug - Timeline slug
+ * @param {string|null} recordId - Optional record id fallback
  * @returns {Promise<Object>} - Timeline record
  */
-export async function getPublicTimeline(slug) {
+export async function getPublicTimeline(slug, recordId = null) {
     try {
         // Try to find by slug first
-        const timeline = await pb.collection('timelines').getFirstListItem(`slug="${slug}" && public=true`);
+        const safeSlug = slug?.replace(/"/g, '\\"') || '';
+        const timeline = await pb.collection('timelines').getFirstListItem(`slug="${safeSlug}" && public=true`);
         return timeline;
     } catch (error) {
         // If not found by slug, try by ID (fallback)
-        try {
-            const timeline = await pb.collection('timelines').getOne(slug);
-            if (timeline.public) {
-                return timeline;
+        if (recordId) {
+            try {
+                const timeline = await pb.collection('timelines').getOne(recordId);
+                if (timeline.public) {
+                    return timeline;
+                }
+                throw new Error('Timeline is not public');
+            } catch {
+                // fall through to final error
             }
-            throw new Error('Timeline is not public');
-        } catch {
-            throw new Error('Timeline not found');
+        } else if (slug) {
+            // Last resort: treat slug as an ID
+            try {
+                const timeline = await pb.collection('timelines').getOne(slug);
+                if (timeline.public) {
+                    return timeline;
+                }
+            } catch {
+                // ignore
+            }
         }
+        throw new Error('Timeline not found');
     }
 }
 
@@ -42,4 +57,3 @@ export async function incrementViewCount(timelineId) {
         console.error('Failed to increment view count:', error);
     }
 }
-

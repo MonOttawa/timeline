@@ -3,6 +3,23 @@ import { X, Share2, Copy, Check, Eye } from 'lucide-react';
 
 const ShareModal = ({ isOpen, onClose, isPublic, onTogglePublic, shareUrl, viewCount, isSaving }) => {
     const [copied, setCopied] = useState(false);
+    const [copiedEmbed, setCopiedEmbed] = useState(false);
+
+    const embedUrl = shareUrl
+        ? `${shareUrl}${shareUrl.includes('?') ? '&' : '?'}embed=1`
+        : '';
+    const embedCode = embedUrl
+        ? `<iframe src="${embedUrl}" width="100%" height="800" style="border:0;" loading="lazy" referrerpolicy="no-referrer-when-downgrade" allowfullscreen></iframe>`
+        : '';
+    const styleHint = (() => {
+        if (!shareUrl) return '';
+        try {
+            const url = new URL(shareUrl);
+            return url.searchParams.get('style') || '';
+        } catch {
+            return '';
+        }
+    })();
 
     if (!isOpen) return null;
 
@@ -14,6 +31,18 @@ const ShareModal = ({ isOpen, onClose, isPublic, onTogglePublic, shareUrl, viewC
         } catch (error) {
             console.error('Failed to copy:', error);
             alert('Failed to copy link to clipboard');
+        }
+    };
+
+    const handleCopyEmbed = async () => {
+        if (!embedCode) return;
+        try {
+            await navigator.clipboard.writeText(embedCode);
+            setCopiedEmbed(true);
+            setTimeout(() => setCopiedEmbed(false), 2000);
+        } catch (error) {
+            console.error('Failed to copy embed code:', error);
+            alert('Failed to copy embed code');
         }
     };
 
@@ -73,6 +102,34 @@ const ShareModal = ({ isOpen, onClose, isPublic, onTogglePublic, shareUrl, viewC
                                 className="inline-flex items-center gap-2 border-2 border-black dark:border-white font-bold py-2 px-4 bg-blue-400 text-black shadow-[4px_4px_0px_#000] dark:shadow-[4px_4px_0px_#FFF] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_#000] dark:hover:shadow-[6px_6px_0px_#FFF] transition-all rounded-lg"
                             >
                                 {copied ? <Check size={20} /> : <Copy size={20} />}
+                            </button>
+                        </div>
+                        {styleHint && (
+                            <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                                Preserves style: <span className="font-mono">{styleHint}</span> (parameter in the URL)
+                            </p>
+                        )}
+                    </div>
+                )}
+
+                {/* Embed Code */}
+                {isPublic && embedCode && (
+                    <div className="mb-6">
+                        <div className="flex items-center justify-between mb-2">
+                            <label className="block font-bold">Embed on your site</label>
+                            <span className="text-xs text-gray-500">iframe, same style as shared page</span>
+                        </div>
+                        <div className="flex gap-2">
+                            <textarea
+                                readOnly
+                                value={embedCode}
+                                className="flex-1 p-3 border-2 border-black dark:border-white rounded-lg bg-gray-50 dark:bg-gray-900 text-xs font-mono h-24"
+                            />
+                            <button
+                                onClick={handleCopyEmbed}
+                                className="inline-flex items-center gap-2 border-2 border-black dark:border-white font-bold py-2 px-4 bg-green-400 text-black shadow-[4px_4px_0px_#000] dark:shadow-[4px_4px_0px_#FFF] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_#000] dark:hover:shadow-[6px_6px_0px_#FFF] transition-all rounded-lg h-24"
+                            >
+                                {copiedEmbed ? <Check size={20} /> : <Copy size={20} />}
                             </button>
                         </div>
                     </div>
