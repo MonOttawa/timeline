@@ -32,6 +32,8 @@ export const LearningAssistant = () => {
         answers: {}, // questionIndex -> selectedOptionIndex
         showResults: false
     });
+    const [isReviewMode, setIsReviewMode] = useState(false);
+    const [dueCardsCount, setDueCardsCount] = useState(0);
 
     // Provider Settings State
     const [selectedProvider, setSelectedProviderState] = useState(getSelectedProvider());
@@ -50,6 +52,27 @@ export const LearningAssistant = () => {
         const model = getProviderModel(selectedProvider);
         setSelectedModel(model);
     }, [selectedProvider]);
+
+    // Fetch due cards count
+    useEffect(() => {
+        if (user) {
+            fetchDueCardsCount();
+        }
+    }, [user]);
+
+    const fetchDueCardsCount = async () => {
+        if (!user) return;
+
+        try {
+            const now = new Date().toISOString();
+            const dueReviews = await pb.collection('flashcard_reviews').getList(1, 1, {
+                filter: `user = "${user.id}" && next_review <= "${now}"`,
+            });
+            setDueCardsCount(dueReviews.totalItems || 0);
+        } catch (e) {
+            console.warn('Failed to fetch due cards count', e);
+        }
+    };
 
     useEffect(() => {
         if (showSettings) {
@@ -152,6 +175,53 @@ export const LearningAssistant = () => {
 
         setShowSettings(false);
         setError('');
+    };
+
+    const handleReviewMode = async () => {
+        if (!user) {
+            setError('You must be logged in to review cards.');
+            return;
+        }
+
+        setLoading(true);
+        setError('');
+        setIsReviewMode(true);
+
+        try {
+            // Fetch due cards
+            const now = new Date().toISOString();
+            const dueReviews = await pb.collection('flashcard_reviews').getList(1, 50, {
+                filter: `user = "${user.id}" && next_review <= "${now}"`,
+                sort: 'next_review'
+            });
+
+            if (dueReviews.items.length === 0) {
+                setError('No cards due for review! 🎉');
+                setLoading(false);
+                return;
+            }
+
+            // Transform reviews into flashcard format
+            const flashcards = dueReviews.items.map(review => ({
+                question: review.question || `Card from: ${review.topic}`,
+                answer: review.answer || `Review this card (ID: ${review.card_id})`,
+                reviewId: review.id,
+                cardId: review.card_id,
+                topic: review.topic
+            }));
+
+            // Set result as JSON flashcards
+            const flashcardData = { flashcards };
+            setResult(JSON.stringify(flashcardData));
+            setActiveMode('flashcards');
+            setFlashcardIndex(0);
+            setIsFlipped(false);
+        } catch (err) {
+            console.error('Error fetching due cards:', err);
+            setError('Failed to load due cards.');
+        } finally {
+            setLoading(false);
+        }
     };
 
     const checkCache = async (mode, topic) => {
@@ -337,6 +407,57 @@ IMPORTANT:
         }));
     };
 
+    // SuperMemo-2 Algorithm for calculating next review
+    const calculateNextReview = (rating, previousReview = null) => {
+        // Default values for new cards
+        let interval = 1; // days
+        let repetitions = 0;
+        let easeFactor = 2.5;
+
+        if (previousReview) {
+            interval = previousReview.interval || 1;
+            repetitions = previousReview.repetitions || 0;
+            easeFactor = previousReview.ease_factor || 2.5;
+        }
+
+        // Rating: 1=Again, 2=Hard, 3=Good, 4=Easy
+        if (rating < 3) {
+            // Failed - reset
+            interval = 1;
+            repetitions = 0;
+        } else {
+            // Passed
+            repetitions += 1;
+
+            if (repetitions === 1) {
+                interval = 1;
+            } else if (repetitions === 2) {
+                interval = 6;
+            } else {
+                interval = Math.round(interval * easeFactor);
+            }
+        }
+
+        // Update ease factor based on rating
+        easeFactor = easeFactor + (0.1 - (4 - rating) * (0.08 + (4 - rating) * 0.02));
+
+        // Ensure ease factor doesn't go below 1.3
+        if (easeFactor < 1.3) {
+            easeFactor = 1.3;
+        }
+
+        // Calculate next review date
+        const nextReview = new Date();
+        nextReview.setDate(nextReview.getDate() + interval);
+
+        return {
+            interval,
+            repetitions,
+            ease_factor: easeFactor,
+            next_review: nextReview.toISOString()
+        };
+    };
+
     const handleRateCard = async (rating) => {
         if (!user) return;
 
@@ -349,21 +470,47 @@ IMPORTANT:
             // Simple deterministic ID
             const cardId = btoa(unescape(encodeURIComponent(`${topic}-${card.question}`))).substring(0, 15);
 
+            // Try to fetch previous review for this card
+            let previousReview = null;
+            try {
+                const existingReviews = await pb.collection('flashcard_reviews').getList(1, 1, {
+                    filter: `user = "${user.id}" && card_id = "${cardId}"`,
+                    sort: '-created'
+                });
+                if (existingReviews.items.length > 0) {
+                    previousReview = existingReviews.items[0];
+                }
+            } catch (e) {
+                console.warn('Could not fetch previous review', e);
+            }
+
+            // Calculate next review using SM-2
+            const srsData = calculateNextReview(rating, previousReview);
+
+            // Save review with SRS data
             await pb.collection('flashcard_reviews').create({
                 user: user.id,
                 topic: topic,
                 card_id: cardId,
+                question: card.question,
+                answer: card.answer,
                 rating: rating,
-                reviewed_at: new Date().toISOString()
+                interval: srsData.interval,
+                repetitions: srsData.repetitions,
+                ease_factor: srsData.ease_factor,
+                next_review: srsData.next_review
             });
-            console.log('Review saved');
+            console.log('Review saved with next review:', srsData.next_review);
         } catch (e) {
             console.warn('Failed to save review', e);
         }
 
         // Move to next card
-        const total = JSON.parse(result.replace(/```json\n?|```/g, '').trim()).flashcards.length;
+        const total = JSON.parse(result.replace(/```json\\n?|```/g, '').trim()).flashcards.length;
         handleNextCard(total);
+
+        // Refresh due cards count
+        fetchDueCardsCount();
     };
 
     const handleToggleEdit = () => {
@@ -721,7 +868,22 @@ IMPORTANT:
     return (
         <div className="max-w-4xl mx-auto p-6 relative">
             {/* Header Buttons - Responsive Layout */}
-            <div className="flex justify-end mb-4 md:absolute md:top-6 md:right-6 gap-2 z-50">
+            <div className="flex justify-end mb-4 gap-2">
+                {user && (
+                    <button
+                        onClick={handleReviewMode}
+                        className="p-2 hover:bg-purple-100 dark:hover:bg-purple-900/30 rounded-lg transition-colors flex items-center gap-2 text-sm font-bold border-2 border-purple-500 text-purple-600 dark:text-purple-400 relative"
+                        title="Review Due Cards"
+                    >
+                        <GraduationCap size={20} />
+                        <span className="hidden md:inline">Review</span>
+                        {dueCardsCount > 0 && (
+                            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+                                {dueCardsCount}
+                            </span>
+                        )}
+                    </button>
+                )}
                 <button
                     onClick={() => {
                         if (!user) {
@@ -744,13 +906,9 @@ IMPORTANT:
                 </button>
             </div>
 
-            <div className="text-center mb-10 mt-2 md:mt-0">
-                <h1 className="text-4xl font-black mb-4 flex items-center justify-center gap-3 flex-wrap text-center">
-                    <Sparkles className="text-purple-500 shrink-0" size={40} />
-                    AI Learning Assistant
-                </h1>
+            <div className="text-center mb-10">
                 <p className="text-xl text-gray-600 dark:text-gray-300">
-                    Master any topic in seconds with OpenRouter AI.
+                    Master any topic in seconds.
                 </p>
             </div>
 
@@ -771,12 +929,14 @@ IMPORTANT:
                 </div>
             </div>
 
-            {error && (
-                <div className="mb-8 p-4 border-4 border-red-500 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded-xl flex items-center gap-3 font-bold">
-                    <AlertTriangle size={24} />
-                    <span>{error}</span>
-                </div>
-            )}
+            {
+                error && (
+                    <div className="mb-8 p-4 border-4 border-red-500 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded-xl flex items-center gap-3 font-bold">
+                        <AlertTriangle size={24} />
+                        <span>{error}</span>
+                    </div>
+                )
+            }
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-10">
                 <ActionButton
@@ -832,288 +992,297 @@ IMPORTANT:
                 />
             </div>
 
-            {loading && (
-                <div className="text-center py-12">
-                    <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-4 border-black dark:border-white mb-4"></div>
-                    <p className="text-xl font-bold animate-pulse">Consulting the AI brain...</p>
-                </div>
-            )}
-
-            {result && !loading && (
-                <div className="border-4 border-black dark:border-white rounded-xl p-8 bg-white dark:bg-gray-800 shadow-[8px_8px_0px_#000] dark:shadow-[8px_8px_0px_#FFF] animate-in fade-in slide-in-from-bottom-4 duration-500 relative">
-                    <div className="flex justify-between items-start mb-6 border-b-4 border-black dark:border-white pb-2">
-                        <h3 className="text-2xl font-bold">
-                            {activeMode === 'explain' && "Simple Explanation"}
-                            {activeMode === 'summary' && "Key Points"}
-                            {activeMode === 'flashcards' && "Study Cards"}
-                            {activeMode === 'quiz' && "Knowledge Check"}
-                            {activeMode === 'missing' && "Blind Spots"}
-                            {activeMode === 'stepByStep' && "Action Plan"}
-                            {activeMode === 'deepDive' && "Deep Dive"}
-                        </h3>
-                        <div className="flex gap-2">
-                            {user && (
-                                <button
-                                    onClick={handleSaveToFiles}
-                                    disabled={isSaving || saveSuccess}
-                                    className={`p-2 rounded-lg transition-colors flex items-center gap-2 text-sm font-bold ${saveSuccess ? 'bg-green-100 text-green-700' : 'hover:bg-gray-100 dark:hover:bg-gray-700'}`}
-                                >
-                                    {saveSuccess ? (
-                                        <>Saved! <Sparkles size={18} /></>
-                                    ) : (
-                                        <>{isSaving ? 'Saving...' : 'Save to Files'} <FolderPlus size={18} /></>
-                                    )}
-                                </button>
-                            )}
-                            <button
-                                onClick={handleToggleEdit}
-                                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors flex items-center gap-2 text-sm font-bold"
-                            >
-                                {isEditing ? <><Eye size={18} /> View</> : <><Edit2 size={18} /> Edit</>}
-                            </button>
-                        </div>
+            {
+                loading && (
+                    <div className="text-center py-12">
+                        <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-4 border-black dark:border-white mb-4"></div>
+                        <p className="text-xl font-bold animate-pulse">Consulting the AI brain...</p>
                     </div>
+                )
+            }
 
-                    {isEditing ? (
-                        <textarea
-                            value={result}
-                            onChange={(e) => setResult(e.target.value)}
-                            className="w-full h-96 p-4 font-mono text-sm border-2 border-black dark:border-white rounded-lg bg-gray-50 dark:bg-gray-900 text-black dark:text-white focus:outline-none focus:ring-4 focus:ring-purple-400"
-                        />
-                    ) : (
-                        <div className="prose dark:prose-invert max-w-none text-lg font-medium">
-                            {renderContent()}
+            {
+                result && !loading && (
+                    <div className="border-4 border-black dark:border-white rounded-xl p-8 bg-white dark:bg-gray-800 shadow-[8px_8px_0px_#000] dark:shadow-[8px_8px_0px_#FFF] animate-in fade-in slide-in-from-bottom-4 duration-500 relative">
+                        <div className="flex justify-between items-start mb-6 border-b-4 border-black dark:border-white pb-2">
+                            <h3 className="text-2xl font-bold">
+                                {activeMode === 'explain' && "Simple Explanation"}
+                                {activeMode === 'summary' && "Key Points"}
+                                {activeMode === 'flashcards' && "Study Cards"}
+                                {activeMode === 'quiz' && "Knowledge Check"}
+                                {activeMode === 'missing' && "Blind Spots"}
+                                {activeMode === 'stepByStep' && "Action Plan"}
+                                {activeMode === 'deepDive' && "Deep Dive"}
+                            </h3>
+                            <div className="flex gap-2">
+                                {user && (
+                                    <button
+                                        onClick={handleSaveToFiles}
+                                        disabled={isSaving || saveSuccess}
+                                        className={`p-2 rounded-lg transition-colors flex items-center gap-2 text-sm font-bold ${saveSuccess ? 'bg-green-100 text-green-700' : 'hover:bg-gray-100 dark:hover:bg-gray-700'}`}
+                                    >
+                                        {saveSuccess ? (
+                                            <>Saved! <Sparkles size={18} /></>
+                                        ) : (
+                                            <>{isSaving ? 'Saving...' : 'Save to Files'} <FolderPlus size={18} /></>
+                                        )}
+                                    </button>
+                                )}
+                                <button
+                                    onClick={handleToggleEdit}
+                                    className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors flex items-center gap-2 text-sm font-bold"
+                                >
+                                    {isEditing ? <><Eye size={18} /> View</> : <><Edit2 size={18} /> Edit</>}
+                                </button>
+                            </div>
                         </div>
-                    )}
-                </div>
-            )}
+
+                        {isEditing ? (
+                            <textarea
+                                value={result}
+                                onChange={(e) => setResult(e.target.value)}
+                                className="w-full h-96 p-4 font-mono text-sm border-2 border-black dark:border-white rounded-lg bg-gray-50 dark:bg-gray-900 text-black dark:text-white focus:outline-none focus:ring-4 focus:ring-purple-400"
+                            />
+                        ) : (
+                            <div className="prose dark:prose-invert max-w-none text-lg font-medium">
+                                {renderContent()}
+                            </div>
+                        )}
+                    </div>
+                )
+            }
 
             {/* History Modal - Portal */}
-            {showHistory && createPortal(
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] p-4">
-                    <div className="bg-white dark:bg-gray-800 rounded-xl border-4 border-black dark:border-white shadow-[8px_8px_0px_#000] dark:shadow-[8px_8px_0px_#FFF] max-w-2xl w-full p-6 max-h-[80vh] flex flex-col">
-                        <div className="flex justify-between items-center mb-6">
-                            <h2 className="text-2xl font-black flex items-center gap-2">
-                                <History className="text-purple-500" />
-                                My History
-                            </h2>
-                            <button onClick={() => setShowHistory(false)} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
-                                <X size={24} />
-                            </button>
-                        </div>
-
-                        <div className="overflow-y-auto flex-1 pr-2">
-                            {isLoadingHistory ? (
-                                <div className="text-center py-12">
-                                    <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-4 border-black dark:border-white mb-2"></div>
-                                    <p>Loading history...</p>
-                                </div>
-                            ) : historyItems.length === 0 ? (
-                                <div className="text-center py-12 text-gray-500">
-                                    <History size={48} className="mx-auto mb-4 opacity-30" />
-                                    <p className="text-xl font-bold">No history yet</p>
-                                    <p>Saved learning sessions will appear here.</p>
-                                </div>
-                            ) : (
-                                <div className="space-y-3">
-                                    {historyItems.map((item) => (
-                                        <div
-                                            key={item.id}
-                                            className="border-2 border-black dark:border-white rounded-lg p-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex justify-between items-center group cursor-pointer"
-                                            onClick={() => handleLoadHistory(item)}
-                                        >
-                                            <div className="flex items-center gap-3 flex-1 min-w-0">
-                                                <h3 className="font-bold text-base truncate">{item.title || 'Untitled'}</h3>
-                                                <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 shrink-0">
-                                                    <Calendar size={12} />
-                                                    {new Date(item.updated).toLocaleDateString()}
-                                                </div>
-                                            </div>
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    if (deleteConfirmId === item.id) {
-                                                        handleDeleteHistory(item.id);
-                                                    } else {
-                                                        setDeleteConfirmId(item.id);
-                                                        // Auto-reset after 3 seconds
-                                                        setTimeout(() => setDeleteConfirmId(null), 3000);
-                                                    }
-                                                }}
-                                                className={`p-2 rounded transition-all z-10 flex items-center gap-1 ${deleteConfirmId === item.id
-                                                    ? 'bg-red-500 text-white w-auto px-3'
-                                                    : 'text-red-500 hover:bg-red-100 dark:hover:bg-red-900'
-                                                    }`}
-                                                title="Delete"
-                                            >
-                                                {deleteConfirmId === item.id ? (
-                                                    <span className="text-xs font-bold whitespace-nowrap">Sure?</span>
-                                                ) : (
-                                                    <Trash2 size={18} />
-                                                )}
-                                            </button>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                </div>,
-                document.body
-            )}
-
-            {/* Settings Modal - Portal */}
-            {showSettings && createPortal(
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] p-4">
-                    <div className="bg-white dark:bg-gray-800 rounded-xl border-4 border-black dark:border-white shadow-[8px_8px_0px_#000] dark:shadow-[8px_8px_0px_#FFF] max-w-lg w-full h-auto max-h-[95vh] flex flex-col">
-                        <div className="p-6 pb-4 flex-shrink-0">
-                            <div className="flex justify-between items-center">
+            {
+                showHistory && createPortal(
+                    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] p-4">
+                        <div className="bg-white dark:bg-gray-800 rounded-xl border-4 border-black dark:border-white shadow-[8px_8px_0px_#000] dark:shadow-[8px_8px_0px_#FFF] max-w-2xl w-full p-6 max-h-[80vh] flex flex-col">
+                            <div className="flex justify-between items-center mb-6">
                                 <h2 className="text-2xl font-black flex items-center gap-2">
-                                    <Settings className="text-purple-500" />
-                                    Settings
+                                    <History className="text-purple-500" />
+                                    My History
                                 </h2>
-                                <button onClick={() => setShowSettings(false)} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
+                                <button onClick={() => setShowHistory(false)} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
                                     <X size={24} />
                                 </button>
                             </div>
-                        </div>
 
-                        <div className="px-6 py-4 overflow-y-auto flex-1">
-                            <div className="space-y-6">
-                                {/* Provider Selection */}
-                                <div>
-                                    <label className="block font-bold mb-2">
-                                        AI Provider
-                                    </label>
-                                    <select
-                                        value={selectedProvider}
-                                        onChange={(e) => handleProviderChange(e.target.value)}
-                                        className="w-full p-3 border-2 border-black dark:border-white rounded-lg bg-gray-50 dark:bg-gray-900 font-bold focus:outline-none focus:ring-4 focus:ring-purple-400"
-                                    >
-                                        {Object.values(PROVIDERS).map(provider => (
-                                            <option key={provider.id} value={provider.id}>
-                                                {provider.name} - {provider.description}
-                                            </option>
-                                        ))}
-                                    </select>
-                                    <p className="mt-2 text-xs text-gray-400">
-                                        {PROVIDERS[selectedProvider.toUpperCase()]?.hasFreeModels
-                                            ? '✅ Has free tier or free models available'
-                                            : '💳 Requires paid credits'}
-                                    </p>
-                                </div>
-
-                                {/* API Key Input */}
-                                <div>
-                                    <label className="block font-bold mb-2 flex items-center gap-2">
-                                        <Key size={18} />
-                                        {PROVIDERS[selectedProvider.toUpperCase()]?.name} API Key
-                                    </label>
-                                    <input
-                                        type="password"
-                                        value={apiKey}
-                                        onChange={(e) => setApiKey(e.target.value)}
-                                        placeholder="sk-or-v1-..."
-                                        className="w-full p-3 border-2 border-black dark:border-white rounded-lg bg-gray-50 dark:bg-gray-900 font-mono text-sm focus:outline-none focus:ring-4 focus:ring-purple-400"
-                                    />
-                                    <p className="mt-2 text-sm text-gray-500">
-                                        Get your API key at <a href={PROVIDERS[selectedProvider.toUpperCase()]?.docsUrl} target="_blank" rel="noopener noreferrer" className="text-purple-500 hover:underline font-bold">
-                                            {PROVIDERS[selectedProvider.toUpperCase()]?.docsUrl.replace('https://', '')}
-                                        </a>
-                                    </p>
-                                </div>
-
-                                {/* Model Selection */}
-                                <div>
-                                    <label className="block font-bold mb-2 flex items-center gap-2">
-                                        <Brain size={18} />
-                                        AI Model
-                                    </label>
-                                    <div className="relative">
-                                        <button
-                                            onClick={() => setIsModelDropdownOpen(!isModelDropdownOpen)}
-                                            disabled={isLoadingModels}
-                                            className="w-full p-3 border-2 border-black dark:border-white rounded-lg bg-gray-50 dark:bg-gray-900 font-bold focus:outline-none focus:ring-4 focus:ring-purple-400 flex items-center justify-between text-left disabled:opacity-50"
-                                        >
-                                            <span className="truncate text-sm">{selectedModelDisplay}</span>
-                                            <ChevronDown size={20} className={`transition-transform ${isModelDropdownOpen ? 'rotate-180' : ''}`} />
-                                        </button>
-
-                                        {isModelDropdownOpen && (
-                                            <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-gray-800 border-2 border-black dark:border-white shadow-[4px_4px_0px_#000] dark:shadow-[4px_4px_0px_#FFF] rounded-lg overflow-hidden z-50 max-h-60 flex flex-col">
-                                                <div className="p-2 border-b-2 border-black dark:border-white sticky top-0 bg-white dark:bg-gray-800 z-10">
-                                                    <div className="relative">
-                                                        <Search size={16} className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" />
-                                                        <input
-                                                            type="text"
-                                                            placeholder="Search models..."
-                                                            value={modelSearch}
-                                                            onChange={(e) => setModelSearch(e.target.value)}
-                                                            className="w-full pl-8 pr-2 py-1 border-2 border-gray-200 dark:border-gray-700 rounded text-sm focus:outline-none focus:border-purple-400"
-                                                            onClick={(e) => e.stopPropagation()}
-                                                        />
+                            <div className="overflow-y-auto flex-1 pr-2">
+                                {isLoadingHistory ? (
+                                    <div className="text-center py-12">
+                                        <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-4 border-black dark:border-white mb-2"></div>
+                                        <p>Loading history...</p>
+                                    </div>
+                                ) : historyItems.length === 0 ? (
+                                    <div className="text-center py-12 text-gray-500">
+                                        <History size={48} className="mx-auto mb-4 opacity-30" />
+                                        <p className="text-xl font-bold">No history yet</p>
+                                        <p>Saved learning sessions will appear here.</p>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-3">
+                                        {historyItems.map((item) => (
+                                            <div
+                                                key={item.id}
+                                                className="border-2 border-black dark:border-white rounded-lg p-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex justify-between items-center group cursor-pointer"
+                                                onClick={() => handleLoadHistory(item)}
+                                            >
+                                                <div className="flex items-center gap-3 flex-1 min-w-0">
+                                                    <h3 className="font-bold text-base truncate">{item.title || 'Untitled'}</h3>
+                                                    <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 shrink-0">
+                                                        <Calendar size={12} />
+                                                        {new Date(item.updated).toLocaleDateString()}
                                                     </div>
                                                 </div>
-                                                <div className="overflow-y-auto flex-1">
-                                                    {isLoadingModels ? (
-                                                        <div className="p-4 text-center text-sm text-gray-500">Loading models...</div>
-                                                    ) : filteredModels.length > 0 ? (
-                                                        filteredModels.map((model) => (
-                                                            <button
-                                                                key={model.id}
-                                                                onClick={() => {
-                                                                    setSelectedModel(model.id);
-                                                                    setIsModelDropdownOpen(false);
-                                                                    setModelSearch('');
-                                                                }}
-                                                                className={`w-full text-left px-4 py-3 hover:bg-purple-100 dark:hover:bg-purple-900 transition-colors border-b border-gray-100 dark:border-gray-700 last:border-0 ${selectedModel === model.id ? 'bg-purple-50 dark:bg-purple-900/50' : ''}`}
-                                                            >
-                                                                <div className="font-bold text-sm truncate">{model.name}</div>
-                                                                <div className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-2">
-                                                                    <span>{model.provider}</span>
-                                                                    {model.free && (
-                                                                        <span className="bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 px-1.5 py-0.5 rounded text-[10px] font-bold">FREE</span>
-                                                                    )}
-                                                                </div>
-                                                            </button>
-                                                        ))
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        if (deleteConfirmId === item.id) {
+                                                            handleDeleteHistory(item.id);
+                                                        } else {
+                                                            setDeleteConfirmId(item.id);
+                                                            // Auto-reset after 3 seconds
+                                                            setTimeout(() => setDeleteConfirmId(null), 3000);
+                                                        }
+                                                    }}
+                                                    className={`p-2 rounded transition-all z-10 flex items-center gap-1 ${deleteConfirmId === item.id
+                                                        ? 'bg-red-500 text-white w-auto px-3'
+                                                        : 'text-red-500 hover:bg-red-100 dark:hover:bg-red-900'
+                                                        }`}
+                                                    title="Delete"
+                                                >
+                                                    {deleteConfirmId === item.id ? (
+                                                        <span className="text-xs font-bold whitespace-nowrap">Sure?</span>
                                                     ) : (
-                                                        <div className="p-4 text-center text-sm text-gray-500">No models found</div>
+                                                        <Trash2 size={18} />
                                                     )}
-                                                </div>
+                                                </button>
                                             </div>
-                                        )}
+                                        ))}
                                     </div>
-                                    <p className="mt-2 text-xs text-gray-400">
-                                        Free models are recommended for testing.
-                                    </p>
+                                )}
+                            </div>
+                        </div>
+                    </div>,
+                    document.body
+                )
+            }
+
+            {/* Settings Modal - Portal */}
+            {
+                showSettings && createPortal(
+                    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] p-4">
+                        <div className="bg-white dark:bg-gray-800 rounded-xl border-4 border-black dark:border-white shadow-[8px_8px_0px_#000] dark:shadow-[8px_8px_0px_#FFF] max-w-lg w-full h-auto max-h-[95vh] flex flex-col">
+                            <div className="p-6 pb-4 flex-shrink-0">
+                                <div className="flex justify-between items-center">
+                                    <h2 className="text-2xl font-black flex items-center gap-2">
+                                        <Settings className="text-purple-500" />
+                                        Settings
+                                    </h2>
+                                    <button onClick={() => setShowSettings(false)} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
+                                        <X size={24} />
+                                    </button>
                                 </div>
                             </div>
 
-                        </div>
+                            <div className="px-6 py-4 overflow-y-auto flex-1">
+                                <div className="space-y-6">
+                                    {/* Provider Selection */}
+                                    <div>
+                                        <label className="block font-bold mb-2">
+                                            AI Provider
+                                        </label>
+                                        <select
+                                            value={selectedProvider}
+                                            onChange={(e) => handleProviderChange(e.target.value)}
+                                            className="w-full p-3 border-2 border-black dark:border-white rounded-lg bg-gray-50 dark:bg-gray-900 font-bold focus:outline-none focus:ring-4 focus:ring-purple-400"
+                                        >
+                                            {Object.values(PROVIDERS).map(provider => (
+                                                <option key={provider.id} value={provider.id}>
+                                                    {provider.name} - {provider.description}
+                                                </option>
+                                            ))}
+                                        </select>
+                                        <p className="mt-2 text-xs text-gray-400">
+                                            {PROVIDERS[selectedProvider.toUpperCase()]?.hasFreeModels
+                                                ? '✅ Has free tier or free models available'
+                                                : '💳 Requires paid credits'}
+                                        </p>
+                                    </div>
 
-                        <div className="p-6 pt-4 flex-shrink-0 border-t-2 border-gray-200 dark:border-gray-700">
-                            <div className="flex justify-end gap-3">
-                                <button
-                                    onClick={() => setShowSettings(false)}
-                                    className="px-4 py-2 font-bold text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    onClick={handleSaveSettings}
-                                    className="px-6 py-2 bg-purple-400 text-black font-bold rounded-lg border-2 border-black dark:border-white shadow-[4px_4px_0px_#000] dark:shadow-[4px_4px_0px_#FFF] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_#000] dark:hover:shadow-[6px_6px_0px_#FFF] transition-all flex items-center gap-2"
-                                >
-                                    <Save size={18} />
-                                    Save Settings
-                                </button>
+                                    {/* API Key Input */}
+                                    <div>
+                                        <label className="block font-bold mb-2 flex items-center gap-2">
+                                            <Key size={18} />
+                                            {PROVIDERS[selectedProvider.toUpperCase()]?.name} API Key
+                                        </label>
+                                        <input
+                                            type="password"
+                                            value={apiKey}
+                                            onChange={(e) => setApiKey(e.target.value)}
+                                            placeholder="sk-or-v1-..."
+                                            className="w-full p-3 border-2 border-black dark:border-white rounded-lg bg-gray-50 dark:bg-gray-900 font-mono text-sm focus:outline-none focus:ring-4 focus:ring-purple-400"
+                                        />
+                                        <p className="mt-2 text-sm text-gray-500">
+                                            Get your API key at <a href={PROVIDERS[selectedProvider.toUpperCase()]?.docsUrl} target="_blank" rel="noopener noreferrer" className="text-purple-500 hover:underline font-bold">
+                                                {PROVIDERS[selectedProvider.toUpperCase()]?.docsUrl.replace('https://', '')}
+                                            </a>
+                                        </p>
+                                    </div>
+
+                                    {/* Model Selection */}
+                                    <div>
+                                        <label className="block font-bold mb-2 flex items-center gap-2">
+                                            <Brain size={18} />
+                                            AI Model
+                                        </label>
+                                        <div className="relative">
+                                            <button
+                                                onClick={() => setIsModelDropdownOpen(!isModelDropdownOpen)}
+                                                disabled={isLoadingModels}
+                                                className="w-full p-3 border-2 border-black dark:border-white rounded-lg bg-gray-50 dark:bg-gray-900 font-bold focus:outline-none focus:ring-4 focus:ring-purple-400 flex items-center justify-between text-left disabled:opacity-50"
+                                            >
+                                                <span className="truncate text-sm">{selectedModelDisplay}</span>
+                                                <ChevronDown size={20} className={`transition-transform ${isModelDropdownOpen ? 'rotate-180' : ''}`} />
+                                            </button>
+
+                                            {isModelDropdownOpen && (
+                                                <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-gray-800 border-2 border-black dark:border-white shadow-[4px_4px_0px_#000] dark:shadow-[4px_4px_0px_#FFF] rounded-lg overflow-hidden z-50 max-h-60 flex flex-col">
+                                                    <div className="p-2 border-b-2 border-black dark:border-white sticky top-0 bg-white dark:bg-gray-800 z-10">
+                                                        <div className="relative">
+                                                            <Search size={16} className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" />
+                                                            <input
+                                                                type="text"
+                                                                placeholder="Search models..."
+                                                                value={modelSearch}
+                                                                onChange={(e) => setModelSearch(e.target.value)}
+                                                                className="w-full pl-8 pr-2 py-1 border-2 border-gray-200 dark:border-gray-700 rounded text-sm focus:outline-none focus:border-purple-400"
+                                                                onClick={(e) => e.stopPropagation()}
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                    <div className="overflow-y-auto flex-1">
+                                                        {isLoadingModels ? (
+                                                            <div className="p-4 text-center text-sm text-gray-500">Loading models...</div>
+                                                        ) : filteredModels.length > 0 ? (
+                                                            filteredModels.map((model) => (
+                                                                <button
+                                                                    key={model.id}
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        setSelectedModel(model.id);
+                                                                        setIsModelDropdownOpen(false);
+                                                                        setModelSearch('');
+                                                                    }}
+                                                                    className={`w-full text-left px-4 py-3 hover:bg-purple-100 dark:hover:bg-purple-900 transition-colors border-b border-gray-100 dark:border-gray-700 last:border-0 ${selectedModel === model.id ? 'bg-purple-50 dark:bg-purple-900/50' : ''}`}
+                                                                >
+                                                                    <div className="font-bold text-sm truncate">{model.name}</div>
+                                                                    <div className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-2">
+                                                                        <span>{model.provider}</span>
+                                                                        {model.free && (
+                                                                            <span className="bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 px-1.5 py-0.5 rounded text-[10px] font-bold">FREE</span>
+                                                                        )}
+                                                                    </div>
+                                                                </button>
+                                                            ))
+                                                        ) : (
+                                                            <div className="p-4 text-center text-sm text-gray-500">No models found</div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                        <p className="mt-2 text-xs text-gray-400">
+                                            Free models are recommended for testing.
+                                        </p>
+                                    </div>
+                                </div>
+
+                            </div>
+
+                            <div className="p-6 pt-4 flex-shrink-0 border-t-2 border-gray-200 dark:border-gray-700">
+                                <div className="flex justify-end gap-3">
+                                    <button
+                                        onClick={() => setShowSettings(false)}
+                                        className="px-4 py-2 font-bold text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        onClick={handleSaveSettings}
+                                        className="px-6 py-2 bg-purple-400 text-black font-bold rounded-lg border-2 border-black dark:border-white shadow-[4px_4px_0px_#000] dark:shadow-[4px_4px_0px_#FFF] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_#000] dark:hover:shadow-[6px_6px_0px_#FFF] transition-all flex items-center gap-2"
+                                    >
+                                        <Save size={18} />
+                                        Save Settings
+                                    </button>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                </div>,
-                document.body
-            )}
-        </div>
+                    </div>,
+                    document.body
+                )
+            }
+        </div >
     );
 };
 

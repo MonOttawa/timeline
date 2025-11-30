@@ -1,6 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
 import { ChartNoAxesGantt, Moon, Sun, Sparkles, ChevronDown, Settings, LogOut } from "lucide-react";
-import logo from "../assets/substantifique-logo.png";
 import { BurgerMenu } from "./BurgerMenu";
 
 export const Header = ({
@@ -46,10 +45,11 @@ export const Header = ({
                         onClick={onNavigateHome}
                     >
                         <img
-                            src={logo}
-                            alt="Markdown Timeline logo"
+                            src="/logo.png"
+                            alt="Substantifique Logo"
                             className="h-[32px] md:h-[36px] w-auto"
                         />
+                        <span className="font-display font-bold text-xl tracking-wider ml-3 hidden md:block">SUBSTANTIFIQUE</span>
                     </div>
 
                     <div className="flex-1 flex items-center gap-3 justify-end">
