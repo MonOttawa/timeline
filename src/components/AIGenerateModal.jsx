@@ -1,46 +1,16 @@
-import React, { useState, useEffect } from 'react';
-import { X, Sparkles, MessageSquare } from 'lucide-react';
-import { PROVIDERS, getProviderClient, getProviderApiKey } from '../lib/providers';
-import ProviderSelector from './ProviderSelector';
+import React, { useState } from 'react';
+import { X, Sparkles, MessageSquare, Settings } from 'lucide-react';
+import { generateContent } from '../lib/providers';
 
 const AIGenerateModal = ({ onClose, onGenerate }) => {
-  const [selectedProvider, setSelectedProvider] = useState('openrouter');
   const [prompt, setPrompt] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
-  const [apiKeyInput, setApiKeyInput] = useState('');
-  const [modelInput, setModelInput] = useState('');
-
-  useEffect(() => {
-    // Set default provider to first one with API key configured
-    const configuredProvider = Object.keys(PROVIDERS).find(key => {
-      const provider = key.toLowerCase();
-      return getProviderApiKey(provider);
-    });
-
-    if (configuredProvider) {
-      setSelectedProvider(configuredProvider.toLowerCase());
-    }
-  }, []);
-
-  const currentProvider = PROVIDERS[selectedProvider.toUpperCase()];
-  const hasApiKey = !!apiKeyInput;
-  const hasModel = !!modelInput;
 
   const handleGenerate = async () => {
     setErrorMessage('');
     if (!prompt.trim()) {
       setErrorMessage('Please enter a prompt describing your timeline.');
-      return;
-    }
-
-    if (!hasApiKey) {
-      setErrorMessage(`Configure your ${currentProvider?.name || selectedProvider} API key in Settings first.`);
-      return;
-    }
-
-    if (!hasModel) {
-      setErrorMessage(`Select a model for ${currentProvider?.name || selectedProvider} in Settings.`);
       return;
     }
 
@@ -90,11 +60,7 @@ IMPORTANT:
         }
       ];
 
-      const client = await getProviderClient(selectedProvider);
-      const apiKey = apiKeyInput;
-      const model = modelInput;
-
-      const generatedContent = await client.generateContent(apiKey, model, messages);
+      const generatedContent = await generateContent(messages);
 
       if (generatedContent) {
         onGenerate(generatedContent);
@@ -108,16 +74,14 @@ IMPORTANT:
       let userMessage = error.message;
 
       if (error.message.includes('insufficient_quota') || error.message.includes('credits')) {
-        userMessage = 'This model requires credits. Please add credits to your account or try a different model/provider.';
-      } else if (error.message.includes('invalid_api_key') || error.message.includes('authentication')) {
-        userMessage = 'Invalid API key. Please check your API key in Settings.';
-      } else if (error.message.includes('model_not_found') || error.message.includes('not found')) {
-        userMessage = 'Model not available. Please select a different model in Settings.';
+        userMessage = 'This model requires credits. Please add credits to your account or try a different model/provider in Settings.';
+      } else if (error.message.includes('API key not configured') || error.message.includes('No model selected')) {
+        userMessage = 'Please configure your AI provider and model in Settings (⚙️ icon in header).';
       } else if (error.message.includes('rate_limit')) {
         userMessage = 'Rate limit exceeded. Please wait a moment and try again.';
       }
 
-      setErrorMessage(`Failed to generate timeline: ${userMessage}`);
+      setErrorMessage(userMessage);
     } finally {
       setIsGenerating(false);
     }
@@ -143,139 +107,11 @@ IMPORTANT:
         {/* Content */}
         <div className="p-6 space-y-6">
           {errorMessage && (
-            <div className="p-3 border-2 border-red-500 bg-red-50 text-red-700 font-semibold rounded-lg text-sm">
+            <div className="p-3 border-2 border-red-500 bg-red-50 text-red-700 font-semibold rounded-lg text-sm flex items-center gap-2">
+              <Settings size={16} />
               {errorMessage}
             </div>
           )}
-
-          {/* Provider Selection */}
-          <div>
-            <label className="font-bold mb-2 block">AI Provider</label>
-            <div className="relative">
-              <button
-                onClick={() => setIsProviderDropdownOpen(!isProviderDropdownOpen)}
-                className="w-full p-3 border-2 border-black dark:border-white rounded-lg bg-gray-50 dark:bg-gray-900 font-bold focus:outline-none focus:ring-4 focus:ring-purple-400 flex items-center justify-between text-left"
-              >
-                <span className="flex items-center gap-2">
-                  {currentProvider?.name || selectedProvider}
-                  {!hasApiKey && <span className="text-xs text-red-500">(Not configured)</span>}
-                </span>
-                <ChevronDown size={20} className={`transition-transform ${isProviderDropdownOpen ? 'rotate-180' : ''}`} />
-              </button>
-
-              {isProviderDropdownOpen && (
-                <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-gray-800 border-2 border-black dark:border-white shadow-[4px_4px_0px_#000] dark:shadow-[4px_4px_0px_#FFF] rounded-lg overflow-hidden z-50">
-                  {Object.entries(PROVIDERS).map(([key, provider]) => {
-                    const providerKey = key.toLowerCase();
-                    const configured = !!getProviderApiKey(providerKey);
-
-                    return (
-                      <button
-                        key={key}
-                        onClick={() => {
-                          setSelectedProvider(providerKey);
-                          setIsProviderDropdownOpen(false);
-                        }}
-                        className={`w-full text-left px-4 py-3 hover:bg-purple-100 dark:hover:bg-purple-900 transition-colors border-b border-gray-200 dark:border-gray-700 ${selectedProvider === providerKey ? 'bg-purple-200 dark:bg-purple-800' : ''
-                          }`}
-                      >
-                        <div className="flex items-center justify-between">
-                          <span className="font-bold">{provider.name}</span>
-                          {configured ? (
-                            <span className="text-xs text-green-600 dark:text-green-400 font-bold">✓ CONFIGURED</span>
-                          ) : (
-                            <span className="text-xs text-gray-400">Not set up</span>
-                          )}
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-
-            {!hasApiKey && (
-              <div className="mt-3 p-3 bg-yellow-50 dark:bg-yellow-900/20 border-2 border-yellow-400 rounded-lg">
-                <p className="text-sm font-bold text-yellow-800 dark:text-yellow-200 mb-2">
-                  ⚠️ Provider not configured
-                </p>
-                <p className="text-sm text-yellow-700 dark:text-yellow-300">
-                  Please configure your {currentProvider?.name || selectedProvider} API key and model in the Learning Assistant settings.
-                </p>
-              </div>
-            )}
-          </div>
-
-          {/* Provider Credentials (inline) */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block font-bold mb-2 text-sm">API Key</label>
-              <input
-                type="password"
-                value={apiKeyInput}
-                onChange={(e) => setApiKeyInput(e.target.value)}
-                placeholder="sk-..."
-                className="w-full p-3 border-2 border-black dark:border-white rounded-lg bg-gray-50 dark:bg-gray-900 font-mono text-sm focus:outline-none focus:ring-4 focus:ring-purple-400"
-              />
-            </div>
-            <div>
-              <label className="block font-bold mb-2 text-sm">Model</label>
-              {filteredModels.length > 0 && !useCustomModel ? (
-                <select
-                  value={modelInput}
-                  onChange={(e) => {
-                    setModelInput(e.target.value);
-                    setUseCustomModel(false);
-                  }}
-                  className="w-full p-3 border-2 border-black dark:border-white rounded-lg bg-gray-50 dark:bg-gray-900 font-bold focus:outline-none focus:ring-4 focus:ring-purple-400"
-                  disabled={isLoadingModels}
-                >
-                  <option value="">{isLoadingModels ? 'Loading models…' : 'Select a model'}</option>
-                  {filteredModels.map((m) => (
-                    <option key={m.id} value={m.id}>
-                      {m.name || m.id} ({m.provider || 'model'})
-                    </option>
-                  ))}
-                  <option value="__custom">Custom model…</option>
-                </select>
-              ) : null}
-              {useCustomModel || filteredModels.length === 0 ? (
-                <input
-                  type="text"
-                  value={modelInput}
-                  onChange={(e) => setModelInput(e.target.value)}
-                  placeholder="e.g., glm-4.6"
-                  className="w-full mt-2 p-3 border-2 border-black dark:border-white rounded-lg bg-gray-50 dark:bg-gray-900 font-mono text-sm focus:outline-none focus:ring-4 focus:ring-purple-400"
-                />
-              ) : null}
-              {models.length > 0 && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setUseCustomModel(!useCustomModel);
-                    if (!useCustomModel && models[0]) {
-                      setModelInput('');
-                    }
-                  }}
-                  className="mt-2 text-xs font-bold text-purple-600 dark:text-purple-300 hover:underline"
-                >
-                  {useCustomModel ? 'Use provider list' : 'Use custom model'}
-                </button>
-              )}
-            </div>
-          </div>
-          <div className="flex justify-end">
-            <button
-              onClick={() => {
-                setProviderApiKey(selectedProvider, apiKeyInput);
-                if (modelInput) setProviderModel(selectedProvider, modelInput);
-                setErrorMessage('');
-              }}
-              className="inline-flex items-center gap-2 border-2 border-black dark:border-white font-bold py-2 px-4 bg-gray-200 dark:bg-gray-700 text-black dark:text-white shadow-[4px_4px_0px_#000] dark:shadow-[4px_4px_0px_#FFF] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_#000] dark:hover:shadow-[6px_6px_0px_#FFF] transition-all rounded-lg text-sm"
-            >
-              Save Provider
-            </button>
-          </div>
 
           {/* Prompt Input */}
           <div>
@@ -294,10 +130,9 @@ IMPORTANT:
             </p>
           </div>
 
-          {/* Settings Link */}
-          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-900 p-3 rounded-lg">
             <Settings size={16} />
-            <span>Configure providers in the Learning Assistant settings (⚙️ icon in header)</span>
+            <span>AI settings are now configured globally. Click the gear icon in the top header to change providers.</span>
           </div>
         </div>
 
@@ -311,7 +146,7 @@ IMPORTANT:
           </button>
           <button
             onClick={handleGenerate}
-            disabled={isGenerating || !hasApiKey || !hasModel}
+            disabled={isGenerating}
             className="px-6 py-3 border-2 border-black dark:border-white font-bold rounded-lg bg-purple-400 text-black hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[4px_4px_0px_#000] dark:hover:shadow-[4px_4px_0px_#FFF] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >
             <Sparkles size={20} />

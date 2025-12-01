@@ -60,11 +60,11 @@ export const PROVIDERS = {
         hasFreeModels: true,
         format: 'gemini' // Uses Google-specific format
     },
-    MOONSHOT: {
-        id: 'moonshot',
+    ZAI: {
+        id: 'zai',
         name: 'Z.AI (GLM)',
         description: 'GLM-4.6 and other advanced models',
-        endpoint: 'https://api.z.ai/api/paas/v4',
+        endpoint: 'https://api.z.ai/api/coding/paas/v4',
         docsUrl: 'https://docs.z.ai',
         requiresApiKey: true,
         hasFreeModels: false,
@@ -74,8 +74,8 @@ export const PROVIDERS = {
 
 // Get stored provider selection
 export const getSelectedProvider = () => {
-    // Default to Z.AI - now using Coding API endpoint that works with Pro plan
-    return localStorage.getItem('ai_provider') || 'moonshot';
+    // Default to Z.AI
+    return localStorage.getItem('ai_provider') || 'zai';
 };
 
 // Set provider selection
@@ -92,7 +92,7 @@ export const getProviderApiKey = (providerId) => {
         'openai': import.meta.env.VITE_OPENAI_API_KEY,
         'anthropic': import.meta.env.VITE_ANTHROPIC_API_KEY,
         'gemini': import.meta.env.VITE_GEMINI_API_KEY,
-        'moonshot': import.meta.env.VITE_MOONSHOT_API_KEY
+        'zai': import.meta.env.VITE_ZAI_API_KEY
     };
 
     return envKeys[providerId] || localStorage.getItem(`${providerId}_api_key`) || '';
@@ -142,9 +142,9 @@ export const getProviderClient = async (providerId) => {
         case 'gemini':
             const { default: GeminiClient } = await import('./providers/gemini.js');
             return new GeminiClient();
-        case 'moonshot':
-            const { default: MoonshotClient } = await import('./providers/moonshot.js');
-            return new MoonshotClient();
+        case 'zai':
+            const { default: ZAIClient } = await import('./providers/zai.js');
+            return new ZAIClient();
         default:
             throw new Error(`Unknown provider: ${providerId}`);
     }

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Sparkles, BookOpen, Brain, List, HelpCircle, Layers, ArrowRight, AlertTriangle, Settings, Key, X, Save, ChevronDown, Search, Edit2, Eye, FolderPlus, History, Trash2, Calendar, GraduationCap } from 'lucide-react';
 import { marked } from 'marked';
-import { PROVIDERS, getSelectedProvider, setSelectedProvider, getProviderApiKey, setProviderApiKey, getProviderModel, setProviderModel, getProviderClient } from '../lib/providers';
+import { generateContent } from '../lib/providers';
 import { sanitizeMarkdownHtml } from '../lib/sanitizeMarkdown';
 import { pb } from '../lib/pocketbase';
 import { useAuth } from '../hooks/useAuth';
@@ -14,7 +14,6 @@ export const LearningAssistant = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [activeMode, setActiveMode] = useState(null);
-    const [showSettings, setShowSettings] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [saveSuccess, setSaveSuccess] = useState(false);
@@ -34,24 +33,6 @@ export const LearningAssistant = () => {
     });
     const [isReviewMode, setIsReviewMode] = useState(false);
     const [dueCardsCount, setDueCardsCount] = useState(0);
-
-    // Provider Settings State
-    const [selectedProvider, setSelectedProviderState] = useState(getSelectedProvider());
-    const [apiKey, setApiKey] = useState('');
-    const [models, setModels] = useState([]);
-    const [selectedModel, setSelectedModel] = useState('');
-    const [isModelDropdownOpen, setIsModelDropdownOpen] = useState(false);
-    const [modelSearch, setModelSearch] = useState('');
-    const [isLoadingModels, setIsLoadingModels] = useState(false);
-
-    useEffect(() => {
-        // Load API key and model for the selected provider
-        const key = getProviderApiKey(selectedProvider);
-        setApiKey(key);
-
-        const model = getProviderModel(selectedProvider);
-        setSelectedModel(model);
-    }, [selectedProvider]);
 
     // Fetch due cards count
     useEffect(() => {
@@ -75,31 +56,10 @@ export const LearningAssistant = () => {
     };
 
     useEffect(() => {
-        if (showSettings) {
-            loadModels();
-        }
-    }, [showSettings, selectedProvider]);
-
-    useEffect(() => {
         if (showHistory && user) {
             fetchHistory();
         }
     }, [showHistory, user]);
-
-    const loadModels = async () => {
-        setIsLoadingModels(true);
-        try {
-            const apiKey = getProviderApiKey(selectedProvider);
-            const client = await getProviderClient(selectedProvider);
-            const fetchedModels = await client.fetchModels(apiKey);
-            setModels(fetchedModels);
-        } catch (err) {
-            console.error('Error loading models:', err);
-            setModels([]);
-        } finally {
-            setIsLoadingModels(false);
-        }
-    };
 
     const fetchHistory = async () => {
         setIsLoadingHistory(true);
@@ -154,27 +114,6 @@ export const LearningAssistant = () => {
             console.error('Error deleting item:', err);
             setError('Failed to delete item.');
         }
-    };
-
-    const handleProviderChange = (providerId) => {
-        setSelectedProviderState(providerId);
-        setSelectedProvider(providerId);
-        setIsModelDropdownOpen(false);
-        // Clear model selection when changing provider
-        setSelectedModel('');
-    };
-
-    const handleSaveSettings = () => {
-        // Save API key for the selected provider
-        setProviderApiKey(selectedProvider, apiKey);
-
-        // Save model for the selected provider
-        if (selectedModel) {
-            setProviderModel(selectedProvider, selectedModel);
-        }
-
-        setShowSettings(false);
-        setError('');
     };
 
     const handleReviewMode = async () => {
@@ -262,22 +201,6 @@ export const LearningAssistant = () => {
 
     const handleAction = async (mode) => {
         if (!topic.trim()) return;
-
-        const currentKey = getProviderApiKey(selectedProvider);
-        const currentModel = getProviderModel(selectedProvider);
-        const providerName = PROVIDERS[selectedProvider.toUpperCase()]?.name || selectedProvider;
-
-        if (!currentKey) {
-            setError(`Please configure your ${providerName} API Key in settings first.`);
-            setShowSettings(true);
-            return;
-        }
-
-        if (!currentModel) {
-            setError(`Please select a model for ${providerName} in settings.`);
-            setShowSettings(true);
-            return;
-        }
 
         setLoading(true);
         setError('');
@@ -367,17 +290,20 @@ IMPORTANT:
                 }
             ];
 
-            const client = await getProviderClient(selectedProvider);
-            const content = await client.generateContent(currentKey, currentModel, messages);
+            const content = await generateContent(messages);
             setResult(content);
 
             // Save to cache in background
             saveToCache(mode, topic, content);
         } catch (err) {
-            setError(err.message);
-            if (err.message.includes('API key')) {
-                setShowSettings(true);
+            console.error('AI Generation error:', err);
+            let userMessage = err.message;
+
+            if (err.message.includes('API key not configured') || err.message.includes('No model selected')) {
+                userMessage = 'Please configure your AI provider and model in Settings (⚙️ icon in header).';
             }
+
+            setError(userMessage);
         } finally {
             setLoading(false);
         }
@@ -617,22 +543,6 @@ IMPORTANT:
             setIsSaving(false);
         }
     };
-
-    // Filter models
-    const filteredModels = models.filter(model => {
-        const searchLower = modelSearch.toLowerCase();
-        return (
-            model.name.toLowerCase().includes(searchLower) ||
-            model.provider.toLowerCase().includes(searchLower) ||
-            model.id.toLowerCase().includes(searchLower)
-        );
-    });
-
-    const selectedModelObj = models.find(m => m.id === selectedModel);
-    const selectedModelDisplay = selectedModelObj
-        ? `${selectedModelObj.name} (${selectedModelObj.provider})${selectedModelObj.free ? ' - FREE' : ''}`
-        : selectedModel || 'Select a model';
-
 
     // Render content based on mode
     const renderContent = () => {
@@ -897,13 +807,6 @@ IMPORTANT:
                 >
                     <History size={24} className={user ? "text-gray-600 dark:text-gray-400" : "text-gray-400 dark:text-gray-600"} />
                 </button>
-                <button
-                    onClick={() => setShowSettings(true)}
-                    className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-                    title="API Settings"
-                >
-                    <Settings size={24} className="text-gray-600 dark:text-gray-400" />
-                </button>
             </div>
 
             <div className="text-center mb-10">
@@ -1121,161 +1024,6 @@ IMPORTANT:
                                         ))}
                                     </div>
                                 )}
-                            </div>
-                        </div>
-                    </div>,
-                    document.body
-                )
-            }
-
-            {/* Settings Modal - Portal */}
-            {
-                showSettings && createPortal(
-                    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] p-4">
-                        <div className="bg-white dark:bg-gray-800 rounded-xl border-4 border-black dark:border-white shadow-[8px_8px_0px_#000] dark:shadow-[8px_8px_0px_#FFF] max-w-lg w-full h-auto max-h-[95vh] flex flex-col">
-                            <div className="p-6 pb-4 flex-shrink-0">
-                                <div className="flex justify-between items-center">
-                                    <h2 className="text-2xl font-black flex items-center gap-2">
-                                        <Settings className="text-purple-500" />
-                                        Settings
-                                    </h2>
-                                    <button onClick={() => setShowSettings(false)} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
-                                        <X size={24} />
-                                    </button>
-                                </div>
-                            </div>
-
-                            <div className="px-6 py-4 overflow-y-auto flex-1">
-                                <div className="space-y-6">
-                                    {/* Provider Selection */}
-                                    <div>
-                                        <label className="block font-bold mb-2">
-                                            AI Provider
-                                        </label>
-                                        <select
-                                            value={selectedProvider}
-                                            onChange={(e) => handleProviderChange(e.target.value)}
-                                            className="w-full p-3 border-2 border-black dark:border-white rounded-lg bg-gray-50 dark:bg-gray-900 font-bold focus:outline-none focus:ring-4 focus:ring-purple-400"
-                                        >
-                                            {Object.values(PROVIDERS).map(provider => (
-                                                <option key={provider.id} value={provider.id}>
-                                                    {provider.name} - {provider.description}
-                                                </option>
-                                            ))}
-                                        </select>
-                                        <p className="mt-2 text-xs text-gray-400">
-                                            {PROVIDERS[selectedProvider.toUpperCase()]?.hasFreeModels
-                                                ? '✅ Has free tier or free models available'
-                                                : '💳 Requires paid credits'}
-                                        </p>
-                                    </div>
-
-                                    {/* API Key Input */}
-                                    <div>
-                                        <label className="block font-bold mb-2 flex items-center gap-2">
-                                            <Key size={18} />
-                                            {PROVIDERS[selectedProvider.toUpperCase()]?.name} API Key
-                                        </label>
-                                        <input
-                                            type="password"
-                                            value={apiKey}
-                                            onChange={(e) => setApiKey(e.target.value)}
-                                            placeholder="sk-or-v1-..."
-                                            className="w-full p-3 border-2 border-black dark:border-white rounded-lg bg-gray-50 dark:bg-gray-900 font-mono text-sm focus:outline-none focus:ring-4 focus:ring-purple-400"
-                                        />
-                                        <p className="mt-2 text-sm text-gray-500">
-                                            Get your API key at <a href={PROVIDERS[selectedProvider.toUpperCase()]?.docsUrl} target="_blank" rel="noopener noreferrer" className="text-purple-500 hover:underline font-bold">
-                                                {PROVIDERS[selectedProvider.toUpperCase()]?.docsUrl.replace('https://', '')}
-                                            </a>
-                                        </p>
-                                    </div>
-
-                                    {/* Model Selection */}
-                                    <div>
-                                        <label className="block font-bold mb-2 flex items-center gap-2">
-                                            <Brain size={18} />
-                                            AI Model
-                                        </label>
-                                        <div className="relative">
-                                            <button
-                                                onClick={() => setIsModelDropdownOpen(!isModelDropdownOpen)}
-                                                disabled={isLoadingModels}
-                                                className="w-full p-3 border-2 border-black dark:border-white rounded-lg bg-gray-50 dark:bg-gray-900 font-bold focus:outline-none focus:ring-4 focus:ring-purple-400 flex items-center justify-between text-left disabled:opacity-50"
-                                            >
-                                                <span className="truncate text-sm">{selectedModelDisplay}</span>
-                                                <ChevronDown size={20} className={`transition-transform ${isModelDropdownOpen ? 'rotate-180' : ''}`} />
-                                            </button>
-
-                                            {isModelDropdownOpen && (
-                                                <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-gray-800 border-2 border-black dark:border-white shadow-[4px_4px_0px_#000] dark:shadow-[4px_4px_0px_#FFF] rounded-lg overflow-hidden z-50 max-h-60 flex flex-col">
-                                                    <div className="p-2 border-b-2 border-black dark:border-white sticky top-0 bg-white dark:bg-gray-800 z-10">
-                                                        <div className="relative">
-                                                            <Search size={16} className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" />
-                                                            <input
-                                                                type="text"
-                                                                placeholder="Search models..."
-                                                                value={modelSearch}
-                                                                onChange={(e) => setModelSearch(e.target.value)}
-                                                                className="w-full pl-8 pr-2 py-1 border-2 border-gray-200 dark:border-gray-700 rounded text-sm focus:outline-none focus:border-purple-400"
-                                                                onClick={(e) => e.stopPropagation()}
-                                                            />
-                                                        </div>
-                                                    </div>
-                                                    <div className="overflow-y-auto flex-1">
-                                                        {isLoadingModels ? (
-                                                            <div className="p-4 text-center text-sm text-gray-500">Loading models...</div>
-                                                        ) : filteredModels.length > 0 ? (
-                                                            filteredModels.map((model) => (
-                                                                <button
-                                                                    key={model.id}
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        setSelectedModel(model.id);
-                                                                        setIsModelDropdownOpen(false);
-                                                                        setModelSearch('');
-                                                                    }}
-                                                                    className={`w-full text-left px-4 py-3 hover:bg-purple-100 dark:hover:bg-purple-900 transition-colors border-b border-gray-100 dark:border-gray-700 last:border-0 ${selectedModel === model.id ? 'bg-purple-50 dark:bg-purple-900/50' : ''}`}
-                                                                >
-                                                                    <div className="font-bold text-sm truncate">{model.name}</div>
-                                                                    <div className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-2">
-                                                                        <span>{model.provider}</span>
-                                                                        {model.free && (
-                                                                            <span className="bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 px-1.5 py-0.5 rounded text-[10px] font-bold">FREE</span>
-                                                                        )}
-                                                                    </div>
-                                                                </button>
-                                                            ))
-                                                        ) : (
-                                                            <div className="p-4 text-center text-sm text-gray-500">No models found</div>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </div>
-                                        <p className="mt-2 text-xs text-gray-400">
-                                            Free models are recommended for testing.
-                                        </p>
-                                    </div>
-                                </div>
-
-                            </div>
-
-                            <div className="p-6 pt-4 flex-shrink-0 border-t-2 border-gray-200 dark:border-gray-700">
-                                <div className="flex justify-end gap-3">
-                                    <button
-                                        onClick={() => setShowSettings(false)}
-                                        className="px-4 py-2 font-bold text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-                                    >
-                                        Cancel
-                                    </button>
-                                    <button
-                                        onClick={handleSaveSettings}
-                                        className="px-6 py-2 bg-purple-400 text-black font-bold rounded-lg border-2 border-black dark:border-white shadow-[4px_4px_0px_#000] dark:shadow-[4px_4px_0px_#FFF] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_#000] dark:hover:shadow-[6px_6px_0px_#FFF] transition-all flex items-center gap-2"
-                                    >
-                                        <Save size={18} />
-                                        Save Settings
-                                    </button>
-                                </div>
                             </div>
                         </div>
                     </div>,

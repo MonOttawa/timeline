@@ -8,6 +8,7 @@ import { LearningAssistant } from './components/LearningAssistant';
 import PublicTimeline from './components/PublicTimeline';
 import ErrorBoundary from './components/ErrorBoundary';
 import Dashboard from './components/Dashboard';
+import SettingsModal from './components/SettingsModal';
 import { useAuth } from './hooks/useAuth';
 
 function App() {
@@ -15,6 +16,7 @@ function App() {
   const [currentView, setCurrentView] = useState('landing'); // 'landing', 'dashboard', 'editor', 'learning'
   const [showLegal, setShowLegal] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [theme, setTheme] = useState('light');
   const [isDemoMode, setIsDemoMode] = useState(false);
   const [publicSlug, setPublicSlug] = useState(null);
@@ -152,6 +154,7 @@ function App() {
           onNavigateTimeline={currentView !== 'editor' ? handleNavigateTimeline : null}
           onNavigateLearning={currentView !== 'learning' ? handleNavigateLearning : null}
           onLogin={!user ? handleLogin : null}
+          onNavigateSettings={() => setShowSettingsModal(true)}
           showDashboard={!!user}
         />
       )}
@@ -216,6 +219,12 @@ function App() {
         <AuthModal
           onClose={() => setShowAuthModal(false)}
           onSuccess={handleAuthSuccess}
+        />
+      )}
+
+      {showSettingsModal && (
+        <SettingsModal
+          onClose={() => setShowSettingsModal(false)}
         />
       )}
     </div>

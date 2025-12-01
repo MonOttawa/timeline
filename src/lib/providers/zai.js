@@ -1,6 +1,6 @@
-export default class MoonshotClient {
+export default class ZAIClient {
     constructor() {
-        // Z.AI Coding API endpoint - uses Pro plan quota instead of separate API credits
+        // Z.AI Coding API endpoint (required for Coding Plan Pro)
         this.baseUrl = 'https://api.z.ai/api/coding/paas/v4';
     }
 
