@@ -7,6 +7,7 @@ const Dashboard = ({ user, onEdit, onCreate, onShare }) => {
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [deleteConfirmId, setDeleteConfirmId] = useState(null);
+    const [error, setError] = useState(null);
 
     useEffect(() => {
         fetchTimelines();
@@ -15,26 +16,17 @@ const Dashboard = ({ user, onEdit, onCreate, onShare }) => {
     const fetchTimelines = async () => {
         if (!user) return;
         setLoading(true);
+        setError(null);
         try {
             const records = await pb.collection('timelines').getList(1, 50, {
                 sort: '-updated',
                 filter: `user = "${user.id}"`,
                 fields: '*' // Fetch all fields including content
             });
-            console.log('Fetched timelines:', records.items.length);
-            if (records.items.length > 0) {
-                const firstTimeline = records.items[0];
-                console.log('First timeline object:', firstTimeline);
-                console.log('Available fields:', Object.keys(firstTimeline).join(', '));
-                console.log('Checking for content-like fields:');
-                console.log('  - content:', firstTimeline.content);
-                console.log('  - markdown:', firstTimeline.markdown);
-                console.log('  - data:', firstTimeline.data);
-                console.log('  - body:', firstTimeline.body);
-            }
             setTimelines(records.items);
         } catch (error) {
             console.error('Error fetching timelines:', error);
+            setError('Unable to load timelines. Please refresh or try again later.');
         } finally {
             setLoading(false);
         }
@@ -49,7 +41,7 @@ const Dashboard = ({ user, onEdit, onCreate, onShare }) => {
                 setDeleteConfirmId(null);
             } catch (error) {
                 console.error('Error deleting timeline:', error);
-                alert('Failed to delete timeline');
+                setError('Failed to delete timeline. Please try again.');
             }
         } else {
             setDeleteConfirmId(id);
@@ -77,6 +69,12 @@ const Dashboard = ({ user, onEdit, onCreate, onShare }) => {
                     Create New
                 </button>
             </div>
+
+            {error && (
+                <div className="mb-4 p-4 border-2 border-red-500 bg-red-50 text-red-700 font-semibold rounded-lg">
+                    {error}
+                </div>
+            )}
 
             {/* Search Bar */}
             <div className="relative mb-6">
