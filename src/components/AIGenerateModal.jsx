@@ -17,6 +17,8 @@ const AIGenerateModal = ({ onClose, onGenerate }) => {
   const [errorMessage, setErrorMessage] = useState('');
   const [apiKeyInput, setApiKeyInput] = useState('');
   const [modelInput, setModelInput] = useState('');
+  const [models, setModels] = useState([]);
+  const [isLoadingModels, setIsLoadingModels] = useState(false);
 
   useEffect(() => {
     // Set default provider to first one with API key configured
@@ -34,7 +36,31 @@ const AIGenerateModal = ({ onClose, onGenerate }) => {
   useEffect(() => {
     setApiKeyInput(getProviderApiKey(selectedProvider) || '');
     setModelInput(getProviderModel(selectedProvider) || '');
+    setModels([]);
   }, [selectedProvider]);
+
+  // Load models when provider or apiKey changes (best-effort)
+  useEffect(() => {
+    const loadModels = async () => {
+      setIsLoadingModels(true);
+      try {
+        const client = await getProviderClient(selectedProvider);
+        const fetched = await client.fetchModels(apiKeyInput);
+        setModels(fetched || []);
+        if (!modelInput && fetched?.length) {
+          setModelInput(fetched[0].id);
+        }
+      } catch (err) {
+        console.error('Error loading models:', err);
+        setModels([]);
+      } finally {
+        setIsLoadingModels(false);
+      }
+    };
+
+    loadModels();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedProvider, apiKeyInput]);
 
   const currentProvider = PROVIDERS[selectedProvider.toUpperCase()];
   const hasApiKey = !!apiKeyInput;
@@ -233,13 +259,28 @@ IMPORTANT:
             </div>
             <div>
               <label className="block font-bold mb-2 text-sm">Model</label>
-              <input
-                type="text"
-                value={modelInput}
-                onChange={(e) => setModelInput(e.target.value)}
-                placeholder="e.g., glm-4.6"
-                className="w-full p-3 border-2 border-black dark:border-white rounded-lg bg-gray-50 dark:bg-gray-900 font-mono text-sm focus:outline-none focus:ring-4 focus:ring-purple-400"
-              />
+              <div className="space-y-2">
+                <select
+                  value={modelInput}
+                  onChange={(e) => setModelInput(e.target.value)}
+                  className="w-full p-3 border-2 border-black dark:border-white rounded-lg bg-gray-50 dark:bg-gray-900 font-bold focus:outline-none focus:ring-4 focus:ring-purple-400"
+                  disabled={isLoadingModels}
+                >
+                  <option value="">{isLoadingModels ? 'Loading models…' : 'Select or type a model'}</option>
+                  {models.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.name || m.id} ({m.provider || 'model'})
+                    </option>
+                  ))}
+                </select>
+                <input
+                  type="text"
+                  value={modelInput}
+                  onChange={(e) => setModelInput(e.target.value)}
+                  placeholder="e.g., glm-4.6"
+                  className="w-full p-3 border-2 border-black dark:border-white rounded-lg bg-gray-50 dark:bg-gray-900 font-mono text-sm focus:outline-none focus:ring-4 focus:ring-purple-400"
+                />
+              </div>
             </div>
           </div>
           <div className="flex justify-end">
