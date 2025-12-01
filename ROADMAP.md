@@ -23,6 +23,7 @@
 - [ ] **Generation API Endpoint**: Expose a serverless/HTTP endpoint for AI timeline generation (auth-aware), so external tools can trigger creation and persist results. Design request/response schema and provider selection; can be hosted as Supabase Edge Function or a pocketbase-adjacent service.
 - [ ] **Learning Knowledge Graph**: Build a graph of user learning interactions (queries, timelines, assistant sessions) to visualize connections and surface related topics/templates; include per-user map view and privacy controls.
 - [ ] **AI Insights on Learning History**: Use AI to summarize and surface insights from a user’s accumulated timelines and sessions (mastered areas, gaps, suggested next topics), tied to the knowledge graph.
+- [ ] **Shared Provider Selector**: DRY up AI provider/model handling by extracting a single shared selector/component used by both Learning Assistant and Timeline AI generation (Z.AI GLM list, custom model toggle, persisted keys/models).
 
 ## 🔮 Long-term Vision
 
