@@ -1,6 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { X, Sparkles, Settings, MessageSquare, ChevronDown } from 'lucide-react';
-import { PROVIDERS, getProviderClient, getProviderApiKey, getProviderModel } from '../lib/providers';
+import {
+  PROVIDERS,
+  getProviderClient,
+  getProviderApiKey,
+  getProviderModel,
+  setProviderApiKey,
+  setProviderModel,
+} from '../lib/providers';
 
 const AIGenerateModal = ({ onClose, onGenerate }) => {
   const [selectedProvider, setSelectedProvider] = useState('openrouter');
@@ -8,6 +15,8 @@ const AIGenerateModal = ({ onClose, onGenerate }) => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [isProviderDropdownOpen, setIsProviderDropdownOpen] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [apiKeyInput, setApiKeyInput] = useState('');
+  const [modelInput, setModelInput] = useState('');
 
   useEffect(() => {
     // Set default provider to first one with API key configured
@@ -21,9 +30,15 @@ const AIGenerateModal = ({ onClose, onGenerate }) => {
     }
   }, []);
 
+  // Sync inputs when provider changes
+  useEffect(() => {
+    setApiKeyInput(getProviderApiKey(selectedProvider) || '');
+    setModelInput(getProviderModel(selectedProvider) || '');
+  }, [selectedProvider]);
+
   const currentProvider = PROVIDERS[selectedProvider.toUpperCase()];
-  const hasApiKey = !!getProviderApiKey(selectedProvider);
-  const hasModel = !!getProviderModel(selectedProvider);
+  const hasApiKey = !!apiKeyInput;
+  const hasModel = !!modelInput;
 
   const handleGenerate = async () => {
     setErrorMessage('');
@@ -89,8 +104,8 @@ IMPORTANT:
       ];
 
       const client = await getProviderClient(selectedProvider);
-      const apiKey = getProviderApiKey(selectedProvider);
-      const model = getProviderModel(selectedProvider);
+      const apiKey = apiKeyInput;
+      const model = modelInput;
 
       const generatedContent = await client.generateContent(apiKey, model, messages);
 
@@ -204,15 +219,41 @@ IMPORTANT:
             )}
           </div>
 
-          {/* Current Model Display */}
-          {hasApiKey && hasModel && (
-            <div className="p-3 bg-gray-50 dark:bg-gray-900 border-2 border-black dark:border-white rounded-lg">
-              <div className="text-sm">
-                <span className="font-bold">Model: </span>
-                <span className="font-mono text-xs">{getProviderModel(selectedProvider)}</span>
-              </div>
+          {/* Provider Credentials (inline) */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block font-bold mb-2 text-sm">API Key</label>
+              <input
+                type="password"
+                value={apiKeyInput}
+                onChange={(e) => setApiKeyInput(e.target.value)}
+                placeholder="sk-..."
+                className="w-full p-3 border-2 border-black dark:border-white rounded-lg bg-gray-50 dark:bg-gray-900 font-mono text-sm focus:outline-none focus:ring-4 focus:ring-purple-400"
+              />
             </div>
-          )}
+            <div>
+              <label className="block font-bold mb-2 text-sm">Model</label>
+              <input
+                type="text"
+                value={modelInput}
+                onChange={(e) => setModelInput(e.target.value)}
+                placeholder="e.g., glm-4.6"
+                className="w-full p-3 border-2 border-black dark:border-white rounded-lg bg-gray-50 dark:bg-gray-900 font-mono text-sm focus:outline-none focus:ring-4 focus:ring-purple-400"
+              />
+            </div>
+          </div>
+          <div className="flex justify-end">
+            <button
+              onClick={() => {
+                setProviderApiKey(selectedProvider, apiKeyInput);
+                if (modelInput) setProviderModel(selectedProvider, modelInput);
+                setErrorMessage('');
+              }}
+              className="inline-flex items-center gap-2 border-2 border-black dark:border-white font-bold py-2 px-4 bg-gray-200 dark:bg-gray-700 text-black dark:text-white shadow-[4px_4px_0px_#000] dark:shadow-[4px_4px_0px_#FFF] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_#000] dark:hover:shadow-[6px_6px_0px_#FFF] transition-all rounded-lg text-sm"
+            >
+              Save Provider
+            </button>
+          </div>
 
           {/* Prompt Input */}
           <div>
