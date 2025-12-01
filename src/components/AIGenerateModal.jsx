@@ -9,6 +9,13 @@ import {
   setProviderModel,
 } from '../lib/providers';
 
+const ZAI_GLM_MODELS = [
+  { id: 'glm-4.6', name: 'GLM-4.6', provider: 'Z.AI' },
+  { id: 'glm-4.5v', name: 'GLM-4.5V', provider: 'Z.AI' },
+  { id: 'glm-4.5', name: 'GLM-4.5', provider: 'Z.AI' },
+  { id: 'glm-4.5-air', name: 'GLM-4.5-Air', provider: 'Z.AI' },
+];
+
 const AIGenerateModal = ({ onClose, onGenerate }) => {
   const [selectedProvider, setSelectedProvider] = useState('openrouter');
   const [prompt, setPrompt] = useState('');
@@ -46,6 +53,18 @@ const AIGenerateModal = ({ onClose, onGenerate }) => {
     const loadModels = async () => {
       setIsLoadingModels(true);
       try {
+        // Shortcut for Z.AI: static GLM list
+        if (selectedProvider === 'moonshot') {
+          setModels(ZAI_GLM_MODELS);
+          if (!modelInput) {
+            setModelInput(ZAI_GLM_MODELS[0].id);
+          } else {
+            const match = ZAI_GLM_MODELS.find(m => m.id === modelInput);
+            setUseCustomModel(!match);
+          }
+          return;
+        }
+
         const client = await getProviderClient(selectedProvider);
         const fetched = await client.fetchModels(apiKeyInput);
         setModels(fetched || []);
