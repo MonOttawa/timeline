@@ -1,14 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { pb } from '../lib/pocketbase';
+import { onAuthChange, getCurrentUser, clearSession } from '../lib/api/auth';
 import { AuthContext } from './AuthContext';
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(() => pb.authStore.model);
+  const [user, setUser] = useState(() => getCurrentUser());
 
   useEffect(() => {
-    const unsubscribe = pb.authStore.onChange((token, model) => {
-      setUser(model);
-    });
+    const unsubscribe = onAuthChange((token, model) => setUser(model));
 
     return () => {
       unsubscribe();
@@ -16,7 +14,7 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const signOut = () => {
-    pb.authStore.clear();
+    clearSession();
     setUser(null);
   };
 

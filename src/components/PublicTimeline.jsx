@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { marked } from 'marked';
 import { AlertCircle, Pin, ExternalLink, ArrowRight } from 'lucide-react';
-import { getPublicTimeline, incrementViewCount } from '../lib/pocketbase';
+import { getPublicTimeline, incrementViewCount } from '../lib/api/timelines';
 import { sanitizeMarkdownHtml } from '../lib/sanitizeMarkdown';
 
 const allowedStyles = ['bauhaus', 'neo-brutalist', 'corporate', 'handwritten'];

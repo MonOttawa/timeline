@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { X } from 'lucide-react';
-import { pb } from '../lib/pocketbase';
+import { signInWithPassword, signUpWithPassword } from '../lib/api/auth';
 
 const AuthModal = ({ onClose, onSuccess }) => {
   const [isSignUp, setIsSignUp] = useState(false);
@@ -23,12 +23,7 @@ const AuthModal = ({ onClose, onSuccess }) => {
           throw new Error('Passwords do not match');
         }
 
-        await pb.collection('users').create({
-          email,
-          password,
-          passwordConfirm,
-          emailVisibility: true,
-        });
+        await signUpWithPassword(email, password, passwordConfirm);
 
         setMessage('Account created! You can now sign in.');
         setTimeout(() => {
@@ -36,12 +31,8 @@ const AuthModal = ({ onClose, onSuccess }) => {
           setMessage('');
         }, 2000);
       } else {
-        const authData = await pb.collection('users').authWithPassword(
-          email,
-          password
-        );
-
-        onSuccess(authData.record);
+        const authRecord = await signInWithPassword(email, password);
+        onSuccess(authRecord);
         onClose();
       }
     } catch (error) {

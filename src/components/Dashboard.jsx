@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Search, Calendar, Trash2, Edit2, Share2, MoreVertical, FileText, Loader } from 'lucide-react';
-import { pb } from '../lib/pocketbase';
+import { listTimelinesByUser, deleteTimeline } from '../lib/api/timelines';
 
 const Dashboard = ({ user, onEdit, onCreate, onShare }) => {
     const [timelines, setTimelines] = useState([]);
@@ -18,12 +18,8 @@ const Dashboard = ({ user, onEdit, onCreate, onShare }) => {
         setLoading(true);
         setError(null);
         try {
-            const records = await pb.collection('timelines').getList(1, 50, {
-                sort: '-updated',
-                filter: `user = "${user.id}"`,
-                fields: '*' // Fetch all fields including content
-            });
-            setTimelines(records.items);
+            const items = await listTimelinesByUser(user.id);
+            setTimelines(items);
         } catch (error) {
             console.error('Error fetching timelines:', error);
             setError('Unable to load timelines. Please refresh or try again later.');
@@ -36,7 +32,7 @@ const Dashboard = ({ user, onEdit, onCreate, onShare }) => {
         e.stopPropagation();
         if (deleteConfirmId === id) {
             try {
-                await pb.collection('timelines').delete(id);
+                await deleteTimeline(id);
                 setTimelines(timelines.filter(t => t.id !== id));
                 setDeleteConfirmId(null);
             } catch (error) {
