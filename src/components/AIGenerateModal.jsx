@@ -74,6 +74,14 @@ const AIGenerateModal = ({ onClose, onGenerate }) => {
   const currentProvider = PROVIDERS[selectedProvider.toUpperCase()];
   const hasApiKey = !!apiKeyInput;
   const hasModel = !!modelInput;
+  const filteredModels = (models || []).filter((m) => {
+    if (!m) return false;
+    if (selectedProvider === 'openrouter') return true; // openrouter aggregates
+    const providerName = (m.provider || '').toLowerCase();
+    const id = (m.id || '').toLowerCase();
+    const expected = (currentProvider?.name || selectedProvider).toLowerCase();
+    return providerName.includes(expected) || id.includes(selectedProvider);
+  });
 
   const handleGenerate = async () => {
     setErrorMessage('');
@@ -268,7 +276,7 @@ IMPORTANT:
             </div>
             <div>
               <label className="block font-bold mb-2 text-sm">Model</label>
-              {models.length > 0 && !useCustomModel ? (
+              {filteredModels.length > 0 && !useCustomModel ? (
                 <select
                   value={modelInput}
                   onChange={(e) => {
@@ -279,7 +287,7 @@ IMPORTANT:
                   disabled={isLoadingModels}
                 >
                   <option value="">{isLoadingModels ? 'Loading models…' : 'Select a model'}</option>
-                  {models.map((m) => (
+                  {filteredModels.map((m) => (
                     <option key={m.id} value={m.id}>
                       {m.name || m.id} ({m.provider || 'model'})
                     </option>
@@ -287,7 +295,7 @@ IMPORTANT:
                   <option value="__custom">Custom model…</option>
                 </select>
               ) : null}
-              {useCustomModel || models.length === 0 ? (
+              {useCustomModel || filteredModels.length === 0 ? (
                 <input
                   type="text"
                   value={modelInput}
