@@ -19,6 +19,7 @@ const AIGenerateModal = ({ onClose, onGenerate }) => {
   const [modelInput, setModelInput] = useState('');
   const [models, setModels] = useState([]);
   const [isLoadingModels, setIsLoadingModels] = useState(false);
+  const [useCustomModel, setUseCustomModel] = useState(false);
 
   useEffect(() => {
     // Set default provider to first one with API key configured
@@ -37,6 +38,7 @@ const AIGenerateModal = ({ onClose, onGenerate }) => {
     setApiKeyInput(getProviderApiKey(selectedProvider) || '');
     setModelInput(getProviderModel(selectedProvider) || '');
     setModels([]);
+    setUseCustomModel(false);
   }, [selectedProvider]);
 
   // Load models when provider or apiKey changes (best-effort)
@@ -49,10 +51,17 @@ const AIGenerateModal = ({ onClose, onGenerate }) => {
         setModels(fetched || []);
         if (!modelInput && fetched?.length) {
           setModelInput(fetched[0].id);
+          setUseCustomModel(false);
+        } else if (modelInput && fetched?.length) {
+          const match = fetched.find(m => m.id === modelInput);
+          setUseCustomModel(!match);
+        } else {
+          setUseCustomModel(true);
         }
       } catch (err) {
         console.error('Error loading models:', err);
         setModels([]);
+        setUseCustomModel(true);
       } finally {
         setIsLoadingModels(false);
       }
@@ -259,28 +268,48 @@ IMPORTANT:
             </div>
             <div>
               <label className="block font-bold mb-2 text-sm">Model</label>
-              <div className="space-y-2">
+              {models.length > 0 && !useCustomModel ? (
                 <select
                   value={modelInput}
-                  onChange={(e) => setModelInput(e.target.value)}
+                  onChange={(e) => {
+                    setModelInput(e.target.value);
+                    setUseCustomModel(false);
+                  }}
                   className="w-full p-3 border-2 border-black dark:border-white rounded-lg bg-gray-50 dark:bg-gray-900 font-bold focus:outline-none focus:ring-4 focus:ring-purple-400"
                   disabled={isLoadingModels}
                 >
-                  <option value="">{isLoadingModels ? 'Loading models…' : 'Select or type a model'}</option>
+                  <option value="">{isLoadingModels ? 'Loading models…' : 'Select a model'}</option>
                   {models.map((m) => (
                     <option key={m.id} value={m.id}>
                       {m.name || m.id} ({m.provider || 'model'})
                     </option>
                   ))}
+                  <option value="__custom">Custom model…</option>
                 </select>
+              ) : null}
+              {useCustomModel || models.length === 0 ? (
                 <input
                   type="text"
                   value={modelInput}
                   onChange={(e) => setModelInput(e.target.value)}
                   placeholder="e.g., glm-4.6"
-                  className="w-full p-3 border-2 border-black dark:border-white rounded-lg bg-gray-50 dark:bg-gray-900 font-mono text-sm focus:outline-none focus:ring-4 focus:ring-purple-400"
+                  className="w-full mt-2 p-3 border-2 border-black dark:border-white rounded-lg bg-gray-50 dark:bg-gray-900 font-mono text-sm focus:outline-none focus:ring-4 focus:ring-purple-400"
                 />
-              </div>
+              ) : null}
+              {models.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setUseCustomModel(!useCustomModel);
+                    if (!useCustomModel && models[0]) {
+                      setModelInput('');
+                    }
+                  }}
+                  className="mt-2 text-xs font-bold text-purple-600 dark:text-purple-300 hover:underline"
+                >
+                  {useCustomModel ? 'Use provider list' : 'Use custom model'}
+                </button>
+              )}
             </div>
           </div>
           <div className="flex justify-end">
