@@ -1,32 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { X, Sparkles, Settings, MessageSquare, ChevronDown } from 'lucide-react';
-import {
-  PROVIDERS,
-  getProviderClient,
-  getProviderApiKey,
-  getProviderModel,
-  setProviderApiKey,
-  setProviderModel,
-} from '../lib/providers';
-
-const ZAI_GLM_MODELS = [
-  { id: 'glm-4.6', name: 'GLM-4.6', provider: 'Z.AI' },
-  { id: 'glm-4.5v', name: 'GLM-4.5V', provider: 'Z.AI' },
-  { id: 'glm-4.5', name: 'GLM-4.5', provider: 'Z.AI' },
-  { id: 'glm-4.5-air', name: 'GLM-4.5-Air', provider: 'Z.AI' },
-];
+import { X, Sparkles, MessageSquare } from 'lucide-react';
+import { PROVIDERS, getProviderClient, getProviderApiKey } from '../lib/providers';
+import ProviderSelector from './ProviderSelector';
 
 const AIGenerateModal = ({ onClose, onGenerate }) => {
   const [selectedProvider, setSelectedProvider] = useState('openrouter');
   const [prompt, setPrompt] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
-  const [isProviderDropdownOpen, setIsProviderDropdownOpen] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [apiKeyInput, setApiKeyInput] = useState('');
   const [modelInput, setModelInput] = useState('');
-  const [models, setModels] = useState([]);
-  const [isLoadingModels, setIsLoadingModels] = useState(false);
-  const [useCustomModel, setUseCustomModel] = useState(false);
 
   useEffect(() => {
     // Set default provider to first one with API key configured
@@ -40,77 +23,9 @@ const AIGenerateModal = ({ onClose, onGenerate }) => {
     }
   }, []);
 
-  // Sync inputs when provider changes
-  useEffect(() => {
-    setApiKeyInput(getProviderApiKey(selectedProvider) || '');
-    setModelInput(getProviderModel(selectedProvider) || '');
-    setModels([]);
-    setUseCustomModel(false);
-  }, [selectedProvider]);
-
-  // Load models when provider or apiKey changes (best-effort)
-  useEffect(() => {
-    const loadModels = async () => {
-      setIsLoadingModels(true);
-      try {
-        // Shortcut for Z.AI: static GLM list
-        if (selectedProvider === 'moonshot') {
-          setModels(ZAI_GLM_MODELS);
-          if (!modelInput) {
-            setModelInput(ZAI_GLM_MODELS[0].id);
-          } else {
-            const match = ZAI_GLM_MODELS.find(m => m.id === modelInput);
-            setUseCustomModel(!match);
-          }
-          return;
-        }
-
-        const client = await getProviderClient(selectedProvider);
-        const fetched = await client.fetchModels(apiKeyInput);
-        setModels(fetched || []);
-        if (!modelInput && fetched?.length) {
-          setModelInput(fetched[0].id);
-          setUseCustomModel(false);
-        } else if (modelInput && fetched?.length) {
-          const match = fetched.find(m => m.id === modelInput);
-          setUseCustomModel(!match);
-        } else {
-          setUseCustomModel(true);
-        }
-      } catch (err) {
-        console.error('Error loading models:', err);
-        setModels([]);
-        setUseCustomModel(true);
-      } finally {
-        setIsLoadingModels(false);
-      }
-    };
-
-    loadModels();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedProvider, apiKeyInput]);
-
   const currentProvider = PROVIDERS[selectedProvider.toUpperCase()];
   const hasApiKey = !!apiKeyInput;
   const hasModel = !!modelInput;
-  const filteredModels = (models || []).filter((m) => {
-    if (!m) return false;
-    const providerName = (m.provider || '').toLowerCase();
-    const id = (m.id || '').toLowerCase();
-    const expectedName = (currentProvider?.name || '').toLowerCase();
-    const expectedId = selectedProvider.toLowerCase();
-
-    // For openrouter, keep all (it aggregates)
-    if (expectedId === 'openrouter') return true;
-
-    // For Z.AI (moonshot), keep only GLM models
-    if (expectedId === 'moonshot') {
-      return id.includes('glm') || providerName.includes('z.ai') || providerName.includes('glm');
-    }
-
-    // Default: match by provider name or id substring
-    return providerName.includes(expectedName) || id.includes(expectedId);
-  });
 
   const handleGenerate = async () => {
     setErrorMessage('');
