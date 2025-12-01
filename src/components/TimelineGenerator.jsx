@@ -5,7 +5,6 @@ import { Upload, Download, FileText, Palette, Save, FolderOpen, ChevronDown, Spa
 import domtoimage from 'dom-to-image-more';
 import { useAuth } from '../hooks/useAuth';
 import { sanitizeMarkdownHtml } from '../lib/sanitizeMarkdown';
-import { pb } from '../lib/pocketbase';
 import AuthModal from './AuthModal';
 import SavedTimelinesModal from './SavedTimelinesModal';
 import AIGenerateModal from './AIGenerateModal';
@@ -13,6 +12,8 @@ import TemplatesModal from './TemplatesModal';
 import ShareModal from './ShareModal';
 import { slugify, makeUniqueSlug } from '../lib/slugify';
 import { sampleTimelines } from '../data/sampleTimelines';
+import { createTimeline, updateTimeline, listTimelinesByUser, deleteTimeline as deleteTimelineApi } from '../lib/api/timelines';
+import { buildShareUrl } from '../lib/shareLinks';
 
 const TimelineGenerator = ({ isDemoMode = false, initialTimeline = null, onBack = null }) => {
   const [events, setEvents] = useState([]);
@@ -415,9 +416,9 @@ const TimelineGenerator = ({ isDemoMode = false, initialTimeline = null, onBack 
       data.viewCount = typeof viewCount === 'number' ? viewCount : 0;
 
       if (currentTimelineId) {
-        record = await pb.collection('timelines').update(currentTimelineId, data);
+        record = await updateTimeline(currentTimelineId, data);
       } else {
-        record = await pb.collection('timelines').create(data);
+        record = await createTimeline(data);
         setCurrentTimelineId(record.id);
       }
 
@@ -477,11 +478,8 @@ const TimelineGenerator = ({ isDemoMode = false, initialTimeline = null, onBack 
     setIsLoadingTimelines(true);
 
     try {
-      const records = await pb.collection('timelines').getList(1, 50, {
-        sort: '-updated',
-        filter: `user = "${user.id}"`
-      });
-      setSavedTimelines(records.items);
+      const items = await listTimelinesByUser(user.id);
+      setSavedTimelines(items);
     } catch (error) {
       console.error('Error fetching timelines:', error);
       // Don't alert 404s (collection empty/missing), just show empty list
@@ -508,7 +506,7 @@ const TimelineGenerator = ({ isDemoMode = false, initialTimeline = null, onBack 
 
   const handleDeleteTimeline = async (id) => {
     try {
-      await pb.collection('timelines').delete(id);
+      await deleteTimelineApi(id);
       setSavedTimelines(savedTimelines.filter(t => t.id !== id));
       if (currentTimelineId === id) {
         setCurrentTimelineId(null);
@@ -542,7 +540,7 @@ const TimelineGenerator = ({ isDemoMode = false, initialTimeline = null, onBack 
       }
 
       const newPublicStatus = !isPublic;
-      const record = await pb.collection('timelines').update(currentTimelineId, {
+      const record = await updateTimeline(currentTimelineId, {
         public: newPublicStatus,
         slug: slugToUse
       });
@@ -1241,15 +1239,11 @@ const TimelineGenerator = ({ isDemoMode = false, initialTimeline = null, onBack 
           onClose={() => setShowShareModal(false)}
           isPublic={isPublic}
           onTogglePublic={handleTogglePublic}
-          shareUrl={(() => {
-            if (!(currentSlug || currentTimelineId)) return '';
-            const base = `${(import.meta.env.VITE_APP_URL || window.location.origin).replace(/\/$/, '')}/timeline/${currentSlug || currentTimelineId}`;
-            const params = new URLSearchParams();
-            if (currentTimelineId) params.set('rid', currentTimelineId);
-            if (timelineStyle) params.set('style', timelineStyle);
-            const query = params.toString();
-            return query ? `${base}?${query}` : base;
-          })()}
+          shareUrl={buildShareUrl({
+            slug: currentSlug || undefined,
+            id: currentTimelineId || undefined,
+            style: timelineStyle || undefined,
+          })}
           viewCount={viewCount}
           isSaving={isSaving}
         />

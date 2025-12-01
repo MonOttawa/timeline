@@ -18,6 +18,16 @@ export async function deleteTimeline(timelineId) {
   return client.collection(TIMELINES_COLLECTION).delete(timelineId);
 }
 
+export async function createTimeline(data) {
+  const client = getDataClient();
+  return client.collection(TIMELINES_COLLECTION).create(data);
+}
+
+export async function updateTimeline(timelineId, data) {
+  const client = getDataClient();
+  return client.collection(TIMELINES_COLLECTION).update(timelineId, data);
+}
+
 export async function getPublicTimeline(slug, recordId = null) {
   const client = getDataClient();
   try {
