@@ -7,6 +7,7 @@ const AIGenerateModal = ({ onClose, onGenerate }) => {
   const [prompt, setPrompt] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [isProviderDropdownOpen, setIsProviderDropdownOpen] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   useEffect(() => {
     // Set default provider to first one with API key configured
@@ -25,18 +26,19 @@ const AIGenerateModal = ({ onClose, onGenerate }) => {
   const hasModel = !!getProviderModel(selectedProvider);
 
   const handleGenerate = async () => {
+    setErrorMessage('');
     if (!prompt.trim()) {
-      alert('Please enter a prompt describing your timeline');
+      setErrorMessage('Please enter a prompt describing your timeline.');
       return;
     }
 
     if (!hasApiKey) {
-      alert(`Please configure your ${currentProvider?.name || selectedProvider} API key in Settings first.`);
+      setErrorMessage(`Configure your ${currentProvider?.name || selectedProvider} API key in Settings first.`);
       return;
     }
 
     if (!hasModel) {
-      alert(`Please select a model for ${currentProvider?.name || selectedProvider} in Settings.`);
+      setErrorMessage(`Select a model for ${currentProvider?.name || selectedProvider} in Settings.`);
       return;
     }
 
@@ -113,7 +115,7 @@ IMPORTANT:
         userMessage = 'Rate limit exceeded. Please wait a moment and try again.';
       }
 
-      alert(`Failed to generate timeline: ${userMessage}`);
+      setErrorMessage(`Failed to generate timeline: ${userMessage}`);
     } finally {
       setIsGenerating(false);
     }
@@ -138,6 +140,12 @@ IMPORTANT:
 
         {/* Content */}
         <div className="p-6 space-y-6">
+          {errorMessage && (
+            <div className="p-3 border-2 border-red-500 bg-red-50 text-red-700 font-semibold rounded-lg text-sm">
+              {errorMessage}
+            </div>
+          )}
+
           {/* Provider Selection */}
           <div>
             <label className="font-bold mb-2 block">AI Provider</label>
