@@ -17,6 +17,11 @@ The React Compiler is not enabled on this template because of its impact on dev 
 - `VITE_APP_URL` (recommended): Public site URL for share/embed links, e.g. `https://timeline.example.com`.
 - `VITE_COMMIT_HASH` (optional): Short git SHA to display in the footer build tag.
 
+### Preparing for a future backend swap (PocketBase → Supabase)
+- Central data access now lives in `src/lib/api/` (`client.js`, `auth.js`, `timelines.js`). To swap backends, update the client and these helpers instead of touching UI components.
+- If you plan to use Supabase, you’ll likely need `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` (and to rewrite the helpers to use the Supabase JS client).
+- Align schema: a `timelines` table with fields `id`, `user`, `title`, `content`, `style`, `slug`, `public`, `viewCount`, timestamps. Recreate auth flows (email/password) with Supabase auth and rewire `auth.js`.
+
 ## Expanding the ESLint configuration
 
 If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
