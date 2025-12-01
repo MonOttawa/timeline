@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { ChartNoAxesGantt, Moon, Sun, Sparkles, ChevronDown, Settings, LogOut, LayoutGrid } from "lucide-react";
 import { BurgerMenu } from "./BurgerMenu";
+import newLogo from '../assets/newlogo.png';
 
 export const Header = ({
     theme,
@@ -46,7 +47,7 @@ export const Header = ({
                         onClick={onNavigateHome}
                     >
                         <img
-                            src="/newlogo.png"
+                            src={newLogo}
                             alt="Substantifique Logo"
                             className="h-[32px] md:h-[36px] w-auto"
                         />
