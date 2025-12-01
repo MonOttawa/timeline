@@ -76,11 +76,21 @@ const AIGenerateModal = ({ onClose, onGenerate }) => {
   const hasModel = !!modelInput;
   const filteredModels = (models || []).filter((m) => {
     if (!m) return false;
-    if (selectedProvider === 'openrouter') return true; // openrouter aggregates
     const providerName = (m.provider || '').toLowerCase();
     const id = (m.id || '').toLowerCase();
-    const expected = (currentProvider?.name || selectedProvider).toLowerCase();
-    return providerName.includes(expected) || id.includes(selectedProvider);
+    const expectedName = (currentProvider?.name || '').toLowerCase();
+    const expectedId = selectedProvider.toLowerCase();
+
+    // For openrouter, keep all (it aggregates)
+    if (expectedId === 'openrouter') return true;
+
+    // For Z.AI (moonshot), keep only GLM models
+    if (expectedId === 'moonshot') {
+      return id.includes('glm') || providerName.includes('z.ai') || providerName.includes('glm');
+    }
+
+    // Default: match by provider name or id substring
+    return providerName.includes(expectedName) || id.includes(expectedId);
   });
 
   const handleGenerate = async () => {
