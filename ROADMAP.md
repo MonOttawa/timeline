@@ -20,6 +20,7 @@
 - [ ] **Mobile Optimization**: Better touch support and responsive layout for mobile devices.
 - [ ] **Custom Themes**: Allow users to define custom color palettes for timelines.
 - [ ] **Offline Mode**: PWA support for offline editing.
+- [ ] **Generation API Endpoint**: Expose a serverless/HTTP endpoint for AI timeline generation (auth-aware), so external tools can trigger creation and persist results. Design request/response schema and provider selection; can be hosted as Supabase Edge Function or a pocketbase-adjacent service.
 
 ## 🔮 Long-term Vision
 
