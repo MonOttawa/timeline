@@ -22,6 +22,35 @@ The React Compiler is not enabled on this template because of its impact on dev 
 - If you plan to use Supabase, you’ll likely need `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` (and to rewrite the helpers to use the Supabase JS client).
 - Align schema: a `timelines` table with fields `id`, `user`, `title`, `content`, `style`, `slug`, `public`, `viewCount`, timestamps. Recreate auth flows (email/password) with Supabase auth and rewire `auth.js`.
 
+#### Detailed migration plan (PocketBase → Supabase)
+1) **Schema & policies**
+   - Create `timelines` table with columns: `id (uuid)`, `user (uuid ref to auth.users)`, `title text`, `content text`, `style text`, `slug text`, `public boolean`, `viewCount int`, `created_at`, `updated_at`.
+   - Add unique index on `slug` (or enforce via policy); allow nullable `slug` if needed but prefer unique.
+   - Configure RLS: owner can read/write/delete their rows; public read only when `public=true`.
+2) **Supabase client setup**
+   - Add `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` envs.
+   - Add `src/lib/api/client.js` logic to choose Supabase client when configured; export `getDataClient` returning Supabase instance.
+3) **Auth layer (`src/lib/api/auth.js`)**
+   - Replace PocketBase calls with Supabase auth methods: `signInWithPassword`, `signUpWithPassword`, `onAuthChange` using Supabase auth session listener, `clearSession` using `supabase.auth.signOut`.
+   - Update `AuthProvider` to use Supabase session/user shape (map to `user` object expected by UI).
+4) **Timelines API (`src/lib/api/timelines.js`)**
+   - Rewrite `listTimelinesByUser`, `deleteTimeline`, `getPublicTimeline`, `incrementViewCount` using Supabase queries:
+     - `listTimelinesByUser`: `supabase.from('timelines').select('*').eq('user', userId).order('updated_at', { ascending: false })`.
+     - `deleteTimeline`: `supabase.from('timelines').delete().eq('id', timelineId)`.
+     - `getPublicTimeline`: first by `slug` and `public=true`; fallback by `id` with `public=true`.
+     - `incrementViewCount`: RPC or update with `viewCount + 1`.
+5) **Storage considerations**
+   - If you store files/assets per timeline, add Supabase Storage buckets or encode content inline as today. Current app stores markdown content directly; no file storage changes needed unless you add uploads.
+6) **Env & build**
+   - Ensure builds include Supabase envs; optionally fail build if neither PocketBase nor Supabase is configured.
+7) **Testing**
+   - Manual smoke: auth (sign up/sign in/sign out), dashboard list, create/edit/save timeline, toggle public/share, public view by slug/`rid`, style override, embed mode.
+   - Validate RLS by hitting public URLs while signed out.
+8) **Cutover**
+   - Deploy Supabase-backed API layer.
+   - Migrate existing PocketBase data to Supabase (export/import), preserving slugs and `public` flags.
+   - Update `VITE_POCKETBASE_URL` references out; ensure only Supabase envs remain in prod.
+
 ## Expanding the ESLint configuration
 
 If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
