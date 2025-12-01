@@ -15,6 +15,12 @@ const PublicTimeline = ({ slug, recordId = null, embedMode = false, styleOverrid
     const [error, setError] = useState(null);
 
     useEffect(() => {
+        if (!slug && !recordId) {
+            setError('No timeline specified');
+            setLoading(false);
+            return;
+        }
+
         const fetchTimeline = async () => {
             try {
                 setLoading(true);

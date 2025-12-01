@@ -6,6 +6,7 @@ import AuthModal from './components/AuthModal';
 import { Header } from './components/Header';
 import { LearningAssistant } from './components/LearningAssistant';
 import PublicTimeline from './components/PublicTimeline';
+import ErrorBoundary from './components/ErrorBoundary';
 import Dashboard from './components/Dashboard';
 import { useAuth } from './hooks/useAuth';
 
@@ -157,20 +158,29 @@ function App() {
 
       <main className={`${embedMode ? '' : 'container mx-auto px-4 pb-12'}`}>
         {publicSlug || publicRecordId ? (
-          <PublicTimeline
-            slug={publicSlug}
-            recordId={publicRecordId}
-            embedMode={embedMode}
-            styleOverride={publicStyle}
-            onCreateOwn={() => {
-              setPublicSlug(null);
-              setPublicRecordId(null);
-              setPublicStyle(null);
-              window.history.pushState({}, '', '/');
-              setCurrentView('landing');
-              setEmbedMode(false);
-            }}
-          />
+          <ErrorBoundary
+            fallback={() => (
+              <div className="max-w-4xl mx-auto mt-12 p-6 text-center border-4 border-black dark:border-white bg-white dark:bg-gray-800 shadow-[8px_8px_0px_#000] dark:shadow-[8px_8px_0px_#FFF] rounded-lg">
+                <h2 className="text-2xl font-black mb-2 font-display">Unable to load timeline</h2>
+                <p className="text-gray-600 dark:text-gray-400">Please refresh or check the link.</p>
+              </div>
+            )}
+          >
+            <PublicTimeline
+              slug={publicSlug}
+              recordId={publicRecordId}
+              embedMode={embedMode}
+              styleOverride={publicStyle}
+              onCreateOwn={() => {
+                setPublicSlug(null);
+                setPublicRecordId(null);
+                setPublicStyle(null);
+                window.history.pushState({}, '', '/');
+                setCurrentView('landing');
+                setEmbedMode(false);
+              }}
+            />
+          </ErrorBoundary>
         ) : showLegal ? (
           <TermsAndPrivacy onBack={() => setShowLegal(false)} />
         ) : currentView === 'learning' ? (
