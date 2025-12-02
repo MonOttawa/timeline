@@ -475,8 +475,9 @@ IMPORTANT:
             console.warn('Failed to save review', e);
         }
 
-        // Optimistically update due count for snappier badge updates
-        setDueCardsCount(prev => Math.max(prev - 1, 0));
+        // Refresh due cards count directly from server so badge stays honest
+        const refreshedCount = await fetchDueCardsCount();
+        setDueCardsCount(refreshedCount);
 
         // Move to next card (wrap to start if at end)
         if (total > 0 && !isLast) {
@@ -490,12 +491,7 @@ IMPORTANT:
             setReviewComplete(true);
             setDueCardsCount(0);
             setTimeout(() => setReviewComplete(false), 4500);
-            // Ensure server state is reflected in badge
-            fetchDueCardsCount();
         }
-
-        // Refresh due cards count
-        fetchDueCardsCount();
     };
 
     const handleToggleEdit = () => {
