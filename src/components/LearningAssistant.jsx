@@ -1,13 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { Sparkles, BookOpen, Brain, List, HelpCircle, Layers, ArrowRight, AlertTriangle, Settings, Key, X, Save, ChevronDown, Search, Edit2, Eye, FolderPlus, History, Trash2, Calendar, GraduationCap } from 'lucide-react';
 import { marked } from 'marked';
 import { generateContent } from '../lib/providers';
 import { sanitizeMarkdownHtml } from '../lib/sanitizeMarkdown';
-import { pb } from '../lib/pocketbase';
+import { listTimelinesByUser, deleteTimeline, updateTimeline, createTimeline, findTimelineByTitle } from '../lib/api/timelines';
+import { getDueFlashcardsCount, getDueFlashcards, createFlashcardReview, getLastReview, checkLearningCache, saveLearningCache } from '../lib/api/learning';
 import { useAuth } from '../hooks/useAuth';
 
-export const LearningAssistant = () => {
+export const LearningAssistant = ({ initialItem = null }) => {
     const { user } = useAuth();
     const [topic, setTopic] = useState('');
     const [result, setResult] = useState('');
@@ -31,51 +32,53 @@ export const LearningAssistant = () => {
         answers: {}, // questionIndex -> selectedOptionIndex
         showResults: false
     });
-    const [isReviewMode, setIsReviewMode] = useState(false);
     const [dueCardsCount, setDueCardsCount] = useState(0);
+
+    const fetchDueCardsCount = useCallback(async () => {
+        if (!user) return;
+
+        try {
+            const count = await getDueFlashcardsCount(user.id);
+            setDueCardsCount(count);
+        } catch (e) {
+            console.warn('Failed to fetch due cards count', e);
+        }
+    }, [user]);
 
     // Fetch due cards count
     useEffect(() => {
         if (user) {
             fetchDueCardsCount();
         }
-    }, [user]);
+    }, [user, fetchDueCardsCount]);
 
-    const fetchDueCardsCount = async () => {
-        if (!user) return;
-
-        try {
-            const now = new Date().toISOString();
-            const dueReviews = await pb.collection('flashcard_reviews').getList(1, 1, {
-                filter: `user = "${user.id}" && next_review <= "${now}"`,
-            });
-            setDueCardsCount(dueReviews.totalItems || 0);
-        } catch (e) {
-            console.warn('Failed to fetch due cards count', e);
-        }
-    };
-
-    useEffect(() => {
-        if (showHistory && user) {
-            fetchHistory();
-        }
-    }, [showHistory, user]);
-
-    const fetchHistory = async () => {
+    const fetchHistory = useCallback(async () => {
         setIsLoadingHistory(true);
         try {
-            const records = await pb.collection('timelines').getList(1, 50, {
-                sort: '-updated',
-                filter: `user = "${user.id}"`
-            });
-            setHistoryItems(records.items);
+            const result = await listTimelinesByUser(user.id);
+            setHistoryItems(result.items);
         } catch (err) {
             console.error('Error fetching history:', err);
             setError('Failed to load history.');
         } finally {
             setIsLoadingHistory(false);
         }
-    };
+    }, [user]);
+
+    useEffect(() => {
+        if (showHistory && user) {
+            fetchHistory();
+        }
+    }, [showHistory, user, fetchHistory]);
+
+    // Load initial item if provided (from Dashboard)
+    useEffect(() => {
+        if (initialItem) {
+            handleLoadHistory(initialItem);
+        }
+    }, [initialItem]);
+
+
 
     const handleLoadHistory = (item) => {
         setResult(item.content);
@@ -107,7 +110,7 @@ export const LearningAssistant = () => {
 
     const handleDeleteHistory = async (id) => {
         try {
-            await pb.collection('timelines').delete(id);
+            await deleteTimeline(id);
             setHistoryItems(historyItems.filter(item => item.id !== id));
             setDeleteConfirmId(null);
         } catch (err) {
@@ -124,24 +127,19 @@ export const LearningAssistant = () => {
 
         setLoading(true);
         setError('');
-        setIsReviewMode(true);
 
         try {
             // Fetch due cards
-            const now = new Date().toISOString();
-            const dueReviews = await pb.collection('flashcard_reviews').getList(1, 50, {
-                filter: `user = "${user.id}" && next_review <= "${now}"`,
-                sort: 'next_review'
-            });
+            const items = await getDueFlashcards(user.id);
 
-            if (dueReviews.items.length === 0) {
+            if (items.length === 0) {
                 setError('No cards due for review! 🎉');
                 setLoading(false);
                 return;
             }
 
             // Transform reviews into flashcard format
-            const flashcards = dueReviews.items.map(review => ({
+            const flashcards = items.map(review => ({
                 question: review.question || `Card from: ${review.topic}`,
                 answer: review.answer || `Review this card (ID: ${review.card_id})`,
                 reviewId: review.id,
@@ -165,20 +163,12 @@ export const LearningAssistant = () => {
 
     const checkCache = async (mode, topic) => {
         try {
-            // Normalize topic for better cache hits (lowercase, trimmed)
-            const normalizedTopic = topic.trim().toLowerCase();
-
-            const records = await pb.collection('learning_cache').getList(1, 1, {
-                filter: `topic = "${normalizedTopic}" && mode = "${mode}"`,
-                sort: '-created'
-            });
-
-            if (records.items.length > 0) {
+            const content = await checkLearningCache(topic, mode);
+            if (content) {
                 console.log('Cache hit!');
-                return records.items[0].content;
+                return content;
             }
         } catch (err) {
-            // If collection doesn't exist or other error, just ignore and proceed to AI
             console.warn('Cache lookup failed:', err);
         }
         return null;
@@ -186,13 +176,7 @@ export const LearningAssistant = () => {
 
     const saveToCache = async (mode, topic, content) => {
         try {
-            const normalizedTopic = topic.trim().toLowerCase();
-
-            await pb.collection('learning_cache').create({
-                topic: normalizedTopic,
-                mode: mode,
-                content: content
-            });
+            await saveLearningCache(topic, mode, content);
             console.log('Saved to cache');
         } catch (err) {
             console.warn('Failed to save to cache:', err);
@@ -399,13 +383,7 @@ IMPORTANT:
             // Try to fetch previous review for this card
             let previousReview = null;
             try {
-                const existingReviews = await pb.collection('flashcard_reviews').getList(1, 1, {
-                    filter: `user = "${user.id}" && card_id = "${cardId}"`,
-                    sort: '-created'
-                });
-                if (existingReviews.items.length > 0) {
-                    previousReview = existingReviews.items[0];
-                }
+                previousReview = await getLastReview(user.id, cardId);
             } catch (e) {
                 console.warn('Could not fetch previous review', e);
             }
@@ -414,7 +392,7 @@ IMPORTANT:
             const srsData = calculateNextReview(rating, previousReview);
 
             // Save review with SRS data
-            await pb.collection('flashcard_reviews').create({
+            await createFlashcardReview({
                 user: user.id,
                 topic: topic,
                 card_id: cardId,
@@ -513,19 +491,17 @@ IMPORTANT:
             const title = `${safeTopic} - ${modeLabel}`;
 
             // Check for existing record to prevent duplicates
-            const existingRecords = await pb.collection('timelines').getList(1, 1, {
-                filter: `user = "${user.id}" && title = "${title}"`
-            });
+            const existingRecord = await findTimelineByTitle(user.id, title);
 
-            if (existingRecords.items.length > 0) {
+            if (existingRecord) {
                 // Update existing record
-                await pb.collection('timelines').update(existingRecords.items[0].id, {
+                await updateTimeline(existingRecord.id, {
                     content: result,
                     updated: new Date().toISOString()
                 });
             } else {
                 // Create new record
-                await pb.collection('timelines').create({
+                await createTimeline({
                     user: user.id,
                     title: title,
                     content: result,

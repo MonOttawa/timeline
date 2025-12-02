@@ -1,5 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { createPortal } from 'react-dom';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { marked } from 'marked';
 import { Upload, Download, FileText, Palette, Save, FolderOpen, ChevronDown, Sparkles, Layout, Share2 } from 'lucide-react';
 import domtoimage from 'dom-to-image-more';
@@ -24,21 +23,12 @@ const TimelineGenerator = ({ isDemoMode = false, initialTimeline = null, onBack 
   const [timelineStyle, setTimelineStyle] = useState('bauhaus');
   const [exportFormat, setExportFormat] = useState('');
   const timelineRef = useRef(null);
-  const [isFileMenuOpen, setIsFileMenuOpen] = useState(false);
-  const [isCreateMenuOpen, setIsCreateMenuOpen] = useState(false);
-  const [isStyleMenuOpen, setIsStyleMenuOpen] = useState(false);
-  const [isSampleMenuOpen, setIsSampleMenuOpen] = useState(false);
-  const [isFileExportMenuOpen, setIsFileExportMenuOpen] = useState(false);
   const [isSampleDropdownOpen, setIsSampleDropdownOpen] = useState(false);
   const [isExportDropdownOpen, setIsExportDropdownOpen] = useState(false);
   const [isStyleDropdownOpen, setIsStyleDropdownOpen] = useState(false);
-  const fileMenuRef = useRef(null);
-  const createMenuRef = useRef(null);
-  const styleMenuRef = useRef(null);
   const sampleDropdownRef = useRef(null);
   const exportDropdownRef = useRef(null);
   const styleDropdownRef = useRef(null);
-  const [toolbarContainer, setToolbarContainer] = useState(null);
   const [editingEvent, setEditingEvent] = useState(null); // { index, field: 'date' | 'content' }
   const [hasLoadedDemo, setHasLoadedDemo] = useState(false);
 
@@ -65,18 +55,6 @@ const TimelineGenerator = ({ isDemoMode = false, initialTimeline = null, onBack 
 
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (fileMenuRef.current && !fileMenuRef.current.contains(event.target)) {
-        setIsFileMenuOpen(false);
-        setIsSampleMenuOpen(false);
-        setIsFileExportMenuOpen(false);
-      }
-      if (createMenuRef.current && !createMenuRef.current.contains(event.target)) {
-        setIsCreateMenuOpen(false);
-      }
-      if (styleMenuRef.current && !styleMenuRef.current.contains(event.target)) {
-        setIsStyleMenuOpen(false);
-      }
-      // New dropdowns
       if (sampleDropdownRef.current && !sampleDropdownRef.current.contains(event.target)) {
         setIsSampleDropdownOpen(false);
       }
@@ -94,76 +72,8 @@ const TimelineGenerator = ({ isDemoMode = false, initialTimeline = null, onBack 
     };
   }, []);
 
-  useEffect(() => {
-    if (!isFileMenuOpen) {
-      setIsSampleMenuOpen(false);
-      setIsFileExportMenuOpen(false);
-    }
-  }, [isFileMenuOpen]);
-
-  useEffect(() => {
-    if (typeof document === 'undefined') return undefined;
-    const slot = document.getElementById('header-toolbar-slot');
-    setToolbarContainer(slot);
-    return () => setToolbarContainer(null);
-  }, []);
-
-  // Load initial timeline if provided
-  useEffect(() => {
-    console.log('initialTimeline changed:', initialTimeline);
-    if (initialTimeline) {
-      const content = initialTimeline.content || '';
-      console.log('Loading timeline:', initialTimeline.title, 'Content length:', content.length);
-
-      // Set all timeline properties first
-      setTimelineTitle(initialTimeline.title || 'My Project Timeline');
-      setTimelineStyle(initialTimeline.style || 'bauhaus');
-      setCurrentTimelineId(initialTimeline.id);
-      setCurrentSlug(initialTimeline.slug || '');
-      setIsPublic(initialTimeline.public || false);
-      setViewCount(initialTimeline.viewCount || 0);
-      setMarkdownContent(content);
-
-      // Parse markdown to extract events (without overwriting title)
-      if (content) {
-        console.log('Parsing events from content');
-        parseMarkdownEvents(content);
-      } else {
-        console.log('No content to parse');
-        setEvents([]);
-      }
-    }
-  }, [initialTimeline?.id]); // Use id as dependency to detect changes
-
-  // Auto-load sample timeline in demo mode
-  useEffect(() => {
-    if (isDemoMode && !hasLoadedDemo && sampleTimelines.length > 0 && !initialTimeline) {
-      const firstSample = sampleTimelines[0];
-      setMarkdownContent(firstSample.content);
-      parseMarkdown(firstSample.content);
-      setTimelineTitle(firstSample.name);
-      setFileName(`${firstSample.name}.md`);
-      setHasLoadedDemo(true);
-    }
-  }, [isDemoMode, hasLoadedDemo, initialTimeline]);
-
-  const handleFileSelect = (event) => {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    setFileName(file.name);
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const content = e.target.result;
-      setMarkdownContent(content);
-      parseMarkdown(content);
-      setShowEditor(false);
-    };
-    reader.readAsText(file);
-  };
-
   // Parse markdown to extract events only (without changing title)
-  const parseMarkdownEvents = (markdownContent) => {
+  const parseMarkdownEvents = useCallback((markdownContent) => {
     console.log('parseMarkdownEvents called with content length:', markdownContent?.length);
     if (!markdownContent) {
       setEvents([]);
@@ -240,7 +150,63 @@ const TimelineGenerator = ({ isDemoMode = false, initialTimeline = null, onBack 
 
     console.log('Setting events:', sortedEvents.length);
     setEvents(sortedEvents);
+  }, []);
+
+  // Load initial timeline if provided
+  useEffect(() => {
+    console.log('initialTimeline changed:', initialTimeline);
+    if (initialTimeline) {
+      const content = initialTimeline.content || '';
+      console.log('Loading timeline:', initialTimeline.title, 'Content length:', content.length);
+
+      // Set all timeline properties first
+      setTimelineTitle(initialTimeline.title || 'My Project Timeline');
+      setTimelineStyle(initialTimeline.style || 'bauhaus');
+      setCurrentTimelineId(initialTimeline.id);
+      setCurrentSlug(initialTimeline.slug || '');
+      setIsPublic(initialTimeline.public || false);
+      setViewCount(initialTimeline.viewCount || 0);
+      setMarkdownContent(content);
+
+      // Parse markdown to extract events (without overwriting title)
+      if (content) {
+        console.log('Parsing events from content');
+        parseMarkdownEvents(content);
+      } else {
+        console.log('No content to parse');
+        setEvents([]);
+      }
+    }
+  }, [initialTimeline, parseMarkdownEvents]); // React to full initialTimeline changes
+
+  // Auto-load sample timeline in demo mode
+  useEffect(() => {
+    if (isDemoMode && !hasLoadedDemo && sampleTimelines.length > 0 && !initialTimeline) {
+      const firstSample = sampleTimelines[0];
+      setMarkdownContent(firstSample.content);
+      parseMarkdown(firstSample.content);
+      setTimelineTitle(firstSample.name);
+      setFileName(`${firstSample.name}.md`);
+      setHasLoadedDemo(true);
+    }
+  }, [isDemoMode, hasLoadedDemo, initialTimeline]);
+
+  const handleFileSelect = (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    setFileName(file.name);
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const content = e.target.result;
+      setMarkdownContent(content);
+      parseMarkdown(content);
+      setShowEditor(false);
+    };
+    reader.readAsText(file);
   };
+
+
 
   const parseMarkdown = (markdownContent) => {
     if (!markdownContent) {
@@ -468,7 +434,7 @@ const TimelineGenerator = ({ isDemoMode = false, initialTimeline = null, onBack 
     setCurrentTimelineId(null); // Reset ID as this is a new "file"
   };
 
-  const fetchTimelines = async () => {
+  const fetchTimelines = useCallback(async () => {
     if (!user) {
       setShowAuthModal(true);
       return;
@@ -478,8 +444,8 @@ const TimelineGenerator = ({ isDemoMode = false, initialTimeline = null, onBack 
     setIsLoadingTimelines(true);
 
     try {
-      const items = await listTimelinesByUser(user.id);
-      setSavedTimelines(items);
+      const result = await listTimelinesByUser(user.id);
+      setSavedTimelines(result.items);
     } catch (error) {
       console.error('Error fetching timelines:', error);
       // Don't alert 404s (collection empty/missing), just show empty list
@@ -489,7 +455,7 @@ const TimelineGenerator = ({ isDemoMode = false, initialTimeline = null, onBack 
     } finally {
       setIsLoadingTimelines(false);
     }
-  };
+  }, [user]);
 
   const handleLoadTimeline = (record) => {
     setMarkdownContent(record.content);
@@ -774,6 +740,14 @@ const TimelineGenerator = ({ isDemoMode = false, initialTimeline = null, onBack 
               >
                 <Save size={20} />
                 {isSaving ? 'Saving...' : 'Save'}
+              </button>
+
+              <button
+                onClick={fetchTimelines}
+                className="inline-flex items-center gap-2 border-2 border-black dark:border-white font-bold py-3 px-6 bg-cyan-200 text-black shadow-[4px_4px_0px_#000] dark:shadow-[4px_4px_0px_#FFF] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_#000] dark:hover:shadow-[6px_6px_0px_#FFF] transition-all rounded-lg"
+              >
+                <FolderOpen size={20} />
+                Load Saved
               </button>
 
               {onBack && (
@@ -1202,7 +1176,7 @@ const TimelineGenerator = ({ isDemoMode = false, initialTimeline = null, onBack 
       {showAuthModal && (
         <AuthModal
           onClose={() => setShowAuthModal(false)}
-          onSuccess={(user) => {
+          onSuccess={() => {
             setShowAuthModal(false);
             // If we were trying to save, save now? Or just let user click again.
           }}
