@@ -456,6 +456,9 @@ IMPORTANT:
             console.warn('Failed to save review', e);
         }
 
+        // Optimistically update due count for snappier badge updates
+        setDueCardsCount(prev => Math.max(prev - 1, 0));
+
         // Move to next card (wrap to start if at end)
         if (total > 0 && !isLast) {
             handleNextCard(total);
