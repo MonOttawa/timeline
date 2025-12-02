@@ -5,7 +5,7 @@ import { marked } from 'marked';
 import { generateContent } from '../lib/providers';
 import { sanitizeMarkdownHtml } from '../lib/sanitizeMarkdown';
 import { listTimelinesByUser, deleteTimeline, updateTimeline, createTimeline, findTimelineByTitle } from '../lib/api/timelines';
-import { getDueFlashcardsCount, getDueFlashcards, createFlashcardReview, getLastReview, checkLearningCache, saveLearningCache } from '../lib/api/learning';
+import { getDueFlashcardsCount, getDueFlashcards, createFlashcardReview, updateFlashcardReview, getLastReview, checkLearningCache, saveLearningCache } from '../lib/api/learning';
 import { useAuth } from '../hooks/useAuth';
 
 // Utilities to safely detect and parse structured learning content
@@ -442,19 +442,34 @@ IMPORTANT:
             // Calculate next review using SM-2
             const srsData = calculateNextReview(rating, previousReview);
 
-            // Save review with SRS data
-            await createFlashcardReview({
-                user: user.id,
-                topic: topic,
-                card_id: cardId,
-                question: card.question,
-                answer: card.answer,
-                rating: rating,
-                interval: srsData.interval,
-                repetitions: srsData.repetitions,
-                ease_factor: srsData.ease_factor,
-                next_review: srsData.next_review
-            });
+            // Save review with SRS data. If a previous review exists for this card, update it instead of creating duplicates.
+            if (previousReview?.id) {
+                await updateFlashcardReview(previousReview.id, {
+                    user: user.id,
+                    topic: topic,
+                    card_id: cardId,
+                    question: card.question,
+                    answer: card.answer,
+                    rating: rating,
+                    interval: srsData.interval,
+                    repetitions: srsData.repetitions,
+                    ease_factor: srsData.ease_factor,
+                    next_review: srsData.next_review
+                });
+            } else {
+                await createFlashcardReview({
+                    user: user.id,
+                    topic: topic,
+                    card_id: cardId,
+                    question: card.question,
+                    answer: card.answer,
+                    rating: rating,
+                    interval: srsData.interval,
+                    repetitions: srsData.repetitions,
+                    ease_factor: srsData.ease_factor,
+                    next_review: srsData.next_review
+                });
+            }
             console.log('Review saved with next review:', srsData.next_review);
         } catch (e) {
             console.warn('Failed to save review', e);

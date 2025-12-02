@@ -76,6 +76,17 @@ export async function createFlashcardReview(data) {
 }
 
 /**
+ * Update an existing flashcard review record
+ * @param {string} id
+ * @param {Object} data
+ * @returns {Promise<Object>}
+ */
+export async function updateFlashcardReview(id, data) {
+    const client = getDataClient();
+    return client.collection(REVIEWS_COLLECTION).update(id, data);
+}
+
+/**
  * Check the learning cache for a topic and mode
  * @param {string} topic 
  * @param {string} mode 
