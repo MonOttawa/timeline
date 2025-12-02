@@ -49,3 +49,12 @@ The remote PocketBase deployment is not responding. Cloudflare returns HTTP 521 
 2. Test dashboard connection
 3. Verify save/load functionality
 4. Continue with planned features from ROADMAP.md
+
+## PocketBase Local Setup
+- **Issue**: Automated schema import fails for `relation` fields.
+- **Error**: `validation_required: Cannot be blank.` for `collectionId` property, even when provided in `options`.
+- **Context**: Occurs when using the PocketBase v0.23+ API to create collections programmatically via `fetch` or SDK.
+- **Workaround**: 
+    1. Create the `timelines` and `flashcard_reviews` collections manually in the Admin UI.
+    2. Or, create them without the `user` relation field first, then add the relation field manually.
+- **Status**: Tracked. Automation script `import-schema.js` is paused.

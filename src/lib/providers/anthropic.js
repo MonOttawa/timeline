@@ -7,7 +7,7 @@ export default class AnthropicClient {
         this.apiVersion = '2023-06-01';
     }
 
-    async fetchModels(apiKey) {
+    async fetchModels() {
         // Anthropic doesn't have a models endpoint, return known models
         return [
             { id: 'claude-3-5-sonnet-20241022', name: 'Claude 3.5 Sonnet', provider: 'Anthropic', free: false },

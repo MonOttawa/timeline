@@ -20,6 +20,7 @@
 - **Deep Dive Mode**: Comprehensive learning with ELI5, Key Concepts, Buzzwords, Misconceptions, Path to Mastery, Books, and Experts
 - **Spaced Repetition**: SuperMemo-2 algorithm for flashcard review scheduling
 - **Review System**: Due card tracking and review mode
+- **Planned**: Mindmap/Diagram Mode (React Flow or better) for auto-layout graphs (ELK/Tree/Dagre), draggable nodes, and shareable embeds; supports mindmap-style diagrams similar to the provided reference.
 
 ---
 

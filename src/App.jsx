@@ -13,28 +13,13 @@ import { useAuth } from './hooks/useAuth';
 
 function App() {
   const { user, signOut } = useAuth();
-  const [currentView, setCurrentView] = useState('landing'); // 'landing', 'dashboard', 'editor', 'learning'
+  const [viewOverride, setViewOverride] = useState(null); // null falls back to auth-derived view
   const [showLegal, setShowLegal] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [theme, setTheme] = useState('light');
   const [isDemoMode, setIsDemoMode] = useState(false);
-  const [publicSlug, setPublicSlug] = useState(null);
-  const [publicRecordId, setPublicRecordId] = useState(null);
-  const [publicStyle, setPublicStyle] = useState(null);
-  const [embedMode, setEmbedMode] = useState(false);
-  const [editingTimeline, setEditingTimeline] = useState(null);
-
-  useEffect(() => {
-    if (theme === 'dark') {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-  }, [theme]);
-
-  // Check for public timeline URL on mount
-  useEffect(() => {
+  const initialRouteState = React.useMemo(() => {
     const path = window.location.pathname;
     const timelineMatch = path.match(/^\/timeline\/([^/]+)\/?$/);
     const embedMatch = path.match(/^\/embed\/([^/]+)\/?$/);
@@ -44,28 +29,51 @@ function App() {
     const styleParamRaw = params.get('style');
     const styleParam = styleParamRaw ? styleParamRaw.toLowerCase() : null;
 
+    const route = {
+      publicSlug: null,
+      publicRecordId: null,
+      publicStyle: null,
+      embedMode: false
+    };
+
     if (timelineMatch) {
-      setPublicSlug(timelineMatch[1]);
+      route.publicSlug = timelineMatch[1];
     } else if (embedMatch) {
-      setPublicSlug(embedMatch[1]);
-      setEmbedMode(true);
+      route.publicSlug = embedMatch[1];
+      route.embedMode = true;
     }
 
     if (recordIdParam) {
-      setPublicRecordId(recordIdParam);
+      route.publicRecordId = recordIdParam;
     }
 
     if (embedParam === '1') {
-      setEmbedMode(true);
+      route.embedMode = true;
     }
 
     if (styleParam) {
       const allowed = ['bauhaus', 'neo-brutalist', 'corporate', 'handwritten'];
       if (allowed.includes(styleParam)) {
-        setPublicStyle(styleParam);
+        route.publicStyle = styleParam;
       }
     }
+
+    return route;
   }, []);
+  const [publicSlug, setPublicSlug] = useState(initialRouteState.publicSlug);
+  const [publicRecordId, setPublicRecordId] = useState(initialRouteState.publicRecordId);
+  const [publicStyle, setPublicStyle] = useState(initialRouteState.publicStyle);
+  const [embedMode, setEmbedMode] = useState(initialRouteState.embedMode);
+  const [editingTimeline, setEditingTimeline] = useState(null);
+  const [editingLearningItem, setEditingLearningItem] = useState(null);
+
+  useEffect(() => {
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [theme]);
 
   // Tweak page chrome for embeds (transparent background, no overflow tweaks)
   useEffect(() => {
@@ -82,14 +90,7 @@ function App() {
     return undefined;
   }, [embedMode]);
 
-  // Redirect to dashboard on login
-  useEffect(() => {
-    if (user && currentView === 'landing') {
-      setCurrentView('dashboard');
-    } else if (!user && currentView === 'dashboard') {
-      setCurrentView('landing');
-    }
-  }, [user, currentView]);
+  const currentView = viewOverride || (user ? 'dashboard' : 'landing');
 
   const handleLogin = () => {
     setShowAuthModal(true);
@@ -97,17 +98,17 @@ function App() {
 
   const handleLogout = async () => {
     await signOut();
-    setCurrentView('landing');
+    setViewOverride('landing');
     setIsDemoMode(false);
   };
 
   const handleAuthSuccess = () => {
-    setCurrentView('dashboard');
+    setViewOverride('dashboard');
     setIsDemoMode(false);
   };
 
   const handleStartDemo = () => {
-    setCurrentView('editor');
+    setViewOverride('editor');
     setIsDemoMode(true);
   };
 
@@ -116,30 +117,27 @@ function App() {
   };
 
   const handleNavigateHome = () => {
-    if (user) {
-      setCurrentView('dashboard');
-    } else {
-      setCurrentView('landing');
-    }
+    setViewOverride(null); // fall back to auth-derived view
   };
 
   const handleNavigateTimeline = () => {
-    setCurrentView('editor');
+    setViewOverride('editor');
     setEditingTimeline(null); // Reset editing state for new timeline
   };
 
   const handleNavigateLearning = () => {
-    setCurrentView('learning');
+    setEditingLearningItem(null); // Clear any previously loaded learning item
+    setViewOverride('learning');
   };
 
   const handleEditTimeline = (timeline) => {
     setEditingTimeline(timeline);
-    setCurrentView('editor');
+    setViewOverride('editor');
   };
 
   const handleCreateTimeline = () => {
     setEditingTimeline(null);
-    setCurrentView('editor');
+    setViewOverride('editor');
   };
 
   const appShell = (
@@ -179,7 +177,7 @@ function App() {
                 setPublicRecordId(null);
                 setPublicStyle(null);
                 window.history.pushState({}, '', '/');
-                setCurrentView('landing');
+                setViewOverride('landing');
                 setEmbedMode(false);
               }}
             />
@@ -187,12 +185,19 @@ function App() {
         ) : showLegal ? (
           <TermsAndPrivacy onBack={() => setShowLegal(false)} />
         ) : currentView === 'learning' ? (
-          <LearningAssistant />
+          <ErrorBoundary>
+            <LearningAssistant initialItem={editingLearningItem} />
+          </ErrorBoundary>
         ) : currentView === 'dashboard' && user ? (
           <Dashboard
             user={user}
             onEdit={handleEditTimeline}
             onCreate={handleCreateTimeline}
+            onEditLearning={(item) => {
+              // Navigate to Learning Assistant and load the saved learning material
+              setEditingLearningItem(item);
+              setViewOverride('learning');
+            }}
             onShare={(t) => {
               // For now, just open editor to share. 
               // Ideally Dashboard would have its own share modal, but we can reuse the editor's for now or implement later.
@@ -200,14 +205,16 @@ function App() {
             }}
           />
         ) : currentView === 'editor' ? (
-          <TimelineGenerator
-            isDemoMode={isDemoMode}
-            initialTimeline={editingTimeline}
-            onBack={() => setCurrentView('dashboard')}
-          />
+          <ErrorBoundary>
+            <TimelineGenerator
+              isDemoMode={isDemoMode}
+              initialTimeline={editingTimeline}
+              onBack={() => setViewOverride('dashboard')}
+            />
+          </ErrorBoundary>
         ) : (
           <LandingPage
-            onStart={user ? () => setCurrentView('dashboard') : handleStartDemo}
+            onStart={user ? () => setViewOverride('dashboard') : handleStartDemo}
             onLogin={handleLogin}
             isLoggedIn={!!user}
             onShowLegal={() => setShowLegal(true)}

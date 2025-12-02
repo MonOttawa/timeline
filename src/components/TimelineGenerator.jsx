@@ -419,9 +419,48 @@ const TimelineGenerator = ({ isDemoMode = false, initialTimeline = null, onBack 
     }
   };
 
-  const handleAIGenerate = (generatedContent) => {
-    setMarkdownContent(generatedContent);
-    parseMarkdown(generatedContent);
+  const buildFallbackTimeline = (topic = 'AI Timeline') => {
+    const year = new Date().getFullYear();
+    return `# ${topic}
+
+*${year - 2}-01-01*
+### Kickoff
+Initial milestone and context.
+
+---
+
+*${year - 1}-06-01*
+### Midpoint
+Key progress update and learnings.
+
+---
+
+*${year}-12-01*
+### Wrap-up
+Outcome, impact, and next steps.
+`;
+  };
+
+  const normalizeAIMarkdown = (content, promptContext) => {
+    let result = (content || '').trim();
+    const topic = promptContext || timelineTitle || 'AI Timeline';
+
+    if (!result.startsWith('#')) {
+      result = `# ${topic}\n\n${result}`;
+    }
+
+    const eventBlocks = result.split('---').filter(block => block.trim() !== '');
+    if (eventBlocks.length === 0) {
+      return buildFallbackTimeline(topic);
+    }
+
+    return result;
+  };
+
+  const handleAIGenerate = (generatedContent, promptContext) => {
+    const normalized = normalizeAIMarkdown(generatedContent, promptContext);
+    setMarkdownContent(normalized);
+    parseMarkdown(normalized);
     setFileName('AI Generated Timeline.md');
     setCurrentTimelineId(null); // Reset ID as this is a new "file"
   };

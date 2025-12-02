@@ -6,7 +6,7 @@ export default class CerebrasClient {
         this.endpoint = 'https://api.cerebras.ai/v1';
     }
 
-    async fetchModels(apiKey) {
+    async fetchModels() {
         // Cerebras has a smaller model selection
         return [
             { id: 'llama3.1-70b', name: 'Llama 3.1 70B', provider: 'Meta', free: true },

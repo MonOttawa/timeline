@@ -2,16 +2,26 @@ import { getDataClient } from './client';
 
 const TIMELINES_COLLECTION = 'timelines';
 
-export async function listTimelinesByUser(userId, { page = 1, perPage = 50, sort = '-updated' } = {}) {
+export async function listTimelinesByUser(userId, { page = 1, perPage = 50, sort = '-title' } = {}) {
   if (!userId) return { items: [], totalItems: 0, totalPages: 0 };
   const client = getDataClient();
-  const records = await client.collection(TIMELINES_COLLECTION).getList(page, perPage, {
-    sort: sort,
-    filter: `user = "${userId}"`,
-    fields: '*',
-    requestKey: null, // Disable auto-cancellation
-  });
-  return records;
+  try {
+    const records = await client.collection(TIMELINES_COLLECTION).getList(page, perPage, {
+      sort: sort,
+      filter: `user = "${userId}"`,
+      fields: '*',
+      requestKey: null, // Disable auto-cancellation
+    });
+    return records;
+  } catch (error) {
+    // Fallback: drop sort if PocketBase rejects the query (e.g., invalid sort field).
+    const records = await client.collection(TIMELINES_COLLECTION).getList(page, perPage, {
+      filter: `user = "${userId}"`,
+      fields: '*',
+      requestKey: null, // Disable auto-cancellation
+    });
+    return records;
+  }
 }
 
 export async function deleteTimeline(timelineId) {

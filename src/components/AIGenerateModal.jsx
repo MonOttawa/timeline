@@ -63,7 +63,7 @@ IMPORTANT:
       const generatedContent = await generateContent(messages);
 
       if (generatedContent) {
-        onGenerate(generatedContent);
+        onGenerate(generatedContent, prompt.trim());
         onClose();
       } else {
         throw new Error('No content generated from the AI model');

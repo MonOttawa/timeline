@@ -6,7 +6,7 @@ export default class GeminiClient {
         this.endpoint = 'https://generativelanguage.googleapis.com/v1beta';
     }
 
-    async fetchModels(apiKey) {
+    async fetchModels() {
         // Return known Gemini models
         return [
             { id: 'gemini-2.0-flash-exp', name: 'Gemini 2.0 Flash (Experimental)', provider: 'Google', free: true },

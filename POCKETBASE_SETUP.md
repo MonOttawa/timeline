@@ -28,7 +28,7 @@ PocketBase will start on `http://127.0.0.1:8090`
 2. Create an admin account (this is for the admin dashboard)
 3. You'll be redirected to the admin dashboard
 
-## 4. Configure Environment Variables (Optional)
+## 4. Configure Environment Variables
 
 By default, the app connects to `http://127.0.0.1:8090`. If you want to use a different URL:
 
@@ -37,6 +37,8 @@ By default, the app connects to `http://127.0.0.1:8090`. If you want to use a di
 
 ```env
 VITE_POCKETBASE_URL=http://127.0.0.1:8090
+VITE_DATA_PROVIDER=pocketbase
+VITE_APP_URL=http://localhost:5173
 ```
 
 ## 5. Test Authentication
@@ -81,12 +83,20 @@ To enable the "Save" functionality, you must create a collection for timelines:
 4. Add the following fields:
    - `user`: **Relation** (Single) -> `users` collection (Required)
    - `title`: **Text**
-   - `content`: **Text**
+   - `content`: **Editor** (IMPORTANT: Use Editor, not Text, to avoid 5000 character limit)
    - `style`: **Text**
+   - `slug`: **Text**
+   - `public`: **Bool**
+   - `viewCount`: **Number** (min 0)
 5. **API Rules**:
    - List/Search: `@request.auth.id != "" && user = @request.auth.id`
-   - View: `@request.auth.id != "" && user = @request.auth.id`
+   - View: `@request.auth.id != "" && user = @request.auth.id || public = true`
    - Create: `@request.auth.id != ""`
    - Update: `@request.auth.id != "" && user = @request.auth.id`
    - Delete: `@request.auth.id != "" && user = @request.auth.id`
 
+**Note on sorting:** the schema does not include `created`/`updated` fields. Use sortable fields that exist (e.g., `title`) or add your own timestamp fields if you need sort-by-date.
+
+## AI Timeline Generation
+- The AI modal enforces the required markdown format; if the model omits events, a fallback timeline is injected so saves don’t fail.
+- To add providers/models, use the header ⚙️ Settings modal; env defaults live in `.env`.

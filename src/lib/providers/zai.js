@@ -4,7 +4,7 @@ export default class ZAIClient {
         this.baseUrl = 'https://api.z.ai/api/coding/paas/v4';
     }
 
-    async fetchModels(apiKey) {
+    async fetchModels() {
         // Z.AI (formerly Zhipu AI) models - GLM-4 series
         return [
             {

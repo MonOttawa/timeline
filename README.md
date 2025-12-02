@@ -1,26 +1,49 @@
-# React + Vite
+# Timeline (React + Vite)
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+PocketBase-backed timelines and learning content. Dev uses the Vite `/api` proxy to reach PocketBase; prod uses `VITE_POCKETBASE_URL`.
 
-Currently, two official plugins are available:
+## Quick Start (local)
+1) Copy `.env.example` → `.env` and ensure each var is on its own line:
+   - `VITE_POCKETBASE_URL=http://127.0.0.1:8090`
+   - `VITE_DATA_PROVIDER=pocketbase`
+2) Start PocketBase: `./start-pocketbase.sh` (runs PB on 8090, automigrate off).
+3) Start dev server: `npm run dev -- --host 0.0.0.0 --port 5173`
+   - UI at `http://localhost:5173`
+   - API proxied via `/api` → PocketBase
+4) Login with `testuser@example.com` / `password1234!` (seed user) or create a new one.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
-
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## PocketBase schema essentials
+- Collections: `timelines`, `flashcard_reviews`, `learning_cache`
+- Timeline fields: `user (relation _pb_users_auth_)`, `title (text)`, `content (editor)`, `style (text)`, `slug (text)`, `public (bool)`, `viewCount (number)`
+- API rules for `timelines`: `list/view/update/delete` require auth and ownership; `view` also allows `public=true`; `create` requires auth.
+- Do **not** sort by `created`/`updated`—those fields are not defined in this schema. Use `title` or add explicit sort fields if needed.
 
 ## Environment Variables
 
 - `VITE_POCKETBASE_URL` (required): PocketBase endpoint, e.g. `https://substantifiquedb.rosehilltech.com`.
+ - `VITE_DATA_PROVIDER` (default `pocketbase`): Switch provider when Supabase is added.
 - `VITE_APP_URL` (recommended): Public site URL for share/embed links, e.g. `https://timeline.example.com`.
 - `VITE_COMMIT_HASH` (optional): Short git SHA to display in the footer build tag.
 
-### Preparing for a future backend swap (PocketBase → Supabase)
-- Central data access now lives in `src/lib/api/` (`client.js`, `auth.js`, `timelines.js`). To swap backends, update the client and these helpers instead of touching UI components.
-- If you plan to use Supabase, you’ll likely need `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` (and to rewrite the helpers to use the Supabase JS client).
-- Align schema: a `timelines` table with fields `id`, `user`, `title`, `content`, `style`, `slug`, `public`, `viewCount`, timestamps. Recreate auth flows (email/password) with Supabase auth and rewire `auth.js`.
+### AI Provider Configuration (Optional)
+
+The application supports multiple AI providers. Users can configure these via the Settings modal in the UI, or you can provide default API keys via environment variables:
+
+- `VITE_OPENROUTER_API_KEY`: OpenRouter API key
+- `VITE_GROQ_API_KEY`: Groq API key
+- `VITE_CEREBRAS_API_KEY`: Cerebras API key
+- `VITE_OPENAI_API_KEY`: OpenAI API key
+- `VITE_ANTHROPIC_API_KEY`: Anthropic API key
+- `VITE_GEMINI_API_KEY`: Google Gemini API key
+- `VITE_ZAI_API_KEY`: Z.AI (Zhipu GLM) API key
+
+**Note:** Users can override these defaults by configuring their own API keys in the Settings modal (accessible via the gear icon in the header).
+
+### Architecture & Backend Migration
+
+The application has been refactored to fully decouple the UI from the database. All data access logic is isolated in `src/lib/api/`.
+
+For detailed information on the architecture and how to migrate to Supabase, please see [ARCHITECTURE.md](./ARCHITECTURE.md).
 
 #### Detailed migration plan (PocketBase → Supabase)
 1) **Schema & policies**

@@ -31,7 +31,7 @@ const PublicTimeline = ({ slug, recordId = null, embedMode = false, styleOverrid
                 await incrementViewCount(data.id);
 
                 // Parse markdown content
-                parseMarkdown(data.content, data.title);
+                parseMarkdown(data.content);
             } catch (err) {
                 console.error('Error fetching public timeline:', err);
                 setError(err.message || 'Timeline not found');
@@ -45,7 +45,7 @@ const PublicTimeline = ({ slug, recordId = null, embedMode = false, styleOverrid
         }
     }, [slug, recordId]);
 
-    const parseMarkdown = (markdownContent, title) => {
+    const parseMarkdown = (markdownContent) => {
         const lines = markdownContent.split('\n');
         let contentToProcess = markdownContent;
 

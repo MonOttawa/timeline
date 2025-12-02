@@ -124,27 +124,34 @@ export const setProviderModel = (providerId, model) => {
 // Get the active provider client
 export const getProviderClient = async (providerId) => {
     switch (providerId) {
-        case 'openrouter':
+        case 'openrouter': {
             const { default: OpenRouterClient } = await import('./providers/openrouter.js');
             return new OpenRouterClient();
-        case 'groq':
+        }
+        case 'groq': {
             const { default: GroqClient } = await import('./providers/groq.js');
             return new GroqClient();
-        case 'cerebras':
+        }
+        case 'cerebras': {
             const { default: CerebrasClient } = await import('./providers/cerebras.js');
             return new CerebrasClient();
-        case 'openai':
+        }
+        case 'openai': {
             const { default: OpenAIClient } = await import('./providers/openai.js');
             return new OpenAIClient();
-        case 'anthropic':
+        }
+        case 'anthropic': {
             const { default: AnthropicClient } = await import('./providers/anthropic.js');
             return new AnthropicClient();
-        case 'gemini':
+        }
+        case 'gemini': {
             const { default: GeminiClient } = await import('./providers/gemini.js');
             return new GeminiClient();
-        case 'zai':
+        }
+        case 'zai': {
             const { default: ZAIClient } = await import('./providers/zai.js');
             return new ZAIClient();
+        }
         default:
             throw new Error(`Unknown provider: ${providerId}`);
     }

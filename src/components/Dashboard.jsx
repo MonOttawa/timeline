@@ -12,7 +12,7 @@ const Dashboard = ({ user, onEdit, onCreate, onShare, onEditLearning }) => {
 
     // View State
     const [viewMode, setViewMode] = useState('table'); // 'table', 'grid', 'compact'
-    const [sortConfig, setSortConfig] = useState({ key: 'updated', direction: 'desc' });
+    const [sortConfig, setSortConfig] = useState({ key: 'title', direction: 'desc' });
     const [selectedIds, setSelectedIds] = useState(new Set());
 
     // Pagination State
@@ -117,7 +117,7 @@ const Dashboard = ({ user, onEdit, onCreate, onShare, onEditLearning }) => {
     };
 
     const isLearningMaterial = (item) => {
-        const learningModes = ['Explain', 'Key Points', 'Study Cards', 'Knowledge Check', 'Blind Spots', 'Action Plan', 'Deep Dive'];
+        const learningModes = ['Explain', 'Key Points', 'Study Cards', 'Knowledge Check', 'Blind Spots', 'Action Plan', 'Deep Dive', 'Quick Notes'];
         const title = (item.title || '').toLowerCase();
         return learningModes.some(mode => {
             const normalizedMode = mode.toLowerCase();
@@ -319,7 +319,7 @@ const Dashboard = ({ user, onEdit, onCreate, onShare, onEditLearning }) => {
                     )}
                     <button
                         onClick={onCreate}
-                        className="flex items-center gap-2 bg-black dark:bg-white text-white dark:text-black px-4 py-2 rounded-lg font-bold shadow-[3px_3px_0px_#000] dark:shadow-[3px_3px_0px_#FFF] hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-[4px_4px_0px_#000] dark:hover:shadow-[4px_4px_0px_#FFF] transition-all text-sm"
+                        className="flex items-center gap-2 bg-blue-600 dark:bg-blue-300 text-white dark:text-black px-4 py-2 rounded-lg font-bold shadow-[3px_3px_0px_#000] dark:shadow-[3px_3px_0px_#FFF] hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-[4px_4px_0px_#000] dark:hover:shadow-[4px_4px_0px_#FFF] transition-all text-sm"
                     >
                         <Plus size={16} />
                         Create New

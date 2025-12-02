@@ -8,7 +8,7 @@ export default class OpenRouterClient {
         this.siteName = 'Substantifique';
     }
 
-    async fetchModels(apiKey) {
+    async fetchModels() {
         try {
             const response = await fetch(`${this.endpoint}/models`);
             const data = await response.json();
