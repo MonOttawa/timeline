@@ -8,6 +8,37 @@ import { listTimelinesByUser, deleteTimeline, updateTimeline, createTimeline, fi
 import { getDueFlashcardsCount, getDueFlashcards, createFlashcardReview, getLastReview, checkLearningCache, saveLearningCache } from '../lib/api/learning';
 import { useAuth } from '../hooks/useAuth';
 
+// Utilities to safely detect and parse structured learning content
+const cleanAndParseJson = (raw) => {
+    if (!raw) return null;
+    try {
+        const clean = raw.replace(/```json\n?|```/g, '').trim();
+        return JSON.parse(clean);
+    } catch {
+        return null;
+    }
+};
+
+const extractFlashcards = (raw) => {
+    const parsed = cleanAndParseJson(raw);
+    if (parsed && Array.isArray(parsed.flashcards)) {
+        return parsed.flashcards;
+    }
+    return null;
+};
+
+const detectContentMode = (raw) => {
+    const parsed = cleanAndParseJson(raw);
+    if (!parsed) return null;
+    if (Array.isArray(parsed.flashcards)) return 'flashcards';
+    if (Array.isArray(parsed.quiz)) return 'quiz';
+
+    const deepDiveKeys = ['eli5', 'keyConcepts', 'buzzwords', 'misconceptions', 'pathToMastery'];
+    if (deepDiveKeys.every(k => parsed[k])) return 'deepDive';
+
+    return null;
+};
+
 export const LearningAssistant = ({ initialItem = null }) => {
     const { user } = useAuth();
     const [topic, setTopic] = useState('');
@@ -19,12 +50,14 @@ export const LearningAssistant = ({ initialItem = null }) => {
     const [isSaving, setIsSaving] = useState(false);
     const [saveSuccess, setSaveSuccess] = useState(false);
     const [deleteConfirmId, setDeleteConfirmId] = useState(null);
+    const [reviewComplete, setReviewComplete] = useState(false);
 
     // History State
     const [showHistory, setShowHistory] = useState(false);
     const [historyItems, setHistoryItems] = useState([]);
     const [isLoadingHistory, setIsLoadingHistory] = useState(false);
     const [isCompact, setIsCompact] = useState(false);
+    const [deckLooped, setDeckLooped] = useState(false);
 
     // Interactive Mode State
     const [flashcardIndex, setFlashcardIndex] = useState(0);
@@ -84,6 +117,7 @@ export const LearningAssistant = ({ initialItem = null }) => {
     const handleLoadHistory = (item) => {
         setResult(item.content);
         // Try to extract topic from title "Topic - Mode"
+        const detectedMode = detectContentMode(item.content);
         if (item.title && item.title.includes(' - ')) {
             const [extractedTopic, extractedMode] = item.title.split(' - ');
             setTopic(extractedTopic);
@@ -97,13 +131,12 @@ export const LearningAssistant = ({ initialItem = null }) => {
                 'Action Plan': 'stepByStep'
             };
             // Reverse lookup or simple lowercase check
-            const modeKey = Object.keys(modeMap).find(key => extractedMode.includes(key))
-                ? modeMap[Object.keys(modeMap).find(key => extractedMode.includes(key))]
-                : 'custom';
+            const matchedKey = Object.keys(modeMap).find(key => extractedMode.includes(key));
+            const modeKey = matchedKey ? modeMap[matchedKey] : detectedMode || 'custom';
             setActiveMode(modeKey);
         } else {
             setTopic(item.title);
-            setActiveMode('custom');
+            setActiveMode(detectedMode || 'custom');
         }
         setShowHistory(false);
         setIsEditing(false);
@@ -131,6 +164,7 @@ export const LearningAssistant = ({ initialItem = null }) => {
 
         try {
             // Fetch due cards
+            setReviewComplete(false);
             const items = await getDueFlashcards(user.id);
 
             if (items.length === 0) {
@@ -154,6 +188,8 @@ export const LearningAssistant = ({ initialItem = null }) => {
             setActiveMode('flashcards');
             setFlashcardIndex(0);
             setIsFlipped(false);
+            setDeckLooped(false);
+            setReviewComplete(false);
         } catch (err) {
             console.error('Error fetching due cards:', err);
             setError('Failed to load due cards.');
@@ -193,6 +229,8 @@ export const LearningAssistant = ({ initialItem = null }) => {
         setResult('');
         setIsEditing(false);
         setSaveSuccess(false);
+        setDeckLooped(false);
+        setReviewComplete(false);
 
         // Reset interactive states
         setFlashcardIndex(0);
@@ -298,6 +336,12 @@ IMPORTANT:
         if (flashcardIndex < total - 1) {
             setFlashcardIndex(flashcardIndex + 1);
             setIsFlipped(false);
+            setDeckLooped(false);
+        } else {
+            // At end: wrap to first card and note completion
+            setFlashcardIndex(0);
+            setIsFlipped(false);
+            setDeckLooped(true);
         }
     };
 
@@ -372,10 +416,12 @@ IMPORTANT:
     const handleRateCard = async (rating) => {
         if (!user) return;
 
+        const cards = extractFlashcards(result) || [];
+        const total = cards.length;
+        const isLast = total > 0 ? flashcardIndex === total - 1 : false;
+        if (!total) return;
+
         try {
-            const cleanResult = result.replace(/```json\n?|```/g, '').trim();
-            const json = JSON.parse(cleanResult);
-            const cards = json.flashcards || [];
             const card = cards[flashcardIndex];
 
             // Simple deterministic ID
@@ -410,9 +456,18 @@ IMPORTANT:
             console.warn('Failed to save review', e);
         }
 
-        // Move to next card
-        const total = JSON.parse(result.replace(/```json\\n?|```/g, '').trim()).flashcards.length;
-        handleNextCard(total);
+        // Move to next card (wrap to start if at end)
+        if (total > 0 && !isLast) {
+            handleNextCard(total);
+        } else if (total > 0 && isLast) {
+            setResult('All due cards reviewed! 🎉');
+            setActiveMode('custom');
+            setFlashcardIndex(0);
+            setIsFlipped(false);
+            setDeckLooped(false);
+            setReviewComplete(true);
+            setTimeout(() => setReviewComplete(false), 4500);
+        }
 
         // Refresh due cards count
         fetchDueCardsCount();
@@ -525,16 +580,18 @@ IMPORTANT:
     const renderContent = () => {
         if (!result) return null;
 
+        const flashcardData = extractFlashcards(result);
+        const shouldRenderFlashcards = (activeMode === 'flashcards' || activeMode === 'custom' || !activeMode) && flashcardData && flashcardData.length > 0;
+
         // Interactive Flashcards
-        if (activeMode === 'flashcards') {
+        if (shouldRenderFlashcards) {
             try {
-                const cleanResult = result.replace(/```json\n?|```/g, '').trim();
-                const json = JSON.parse(cleanResult);
-                const cards = json.flashcards || [];
+                const cards = flashcardData;
 
                 if (cards.length === 0) return <p>No flashcards found.</p>;
 
                 const card = cards[flashcardIndex];
+                const isLast = flashcardIndex === cards.length - 1;
 
                 return (
                     <div className="flex flex-col items-center space-y-6">
@@ -567,7 +624,13 @@ IMPORTANT:
                             </div>
                         )}
 
-                        <div className="flex gap-4">
+                        {deckLooped && (
+                            <div className="text-sm text-green-600 dark:text-green-300 font-bold">
+                                Deck complete! Restarted at card 1.
+                            </div>
+                        )}
+
+                        <div className="flex gap-4 items-center">
                             <button
                                 onClick={() => handlePrevCard()}
                                 disabled={flashcardIndex === 0}
@@ -577,10 +640,9 @@ IMPORTANT:
                             </button>
                             <button
                                 onClick={() => handleNextCard(cards.length)}
-                                disabled={flashcardIndex === cards.length - 1}
-                                className="px-6 py-2 font-bold bg-black text-white dark:bg-white dark:text-black border-2 border-black dark:border-white rounded-lg disabled:opacity-50 hover:translate-y-[-2px] transition-transform"
+                                className="px-6 py-2 font-bold bg-gray-900 text-white dark:bg-white dark:text-black border-2 border-black dark:border-white rounded-lg hover:translate-y-[-2px] transition-transform"
                             >
-                                Next
+                                {isLast ? 'Restart' : 'Next'}
                             </button>
                         </div>
                     </div>
@@ -752,6 +814,11 @@ IMPORTANT:
         return <div dangerouslySetInnerHTML={{ __html: sanitizeMarkdownHtml(html) }} />;
     };
 
+    const hasFlashcardsContent = (extractFlashcards(result) || []).length > 0;
+    const modeForTitle = (activeMode === 'flashcards' || ((activeMode === 'custom' || !activeMode) && hasFlashcardsContent))
+        ? 'flashcards'
+        : activeMode;
+
     return (
         <div className={`max-w-6xl mx-auto ${isCompact ? 'p-4' : 'p-6'} relative`}>
             {/* Header */}
@@ -900,15 +967,27 @@ IMPORTANT:
             {
                 result && !loading && (
                     <div className="border-4 border-black dark:border-white rounded-xl p-8 bg-white dark:bg-gray-800 shadow-[8px_8px_0px_#000] dark:shadow-[8px_8px_0px_#FFF] animate-in fade-in slide-in-from-bottom-4 duration-500 relative">
+                        {reviewComplete && (
+                            <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
+                                <div className="bg-white/90 dark:bg-gray-900/90 border-4 border-green-500 rounded-xl px-6 py-4 shadow-[6px_6px_0px_#000] dark:shadow-[6px_6px_0px_#FFF] animate-in fade-in zoom-in-95">
+                                    <div className="text-2xl font-black text-green-600 dark:text-green-300 flex items-center gap-2">
+                                        <span role="img" aria-label="confetti">🎉</span>
+                                        Review complete!
+                                        <span role="img" aria-label="confetti">🎊</span>
+                                    </div>
+                                    <p className="text-sm font-semibold text-gray-700 dark:text-gray-200 mt-1 text-center">All due cards reviewed. Great job!</p>
+                                </div>
+                            </div>
+                        )}
                         <div className="flex justify-between items-start mb-6 border-b-4 border-black dark:border-white pb-2">
                             <h3 className="text-2xl font-bold">
-                                {activeMode === 'explain' && "Simple Explanation"}
-                                {activeMode === 'summary' && "Key Points"}
-                                {activeMode === 'flashcards' && "Study Cards"}
-                                {activeMode === 'quiz' && "Knowledge Check"}
-                                {activeMode === 'missing' && "Blind Spots"}
-                                {activeMode === 'stepByStep' && "Action Plan"}
-                                {activeMode === 'deepDive' && "Deep Dive"}
+                                {modeForTitle === 'explain' && "Simple Explanation"}
+                                {modeForTitle === 'summary' && "Key Points"}
+                                {modeForTitle === 'flashcards' && "Study Cards"}
+                                {modeForTitle === 'quiz' && "Knowledge Check"}
+                                {modeForTitle === 'missing' && "Blind Spots"}
+                                {modeForTitle === 'stepByStep' && "Action Plan"}
+                                {modeForTitle === 'deepDive' && "Deep Dive"}
                             </h3>
                             <div className="flex gap-2">
                                 {user && (
