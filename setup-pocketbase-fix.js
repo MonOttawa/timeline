@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 
+/* eslint-env node */
+
 /**
  * Fix and complete PocketBase schema setup
  * Deletes incomplete collections and recreates them properly

@@ -13,7 +13,7 @@ export async function listTimelinesByUser(userId, { page = 1, perPage = 50, sort
       requestKey: null, // Disable auto-cancellation
     });
     return records;
-  } catch (error) {
+  } catch {
     // Fallback: drop sort if PocketBase rejects the query (e.g., invalid sort field).
     const records = await client.collection(TIMELINES_COLLECTION).getList(page, perPage, {
       filter: `user = "${userId}"`,

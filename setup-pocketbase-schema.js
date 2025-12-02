@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 
+/* eslint-env node */
+
 /**
  * Simplified PocketBase Schema Setup
  * Creates collections one field at a time to avoid validation issues

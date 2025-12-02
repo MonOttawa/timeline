@@ -1,3 +1,5 @@
+/* eslint-env node */
+
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -64,7 +66,7 @@ async function importSchema() {
             console.log(`🚀 Creating collection: ${collection.name}...`);
 
             // We need to remove 'id', 'created', 'updated' system fields if they exist
-            const { id, created, updated, system, ...data } = collection;
+            const { id: _id, created: _created, updated: _updated, system: _system, ...data } = collection;
 
             // Separate rules from data
             const rules = {
@@ -87,7 +89,7 @@ async function importSchema() {
             // Process fields from 'schema' in JSON to 'fields' for API
             if (data.schema && Array.isArray(data.schema)) {
                 initialData.fields = data.schema.map(field => {
-                    const { id, ...fieldData } = field;
+                    const { id: _fieldId, ...fieldData } = field;
 
                     // Fix relation fields
                     if (field.type === 'relation' && field.options && field.options.collectionId) {
@@ -111,7 +113,9 @@ async function importSchema() {
                     const existing = await checkRes.json();
                     collectionId = existing.id;
                 }
-            } catch (e) { }
+            } catch (e) {
+                console.warn(`⚠️  Could not check existing ${collection.name}:`, e.message);
+            }
 
             if (!collectionId) {
                 // Create new collection

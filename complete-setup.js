@@ -1,12 +1,13 @@
 #!/usr/bin/env node
 
+/* eslint-env node */
+
 /**
  * Complete PocketBase setup - delete empty collections and recreate properly
  * This time we'll stop the server, use migrations, and restart
  */
 
 import PocketBase from 'pocketbase';
-import { writeFileSync } from 'fs';
 
 const POCKETBASE_URL = process.env.VITE_POCKETBASE_URL || 'http://127.0.0.1:8090';
 

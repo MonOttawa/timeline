@@ -1,3 +1,4 @@
+/* eslint-env node */
 import PocketBase from 'pocketbase';
 
 const POCKETBASE_URL = process.env.VITE_POCKETBASE_URL || 'http://127.0.0.1:8090';
