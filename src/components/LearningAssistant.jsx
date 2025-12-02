@@ -69,13 +69,15 @@ export const LearningAssistant = ({ initialItem = null }) => {
     const [dueCardsCount, setDueCardsCount] = useState(0);
 
     const fetchDueCardsCount = useCallback(async () => {
-        if (!user) return;
+        if (!user) return 0;
 
         try {
             const count = await getDueFlashcardsCount(user.id);
             setDueCardsCount(count);
+            return count;
         } catch (e) {
             console.warn('Failed to fetch due cards count', e);
+            return 0;
         }
     }, [user]);
 
@@ -191,6 +193,7 @@ export const LearningAssistant = ({ initialItem = null }) => {
             setIsFlipped(false);
             setDeckLooped(false);
             setReviewComplete(false);
+            setDueCardsCount(flashcards.length);
         } catch (err) {
             console.error('Error fetching due cards:', err);
             setError('Failed to load due cards.');
@@ -472,6 +475,8 @@ IMPORTANT:
             setReviewComplete(true);
             setDueCardsCount(0);
             setTimeout(() => setReviewComplete(false), 4500);
+            // Ensure server state is reflected in badge
+            fetchDueCardsCount();
         }
 
         // Refresh due cards count
