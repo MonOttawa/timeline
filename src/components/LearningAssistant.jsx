@@ -169,6 +169,7 @@ export const LearningAssistant = ({ initialItem = null }) => {
 
             if (items.length === 0) {
                 setError('No cards due for review! 🎉');
+                setDueCardsCount(0);
                 setLoading(false);
                 return;
             }
@@ -469,6 +470,7 @@ IMPORTANT:
             setIsFlipped(false);
             setDeckLooped(false);
             setReviewComplete(true);
+            setDueCardsCount(0);
             setTimeout(() => setReviewComplete(false), 4500);
         }
 
