@@ -12,6 +12,7 @@ const Dashboard = ({ user, onEdit, onCreate, onShare, onEditLearning }) => {
 
     // View State
     const [viewMode, setViewMode] = useState('table'); // 'table', 'grid', 'compact'
+    const [isCompact, setIsCompact] = useState(false);
     const [sortConfig, setSortConfig] = useState({ key: 'title', direction: 'desc' });
     const [selectedIds, setSelectedIds] = useState(new Set());
 
@@ -163,20 +164,20 @@ const Dashboard = ({ user, onEdit, onCreate, onShare, onEditLearning }) => {
             <table className="w-full text-left border-collapse">
                 <thead>
                     <tr className="border-b-2 border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 text-sm uppercase tracking-wider">
-                        <th className="p-4 w-12">
+                        <th className={isCompact ? 'p-3 w-12' : 'p-4 w-12'}>
                             <button onClick={toggleSelectAll} className="hover:text-black dark:hover:text-white">
                                 {selectedIds.size === timelines.length && timelines.length > 0 ? <CheckSquare size={20} /> : <Square size={20} />}
                             </button>
                         </th>
-                        <th className="p-4 cursor-pointer hover:text-black dark:hover:text-white" onClick={() => handleSort('title')}>
+                        <th className={isCompact ? 'p-3 cursor-pointer hover:text-black dark:hover:text-white' : 'p-4 cursor-pointer hover:text-black dark:hover:text-white'} onClick={() => handleSort('title')}>
                             <div className="flex items-center gap-2">Title <ArrowUpDown size={14} /></div>
                         </th>
-                        <th className="p-4 w-32">Type</th>
-                        <th className="p-4 w-32">Status</th>
-                        <th className="p-4 w-48 cursor-pointer hover:text-black dark:hover:text-white" onClick={() => handleSort('updated')}>
+                        <th className={isCompact ? 'p-3 w-28' : 'p-4 w-32'}>Type</th>
+                        <th className={isCompact ? 'p-3 w-28' : 'p-4 w-32'}>Status</th>
+                        <th className={isCompact ? 'p-3 w-40 cursor-pointer hover:text-black dark:hover:text-white' : 'p-4 w-48 cursor-pointer hover:text-black dark:hover:text-white'} onClick={() => handleSort('updated')}>
                             <div className="flex items-center gap-2">Updated <ArrowUpDown size={14} /></div>
                         </th>
-                        <th className="p-4 w-32 text-right">Actions</th>
+                        <th className={isCompact ? 'p-3 w-28 text-right' : 'p-4 w-32 text-right'}>Actions</th>
                     </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
@@ -187,18 +188,18 @@ const Dashboard = ({ user, onEdit, onCreate, onShare, onEditLearning }) => {
                         return (
                             <tr
                                 key={timeline.id}
-                                className={`group hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors ${isSelected ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}
+                                className={`group hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors ${isSelected ? 'bg-blue-50 dark:bg-blue-900/20' : ''} ${isCompact ? 'text-sm' : 'text-base'}`}
                                 onClick={() => isLearning && onEditLearning ? onEditLearning(timeline) : onEdit(timeline)}
                             >
-                                <td className="p-4" onClick={e => e.stopPropagation()}>
+                                <td className={isCompact ? 'p-3' : 'p-4'} onClick={e => e.stopPropagation()}>
                                     <button onClick={(e) => toggleSelection(timeline.id, e)} className="text-gray-400 hover:text-black dark:hover:text-white">
                                         {isSelected ? <CheckSquare size={20} className="text-blue-500" /> : <Square size={20} />}
                                     </button>
                                 </td>
-                                <td className="p-4 font-medium text-black dark:text-white cursor-pointer">
+                                <td className={`${isCompact ? 'p-3 text-sm' : 'p-4'} font-medium text-black dark:text-white cursor-pointer`}>
                                     {timeline.title || 'Untitled'}
                                 </td>
-                                <td className="p-4">
+                                <td className={isCompact ? 'p-3' : 'p-4'}>
                                     {isLearning ? (
                                         <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-bold bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
                                             <Brain size={12} /> Learning
@@ -209,18 +210,18 @@ const Dashboard = ({ user, onEdit, onCreate, onShare, onEditLearning }) => {
                                         </span>
                                     )}
                                 </td>
-                                <td className="p-4">
+                                <td className={isCompact ? 'p-3' : 'p-4'}>
                                     {timeline.public ? (
                                         <span className="text-xs font-bold text-green-600 dark:text-green-400">Public</span>
                                     ) : (
                                         <span className="text-xs text-gray-400">Private</span>
                                     )}
                                 </td>
-                                <td className="p-4 text-sm text-gray-500 dark:text-gray-400">
+                                <td className={`${isCompact ? 'p-3 text-xs' : 'p-4 text-sm'} text-gray-500 dark:text-gray-400`}>
                                     {new Date(timeline.updated).toLocaleDateString()}
                                 </td>
-                                <td className="p-4 text-right" onClick={e => e.stopPropagation()}>
-                                    <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <td className={isCompact ? 'p-3 text-right' : 'p-4 text-right'} onClick={e => e.stopPropagation()}>
+                                    <div className={`flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity ${isCompact ? 'text-xs' : ''}`}>
                                         <button
                                             onClick={() => onShare(timeline)}
                                             className="p-1.5 hover:bg-cyan-100 dark:hover:bg-cyan-900/30 text-gray-400 hover:text-cyan-600 dark:hover:text-cyan-400 rounded"
@@ -300,26 +301,32 @@ const Dashboard = ({ user, onEdit, onCreate, onShare, onEditLearning }) => {
     return (
         <div className="max-w-7xl mx-auto px-4">
             {/* Header */}
-            <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
+            <div className={`flex flex-col md:flex-row justify-between items-center ${isCompact ? 'mb-4' : 'mb-8'} gap-3`}>
                 <div>
-                    <h1 className="text-3xl font-black font-display text-black dark:text-white mb-1">My Projects</h1>
+                    <h1 className={`${isCompact ? 'text-2xl' : 'text-3xl'} font-black font-display text-black dark:text-white mb-1`}>My Projects</h1>
                     <p className="text-sm text-gray-600 dark:text-gray-400">
                         {totalItems} items • {selectedIds.size} selected
                     </p>
                 </div>
-                <div className="flex gap-3">
+                <div className="flex gap-2 md:gap-3 items-center">
                     {selectedIds.size > 0 && (
                         <button
                             onClick={handleBulkDelete}
-                            className="flex items-center gap-2 bg-red-500 text-white px-4 py-2 rounded-lg font-bold shadow-[3px_3px_0px_#000] hover:shadow-[4px_4px_0px_#000] transition-all text-sm"
+                            className="flex items-center gap-2 bg-red-500 text-white px-3 py-2 rounded-lg font-bold shadow-[2px_2px_0px_#000] dark:shadow-[2px_2px_0px_#FFF] hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-[3px_3px_0px_#000] dark:hover:shadow-[3px_3px_0px_#FFF] transition-all text-sm"
                         >
                             <Trash2 size={16} />
                             Delete ({selectedIds.size})
                         </button>
                     )}
                     <button
+                        onClick={() => setIsCompact(!isCompact)}
+                        className="flex items-center gap-2 bg-gray-200 dark:bg-gray-700 text-black dark:text-white px-3 py-2 rounded-lg font-bold shadow-[2px_2px_0px_#000] dark:shadow-[2px_2px_0px_#FFF] text-sm hover:translate-x-[-1px] hover:translate-y-[-1px]"
+                    >
+                        {isCompact ? 'Comfortable' : 'Compact'}
+                    </button>
+                    <button
                         onClick={onCreate}
-                        className="flex items-center gap-2 bg-blue-600 dark:bg-blue-300 text-white dark:text-black px-4 py-2 rounded-lg font-bold shadow-[3px_3px_0px_#000] dark:shadow-[3px_3px_0px_#FFF] hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-[4px_4px_0px_#000] dark:hover:shadow-[4px_4px_0px_#FFF] transition-all text-sm"
+                        className="flex items-center gap-2 bg-blue-600 dark:bg-blue-300 text-white dark:text-black px-3 py-2 rounded-lg font-bold shadow-[2px_2px_0px_#000] dark:shadow-[2px_2px_0px_#FFF] hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-[3px_3px_0px_#000] dark:hover:shadow-[3px_3px_0px_#FFF] transition-all text-sm"
                     >
                         <Plus size={16} />
                         Create New
@@ -334,7 +341,7 @@ const Dashboard = ({ user, onEdit, onCreate, onShare, onEditLearning }) => {
             )}
 
             {/* Controls Bar */}
-            <div className="flex flex-col md:flex-row gap-4 mb-6 justify-between items-end md:items-center">
+            <div className={`flex flex-col md:flex-row gap-4 ${isCompact ? 'mb-4' : 'mb-6'} justify-between items-end md:items-center`}>
                 {/* Search & Filter */}
                 <div className="flex gap-4 w-full md:w-auto">
                     <div className="relative flex-1 md:w-64">
@@ -349,7 +356,7 @@ const Dashboard = ({ user, onEdit, onCreate, onShare, onEditLearning }) => {
                     </div>
 
                     <div className="flex border-2 border-black dark:border-white rounded-lg overflow-hidden">
-                        <button onClick={() => setContentFilter('all')} className={`px-3 py-1.5 text-sm font-bold ${contentFilter === 'all' ? 'bg-black text-white dark:bg-white dark:text-black' : 'hover:bg-gray-100 dark:hover:bg-gray-800'}`}>All</button>
+                        <button onClick={() => setContentFilter('all')} className={`px-3 py-1.5 text-sm font-bold ${contentFilter === 'all' ? 'bg-gray-900 text-white dark:bg-white dark:text-black' : 'hover:bg-gray-100 dark:hover:bg-gray-800'}`}>All</button>
                         <button onClick={() => setContentFilter('timelines')} className={`px-3 py-1.5 text-sm font-bold border-l-2 border-black dark:border-white ${contentFilter === 'timelines' ? 'bg-purple-500 text-white' : 'hover:bg-gray-100 dark:hover:bg-gray-800'}`}>Timelines</button>
                         <button onClick={() => setContentFilter('learning')} className={`px-3 py-1.5 text-sm font-bold border-l-2 border-black dark:border-white ${contentFilter === 'learning' ? 'bg-blue-500 text-white' : 'hover:bg-gray-100 dark:hover:bg-gray-800'}`}>Learning</button>
                     </div>

@@ -24,6 +24,7 @@ export const LearningAssistant = ({ initialItem = null }) => {
     const [showHistory, setShowHistory] = useState(false);
     const [historyItems, setHistoryItems] = useState([]);
     const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+    const [isCompact, setIsCompact] = useState(false);
 
     // Interactive Mode State
     const [flashcardIndex, setFlashcardIndex] = useState(0);
@@ -752,56 +753,65 @@ IMPORTANT:
     };
 
     return (
-        <div className="max-w-4xl mx-auto p-6 relative">
-            {/* Header Buttons - Responsive Layout */}
-            <div className="flex justify-end mb-4 gap-2">
-                {user && (
-                    <button
-                        onClick={handleReviewMode}
-                        className="p-2 hover:bg-purple-100 dark:hover:bg-purple-900/30 rounded-lg transition-colors flex items-center gap-2 text-sm font-bold border-2 border-purple-500 text-purple-600 dark:text-purple-400 relative"
+        <div className={`max-w-6xl mx-auto ${isCompact ? 'p-4' : 'p-6'} relative`}>
+            {/* Header */}
+            <div className={`flex flex-col md:flex-row justify-between items-center ${isCompact ? 'mb-4' : 'mb-8'} gap-3`}>
+                <div>
+                    <h1 className={`${isCompact ? 'text-2xl' : 'text-3xl'} font-black font-display text-black dark:text-white mb-1`}>Learning Workspace</h1>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                        {user ? `${dueCardsCount} cards due • AI-powered learning` : 'Log in to save and review'}
+                    </p>
+                </div>
+                <div className="flex gap-2 md:gap-3 items-center">
+                    {user && (
+                        <button
+                            onClick={handleReviewMode}
+                        className={`flex items-center gap-2 px-3 py-2 ${isCompact ? 'text-xs' : 'text-sm'} rounded-lg font-bold border-2 border-purple-500 text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-900/30 shadow-[2px_2px_0px_#000] dark:shadow-[2px_2px_0px_#FFF] hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-[3px_3px_0px_#000] dark:hover:shadow-[3px_3px_0px_#FFF]`}
                         title="Review Due Cards"
                     >
-                        <GraduationCap size={20} />
+                        <GraduationCap size={18} />
                         <span className="hidden md:inline">Review</span>
                         {dueCardsCount > 0 && (
-                            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
-                                {dueCardsCount}
-                            </span>
-                        )}
+                                <span className="bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+                                    {dueCardsCount}
+                                </span>
+                            )}
+                        </button>
+                    )}
+                    <button
+                        onClick={() => {
+                            if (!user) {
+                                setError('Please log in to view your history.');
+                                return;
+                            }
+                            setShowHistory(true);
+                        }}
+                        className={`p-2 rounded-full border-2 border-black dark:border-white transition-colors ${user ? 'hover:bg-gray-100 dark:hover:bg-gray-800' : 'opacity-50 hover:bg-red-100 dark:hover:bg-red-900/30'}`}
+                        title={user ? "My History" : "Log in to view history"}
+                    >
+                        <History size={22} className={user ? "text-gray-600 dark:text-gray-400" : "text-gray-400 dark:text-gray-600"} />
                     </button>
-                )}
-                <button
-                    onClick={() => {
-                        if (!user) {
-                            setError('Please log in to view your history.');
-                            return;
-                        }
-                        setShowHistory(true);
-                    }}
-                    className={`p-2 rounded-full transition-colors ${user ? 'hover:bg-gray-100 dark:hover:bg-gray-800' : 'opacity-50 hover:bg-red-100 dark:hover:bg-red-900/30'}`}
-                    title={user ? "My History" : "Log in to view history"}
+                    <button
+                        onClick={() => setIsCompact(!isCompact)}
+                    className="px-3 py-2 rounded-lg border-2 border-black dark:border-white bg-gray-100 dark:bg-gray-700 text-sm font-bold shadow-[2px_2px_0px_#000] dark:shadow-[2px_2px_0px_#FFF] hover:translate-x-[-1px] hover:translate-y-[-1px]"
                 >
-                    <History size={24} className={user ? "text-gray-600 dark:text-gray-400" : "text-gray-400 dark:text-gray-600"} />
+                    {isCompact ? 'Comfortable' : 'Compact'}
                 </button>
+                </div>
             </div>
 
-            <div className="text-center mb-10">
-                <p className="text-xl text-gray-600 dark:text-gray-300">
-                    Master any topic in seconds.
-                </p>
-            </div>
-
-            <div className="mb-10">
+            <div className={isCompact ? 'mb-6' : 'mb-10'}>
                 <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={isCompact ? 16 : 18} />
                     <input
                         type="text"
                         value={topic}
                         onChange={(e) => setTopic(e.target.value)}
                         placeholder="What do you want to learn? (e.g., Quantum Physics, Baking, History of Rome)"
-                        className="w-full p-6 text-xl border-4 border-black dark:border-white rounded-xl shadow-[8px_8px_0px_#000] dark:shadow-[8px_8px_0px_#FFF] focus:outline-none focus:ring-4 focus:ring-purple-400 focus:translate-x-1 focus:translate-y-1 focus:shadow-none transition-all bg-white dark:bg-gray-800 text-black dark:text-white placeholder-gray-400"
+                        className={`w-full ${isCompact ? 'pl-10 pr-3 py-3 text-base' : 'pl-11 pr-4 py-4 text-lg'} border-2 border-black dark:border-white rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-400 bg-white dark:bg-gray-800 text-black dark:text-white placeholder-gray-400 shadow-[4px_4px_0px_#000] dark:shadow-[4px_4px_0px_#FFF]`}
                     />
                     {topic && (
-                        <div className="absolute right-6 top-1/2 -translate-y-1/2 text-sm font-bold text-green-600 dark:text-green-400 animate-pulse">
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-green-600 dark:text-green-400 animate-pulse">
                             Ready to learn!
                         </div>
                     )}
@@ -817,13 +827,14 @@ IMPORTANT:
                 )
             }
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-10">
+            <div className={`grid grid-cols-1 md:grid-cols-2 ${isCompact ? 'gap-3 mb-6' : 'gap-4 mb-10'}`}>
                 <ActionButton
                     icon={<Brain />}
                     label="Explain like I'm 12"
                     onClick={() => handleAction('explain')}
                     disabled={!topic || loading}
                     color="bg-pink-300"
+                    compact={isCompact}
                 />
                 <ActionButton
                     icon={<List />}
@@ -831,6 +842,7 @@ IMPORTANT:
                     onClick={() => handleAction('summary')}
                     disabled={!topic || loading}
                     color="bg-blue-300"
+                    compact={isCompact}
                 />
                 <ActionButton
                     icon={<Layers />}
@@ -838,6 +850,7 @@ IMPORTANT:
                     onClick={() => handleAction('flashcards')}
                     disabled={!topic || loading}
                     color="bg-green-300"
+                    compact={isCompact}
                 />
                 <ActionButton
                     icon={<HelpCircle />}
@@ -845,6 +858,7 @@ IMPORTANT:
                     onClick={() => handleAction('quiz')}
                     disabled={!topic || loading}
                     color="bg-yellow-300"
+                    compact={isCompact}
                 />
                 <ActionButton
                     icon={<BookOpen />}
@@ -852,6 +866,7 @@ IMPORTANT:
                     onClick={() => handleAction('missing')}
                     disabled={!topic || loading}
                     color="bg-purple-300"
+                    compact={isCompact}
                 />
                 <ActionButton
                     icon={<ArrowRight />}
@@ -859,6 +874,7 @@ IMPORTANT:
                     onClick={() => handleAction('stepByStep')}
                     disabled={!topic || loading}
                     color="bg-orange-300"
+                    compact={isCompact}
                 />
             </div>
             <div className="col-span-1 md:col-span-2">
@@ -868,6 +884,7 @@ IMPORTANT:
                     onClick={() => handleAction('deepDive')}
                     disabled={!topic || loading}
                     color="bg-cyan-300"
+                    compact={isCompact}
                 />
             </div>
 
@@ -963,11 +980,11 @@ IMPORTANT:
                                         {historyItems.map((item) => (
                                             <div
                                                 key={item.id}
-                                                className="border-2 border-black dark:border-white rounded-lg p-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex justify-between items-center group cursor-pointer"
+                                                className={`border-2 border-black dark:border-white rounded-lg ${isCompact ? 'p-2' : 'p-3'} hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex justify-between items-center group cursor-pointer`}
                                                 onClick={() => handleLoadHistory(item)}
                                             >
                                                 <div className="flex items-center gap-3 flex-1 min-w-0">
-                                                    <h3 className="font-bold text-base truncate">{item.title || 'Untitled'}</h3>
+                                                    <h3 className={`font-bold truncate ${isCompact ? 'text-sm' : 'text-base'}`}>{item.title || 'Untitled'}</h3>
                                                     <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 shrink-0">
                                                         <Calendar size={12} />
                                                         {new Date(item.updated).toLocaleDateString()}
@@ -1010,13 +1027,13 @@ IMPORTANT:
     );
 };
 
-const ActionButton = ({ icon, label, onClick, disabled, color }) => (
+const ActionButton = ({ icon, label, onClick, disabled, color, compact = false }) => (
     <button
         onClick={onClick}
         disabled={disabled}
         className={`
-      flex items-center justify-center gap-3 p-4 text-lg font-bold border-4 border-black dark:border-white rounded-xl
-      shadow-[4px_4px_0px_#000] dark:shadow-[4px_4px_0px_#FFF]
+      flex items-center justify-center gap-3 ${compact ? 'p-3 text-sm' : 'p-4 text-lg'} font-bold border-4 border-black dark:border-white rounded-xl
+      ${compact ? 'shadow-[3px_3px_0px_#000]' : 'shadow-[4px_4px_0px_#000]'} dark:shadow-[4px_4px_0px_#FFF]
       transition-all
       ${disabled
                 ? 'opacity-50 cursor-not-allowed bg-gray-200 dark:bg-gray-700'
