@@ -10,9 +10,9 @@ const Dashboard = ({ user, onEdit, onCreate, onShare, onEditLearning }) => {
     const [error, setError] = useState(null);
     const [contentFilter, setContentFilter] = useState('all'); // 'all', 'timelines', 'learning'
 
-    // View State
-    const [viewMode, setViewMode] = useState('table'); // 'table', 'grid', 'compact'
-    const [isCompact, setIsCompact] = useState(false);
+    // View State (force compact grid/table, remove toggle)
+    const [viewMode, setViewMode] = useState('table'); // 'table', 'grid'
+    const isCompact = true;
     const [sortConfig, setSortConfig] = useState({ key: 'title', direction: 'desc' });
     const [selectedIds, setSelectedIds] = useState(new Set());
 
@@ -246,8 +246,8 @@ const Dashboard = ({ user, onEdit, onCreate, onShare, onEditLearning }) => {
         </div>
     );
 
-    const renderGridView = (compact = false) => (
-        <div className={`grid grid-cols-1 ${compact ? 'md:grid-cols-4 lg:grid-cols-5 gap-3' : 'md:grid-cols-3 lg:grid-cols-4 gap-4'}`}>
+    const renderGridView = () => (
+        <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-5 gap-3">
             {filteredTimelines.map((timeline) => {
                 const isLearning = isLearningMaterial(timeline);
                 const isSelected = selectedIds.has(timeline.id);
@@ -256,7 +256,7 @@ const Dashboard = ({ user, onEdit, onCreate, onShare, onEditLearning }) => {
                     <div
                         key={timeline.id}
                         onClick={() => isLearning && onEditLearning ? onEditLearning(timeline) : onEdit(timeline)}
-                        className={`group bg-white dark:bg-gray-800 border-2 ${isSelected ? 'border-blue-500 ring-2 ring-blue-200 dark:ring-blue-900' : 'border-black dark:border-white'} rounded-lg ${compact ? 'p-3' : 'p-4'} shadow-[3px_3px_0px_#000] dark:shadow-[3px_3px_0px_#FFF] hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-[5px_5px_0px_#000] dark:hover:shadow-[5px_5px_0px_#FFF] transition-all cursor-pointer relative`}
+                        className={`group bg-white dark:bg-gray-800 border-2 ${isSelected ? 'border-blue-500 ring-2 ring-blue-200 dark:ring-blue-900' : 'border-black dark:border-white'} rounded-lg p-3 shadow-[3px_3px_0px_#000] dark:shadow-[3px_3px_0px_#FFF] hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-[5px_5px_0px_#000] dark:hover:shadow-[5px_5px_0px_#FFF] transition-all cursor-pointer relative`}
                     >
                         <div className="flex justify-between items-start mb-2">
                             <div className="flex gap-2">
@@ -274,11 +274,11 @@ const Dashboard = ({ user, onEdit, onCreate, onShare, onEditLearning }) => {
                             )}
                         </div>
 
-                        <h3 className={`font-bold ${compact ? 'text-sm mb-2 h-10' : 'text-lg mb-3 h-14'} line-clamp-2 text-black dark:text-white leading-tight`}>
+                        <h3 className="font-bold text-sm mb-2 h-10 line-clamp-2 text-black dark:text-white leading-tight">
                             {timeline.title || 'Untitled'}
                         </h3>
 
-                        <div className={`flex items-center justify-between ${compact ? 'pt-2' : 'pt-3'} border-t border-gray-100 dark:border-gray-700`}>
+                        <div className="flex items-center justify-between pt-2 border-t border-gray-100 dark:border-gray-700">
                             <span className="text-[10px] text-gray-500">
                                 {new Date(timeline.updated).toLocaleDateString()}
                             </span>
@@ -318,12 +318,6 @@ const Dashboard = ({ user, onEdit, onCreate, onShare, onEditLearning }) => {
                             Delete ({selectedIds.size})
                         </button>
                     )}
-                    <button
-                        onClick={() => setIsCompact(!isCompact)}
-                        className="flex items-center gap-2 bg-gray-200 dark:bg-gray-700 text-black dark:text-white px-3 py-2 rounded-lg font-bold shadow-[2px_2px_0px_#000] dark:shadow-[2px_2px_0px_#FFF] text-sm hover:translate-x-[-1px] hover:translate-y-[-1px]"
-                    >
-                        {isCompact ? 'Comfortable' : 'Compact'}
-                    </button>
                     <button
                         onClick={onCreate}
                         className="flex items-center gap-2 bg-blue-600 dark:bg-blue-300 text-white dark:text-black px-3 py-2 rounded-lg font-bold shadow-[2px_2px_0px_#000] dark:shadow-[2px_2px_0px_#FFF] hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-[3px_3px_0px_#000] dark:hover:shadow-[3px_3px_0px_#FFF] transition-all text-sm"
@@ -392,8 +386,7 @@ const Dashboard = ({ user, onEdit, onCreate, onShare, onEditLearning }) => {
             ) : (
                 <>
                     {viewMode === 'table' && renderTableView()}
-                    {viewMode === 'grid' && renderGridView(false)}
-                    {viewMode === 'compact' && renderGridView(true)}
+                    {viewMode === 'grid' && renderGridView()}
                     {renderPagination()}
                 </>
             )}
