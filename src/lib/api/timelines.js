@@ -31,12 +31,20 @@ export async function deleteTimeline(timelineId) {
 
 export async function createTimeline(data) {
   const client = getDataClient();
-  return client.collection(TIMELINES_COLLECTION).create(data);
+  const now = new Date().toISOString();
+  return client.collection(TIMELINES_COLLECTION).create({
+    updated: now,
+    ...data,
+  });
 }
 
 export async function updateTimeline(timelineId, data) {
   const client = getDataClient();
-  return client.collection(TIMELINES_COLLECTION).update(timelineId, data);
+  const now = new Date().toISOString();
+  return client.collection(TIMELINES_COLLECTION).update(timelineId, {
+    updated: now,
+    ...data,
+  });
 }
 
 export async function findTimelineByTitle(userId, title) {
