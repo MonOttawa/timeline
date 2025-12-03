@@ -418,7 +418,8 @@ const TimelineGenerator = ({ isDemoMode = false, initialTimeline = null, onBack 
       setTimeout(() => setTimelineTitle(originalTitle), 2000);
     } catch (error) {
       console.error('Error saving timeline:', error);
-      alert(`Failed to save timeline: ${error.message || error.data?.message || 'Unknown error'}. Please check your internet connection and ensure the "timelines" collection exists with correct API rules.`);
+      const msg = error?.data?.message || error?.message || 'Unknown error';
+      setWarning(`Failed to save timeline: ${msg}`);
     } finally {
       setIsSaving(false);
     }
