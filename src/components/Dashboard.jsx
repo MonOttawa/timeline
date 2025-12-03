@@ -22,11 +22,16 @@ const Dashboard = ({ user, onEdit, onCreate, onShare, onEditLearning }) => {
     const [totalItems, setTotalItems] = useState(0);
     const PER_PAGE = 20;
 
-    const formatDate = (value) => {
-        const candidate = value || '';
-        const d = candidate ? new Date(candidate) : null;
-        if (d && !Number.isNaN(d.getTime())) {
-            return d.toLocaleDateString();
+    const formatDate = (record) => {
+        const candidates = [
+            record?.updated,
+            record?.created,
+            record?.updatedAt,
+            record?.createdAt,
+        ].filter(Boolean);
+        for (const c of candidates) {
+            const d = new Date(c);
+            if (!Number.isNaN(d.getTime())) return d.toLocaleDateString();
         }
         return '—';
     };
@@ -227,7 +232,7 @@ const Dashboard = ({ user, onEdit, onCreate, onShare, onEditLearning }) => {
                                     )}
                                 </td>
                                 <td className={`${isCompact ? 'p-3 text-xs' : 'p-4 text-sm'} text-gray-500 dark:text-gray-400`}>
-                                    {formatDate(timeline.updated || timeline.created)}
+                                    {formatDate(timeline)}
                                 </td>
                                 <td className={isCompact ? 'p-3 text-right' : 'p-4 text-right'} onClick={e => e.stopPropagation()}>
                                     <div className={`flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity ${isCompact ? 'text-xs' : ''}`}>
@@ -289,7 +294,7 @@ const Dashboard = ({ user, onEdit, onCreate, onShare, onEditLearning }) => {
 
                         <div className="flex items-center justify-between pt-2 border-t border-gray-100 dark:border-gray-700">
                             <span className="text-[10px] text-gray-500">
-                                {formatDate(timeline.updated || timeline.created)}
+                                {formatDate(timeline)}
                             </span>
 
                             <div className="flex gap-1" onClick={e => e.stopPropagation()}>
