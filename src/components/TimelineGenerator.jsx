@@ -11,7 +11,7 @@ import TemplatesModal from './TemplatesModal';
 import ShareModal from './ShareModal';
 import { slugify, makeUniqueSlug } from '../lib/slugify';
 import { sampleTimelines } from '../data/sampleTimelines';
-import { createTimeline, updateTimeline, listTimelinesByUser, deleteTimeline as deleteTimelineApi } from '../lib/api/timelines';
+import { createTimeline, updateTimeline, listTimelinesByUser, deleteTimeline as deleteTimelineApi, findTimelineByTitle } from '../lib/api/timelines';
 import { buildShareUrl } from '../lib/shareLinks';
 
 const TimelineGenerator = ({ isDemoMode = false, initialTimeline = null, onBack = null }) => {
@@ -358,17 +358,22 @@ const TimelineGenerator = ({ isDemoMode = false, initialTimeline = null, onBack 
     setIsSaving(true);
     let record = null;
     try {
-      const data = {
-        user: user.id,
-        title: timelineTitle,
-        content: markdownContent,
-        style: timelineStyle,
-      };
+    const safeTitle = (timelineTitle || '').trim() || 'Untitled Timeline';
+    if (safeTitle !== timelineTitle) {
+      setTimelineTitle(safeTitle);
+    }
+
+    const data = {
+      user: user.id,
+      title: safeTitle,
+      content: markdownContent,
+      style: timelineStyle,
+    };
 
       // Ensure every saved timeline has a slug, even for older records
       let slugToUse = currentSlug;
       if (!slugToUse) {
-        const baseSlug = slugify(timelineTitle || 'timeline');
+        const baseSlug = slugify(safeTitle || 'timeline');
         slugToUse = makeUniqueSlug(baseSlug);
         setCurrentSlug(slugToUse);
 
@@ -385,7 +390,20 @@ const TimelineGenerator = ({ isDemoMode = false, initialTimeline = null, onBack 
 
       const datedData = { ...data, updated: new Date().toISOString() };
 
-      if (currentTimelineId) {
+      // If no current ID, check for existing title to avoid duplicates and update instead of create
+      let targetId = currentTimelineId;
+      if (!targetId) {
+        const existingByTitle = await findTimelineByTitle(user.id, safeTitle);
+        if (existingByTitle?.id) {
+          targetId = existingByTitle.id;
+          setCurrentTimelineId(targetId);
+          setCurrentSlug(existingByTitle.slug || slugToUse);
+          setIsPublic(Boolean(existingByTitle.public));
+          setViewCount(existingByTitle.viewCount || 0);
+        }
+      }
+
+      if (targetId) {
         record = await updateTimeline(currentTimelineId, datedData);
       } else {
         record = await createTimeline(datedData);
