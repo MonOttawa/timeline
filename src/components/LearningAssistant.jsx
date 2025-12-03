@@ -409,7 +409,8 @@ IMPORTANT:
             interval,
             repetitions,
             ease_factor: easeFactor,
-            next_review: nextReview.toISOString()
+            next_review: nextReview.toISOString(),
+            rating
         };
     };
 
