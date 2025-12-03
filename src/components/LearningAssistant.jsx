@@ -56,7 +56,7 @@ const [nextReviewHint, setNextReviewHint] = useState(null);
     const [showHistory, setShowHistory] = useState(false);
     const [historyItems, setHistoryItems] = useState([]);
     const [isLoadingHistory, setIsLoadingHistory] = useState(false);
-    const [isCompact] = useState(true);
+    const isCompact = true;
     const [deckLooped, setDeckLooped] = useState(false);
 
     // Interactive Mode State
@@ -853,11 +853,11 @@ IMPORTANT:
         : activeMode;
 
     return (
-        <div className={`max-w-6xl mx-auto ${isCompact ? 'p-4' : 'p-6'} relative`}>
+        <div className="max-w-6xl mx-auto p-4 relative">
             {/* Header */}
-            <div className={`flex flex-col md:flex-row justify-between items-center ${isCompact ? 'mb-4' : 'mb-8'} gap-3`}>
+            <div className="flex flex-col md:flex-row justify-between items-center mb-4 gap-3">
                 <div>
-                    <h1 className={`${isCompact ? 'text-2xl' : 'text-3xl'} font-black font-display text-black dark:text-white mb-1`}>Learning Workspace</h1>
+                    <h1 className="text-2xl font-black font-display text-black dark:text-white mb-1">Learning Workspace</h1>
                     <p className="text-sm text-gray-600 dark:text-gray-400">
                         {user ? `${dueCardsCount} cards due • AI-powered learning` : 'Log in to save and review'}
                     </p>
@@ -894,9 +894,9 @@ IMPORTANT:
                 </div>
             </div>
 
-            <div className={isCompact ? 'mb-6' : 'mb-10'}>
+            <div className="mb-6">
                 <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={isCompact ? 16 : 18} />
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
                     <input
                         type="text"
                         value={topic}
@@ -909,7 +909,7 @@ IMPORTANT:
                             setDeckLooped(false);
                         }}
                         placeholder="What do you want to learn? (e.g., Quantum Physics, Baking, History of Rome)"
-                        className={`w-full ${isCompact ? 'pl-10 pr-3 py-3 text-base' : 'pl-11 pr-4 py-4 text-lg'} border-2 border-black dark:border-white rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-400 bg-white dark:bg-gray-800 text-black dark:text-white placeholder-gray-400 shadow-[4px_4px_0px_#000] dark:shadow-[4px_4px_0px_#FFF]`}
+                        className="w-full pl-10 pr-3 py-3 text-base border-2 border-black dark:border-white rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-400 bg-white dark:bg-gray-800 text-black dark:text-white placeholder-gray-400 shadow-[4px_4px_0px_#000] dark:shadow-[4px_4px_0px_#FFF]"
                     />
                     {topic && (
                         <div className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-green-600 dark:text-green-400 animate-pulse">
@@ -928,7 +928,7 @@ IMPORTANT:
                 )
             }
 
-            <div className={`grid grid-cols-1 md:grid-cols-2 ${isCompact ? 'gap-3 mb-6' : 'gap-4 mb-10'}`}>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6">
                 {/* Action buttons hidden while showing results/review to keep focus */}
                 {topic.trim() && !loading && !result && activeMode !== 'flashcards' && (
                     <>
@@ -1086,7 +1086,7 @@ IMPORTANT:
                                         {historyItems.map((item) => (
                                             <div
                                                 key={item.id}
-                                                className={`border-2 border-black dark:border-white rounded-lg ${isCompact ? 'p-2' : 'p-3'} hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex justify-between items-center group cursor-pointer`}
+                                                className="border-2 border-black dark:border-white rounded-lg p-2 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex justify-between items-center group cursor-pointer"
                                                 onClick={() => handleLoadHistory(item)}
                                             >
                                                 <div className="flex items-center gap-3 flex-1 min-w-0">
