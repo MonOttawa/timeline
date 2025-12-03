@@ -713,7 +713,12 @@ Outcome, impact, and next steps.
   return (
     <div className="max-w-4xl mx-auto">
       <div className="bg-white dark:bg-gray-800 p-8 mb-8 text-center border-4 border-black dark:border-white shadow-[8px_8px_0px_#000] dark:shadow-[8px_8px_0px_#FFF] rounded-lg">
-        <h1 className="text-4xl font-black mb-4 font-display">{timelineTitle}</h1>
+        <input
+          value={timelineTitle}
+          onChange={(e) => setTimelineTitle(e.target.value)}
+          className="text-4xl font-black mb-4 font-display text-center bg-white dark:bg-gray-800 border-2 border-black dark:border-white rounded-lg px-4 py-2 shadow-[3px_3px_0px_#000] dark:shadow-[3px_3px_0px_#FFF] focus:outline-none focus:ring-4 focus:ring-yellow-300"
+          aria-label="Timeline title"
+        />
         <p className="mb-8 text-lg text-gray-600 dark:text-gray-300">Upload your Markdown file to generate a beautiful timeline.</p>
 
         <div className="flex flex-wrap gap-4 justify-center items-center">
@@ -954,9 +959,12 @@ Outcome, impact, and next steps.
             style={{ backgroundColor: 'transparent' }}
           >
             {/* Timeline Title */}
-            <h2 className={`text-5xl font-black font-display mb-12 text-black dark:text-white tracking-tighter ${timelineStyle === 'bauhaus' ? 'text-left pl-16' : 'text-center'}`}>
-              {timelineTitle}
-            </h2>
+            <input
+              value={timelineTitle}
+              onChange={(e) => setTimelineTitle(e.target.value)}
+              className={`text-5xl font-black font-display mb-12 text-black dark:text-white tracking-tighter bg-transparent border-none focus:outline-none ${timelineStyle === 'bauhaus' ? 'text-left pl-16' : 'text-center'}`}
+              aria-label="Timeline title"
+            />
 
             {timelineStyle === 'bauhaus' ? (
               /* Bauhaus Style */
