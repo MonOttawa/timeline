@@ -50,6 +50,11 @@ The remote PocketBase deployment is not responding. Cloudflare returns HTTP 521 
 3. Verify save/load functionality
 4. Continue with planned features from ROADMAP.md
 
+## Follow-up Tasks
+- Enforce unique timeline titles server-side to avoid race conditions; current check is client-only.
+- Avoid overwriting historical `updated` dates during dashboard backfill; prefer a guarded migration instead of writing on fetch.
+- Standardize warning/toast UI across Timeline/Learning/Settings (extract reusable component).
+
 ## PocketBase Local Setup
 - **Issue**: Automated schema import fails for `relation` fields.
 - **Error**: `validation_required: Cannot be blank.` for `collectionId` property, even when provided in `options`.
