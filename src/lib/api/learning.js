@@ -13,10 +13,12 @@ export async function getDueFlashcardsCount(userId) {
     const client = getDataClient();
     const now = new Date().toISOString();
     try {
-        const dueReviews = await client.collection(REVIEWS_COLLECTION).getList(1, 1, {
+        const dueReviews = await client.collection(REVIEWS_COLLECTION).getFullList({
             filter: `user = "${userId}" && next_review <= "${now}"`,
+            fields: 'card_id',
         });
-        return dueReviews.totalItems || 0;
+        const unique = new Set((dueReviews || []).map(r => r.card_id));
+        return unique.size || 0;
     } catch (e) {
         console.warn('Failed to fetch due cards count', e);
         return 0;
@@ -34,11 +36,21 @@ export async function getDueFlashcards(userId, limit = 50) {
     const client = getDataClient();
     const now = new Date().toISOString();
     try {
-        const dueReviews = await client.collection(REVIEWS_COLLECTION).getList(1, limit, {
+        const dueReviews = await client.collection(REVIEWS_COLLECTION).getFullList({
             filter: `user = "${userId}" && next_review <= "${now}"`,
-            sort: 'next_review'
+            sort: 'next_review',
         });
-        return dueReviews.items;
+
+        // Deduplicate by card_id to avoid showing the same card multiple times in one session
+        const deduped = [];
+        const seen = new Set();
+        for (const review of dueReviews) {
+            if (seen.has(review.card_id)) continue;
+            seen.add(review.card_id);
+            deduped.push(review);
+            if (deduped.length >= limit) break;
+        }
+        return deduped;
     } catch (e) {
         console.error('Error fetching due cards:', e);
         throw e;
