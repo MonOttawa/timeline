@@ -200,20 +200,20 @@ const Dashboard = ({ user, onEdit, onCreate, onShare, onEditLearning }) => {
             <table className="w-full text-left border-collapse">
                 <thead>
                     <tr className="border-b-2 border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 text-sm uppercase tracking-wider">
-                        <th className={isCompact ? 'p-3 w-12' : 'p-4 w-12'}>
+                        <th className="p-3 w-10">
                             <button onClick={toggleSelectAll} className="hover:text-black dark:hover:text-white">
                                 {selectedIds.size === timelines.length && timelines.length > 0 ? <CheckSquare size={20} /> : <Square size={20} />}
                             </button>
                         </th>
-                        <th className={isCompact ? 'p-3 cursor-pointer hover:text-black dark:hover:text-white' : 'p-4 cursor-pointer hover:text-black dark:hover:text-white'} onClick={() => handleSort('title')}>
-                            <div className="flex items-center gap-2">Title <ArrowUpDown size={14} /></div>
+                        <th className="p-3 w-2/5 cursor-pointer hover:text-black dark:hover:text-white" onClick={() => handleSort('title')}>
+                            <div className="flex items-center gap-2 uppercase tracking-wide font-bold">Title <ArrowUpDown size={14} /></div>
                         </th>
-                        <th className={isCompact ? 'p-3 w-28' : 'p-4 w-32'}>Type</th>
-                        <th className={isCompact ? 'p-3 w-28' : 'p-4 w-32'}>Status</th>
-                        <th className={isCompact ? 'p-3 w-40 cursor-pointer hover:text-black dark:hover:text-white' : 'p-4 w-48 cursor-pointer hover:text-black dark:hover:text-white'} onClick={() => handleSort('updated')}>
-                            <div className="flex items-center gap-2">Updated <ArrowUpDown size={14} /></div>
+                        <th className="p-3 w-28 uppercase tracking-wide font-bold">Type</th>
+                        <th className="p-3 w-24 uppercase tracking-wide font-bold">Status</th>
+                        <th className="p-3 w-28 cursor-pointer hover:text-black dark:hover:text-white" onClick={() => handleSort('updated')}>
+                            <div className="flex items-center gap-2 uppercase tracking-wide font-bold">Updated <ArrowUpDown size={14} /></div>
                         </th>
-                        <th className={isCompact ? 'p-3 w-28 text-right' : 'p-4 w-32 text-right'}>Actions</th>
+                        <th className="p-3 w-24 text-right uppercase tracking-wide font-bold">Actions</th>
                     </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
@@ -224,7 +224,7 @@ const Dashboard = ({ user, onEdit, onCreate, onShare, onEditLearning }) => {
                         return (
                             <tr
                                 key={timeline.id}
-                                className={`group hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors ${isSelected ? 'bg-blue-50 dark:bg-blue-900/20' : ''} ${isCompact ? 'text-sm' : 'text-base'}`}
+                                className={`group hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors ${isSelected ? 'bg-blue-50 dark:bg-blue-900/20' : ''} text-sm`}
                                 onClick={() => isLearning && onEditLearning ? onEditLearning(timeline) : onEdit(timeline)}
                             >
                                 <td className={isCompact ? 'p-3' : 'p-4'} onClick={e => e.stopPropagation()}>
@@ -232,7 +232,7 @@ const Dashboard = ({ user, onEdit, onCreate, onShare, onEditLearning }) => {
                                         {isSelected ? <CheckSquare size={20} className="text-blue-500" /> : <Square size={20} />}
                                     </button>
                                 </td>
-                                <td className={`${isCompact ? 'p-3 text-sm' : 'p-4'} font-medium text-black dark:text-white cursor-pointer`}>
+                                <td className={`p-3 text-sm font-medium text-black dark:text-white cursor-pointer`}>
                                     {timeline.title || 'Untitled'}
                                 </td>
                                 <td className={isCompact ? 'p-3' : 'p-4'}>
@@ -253,21 +253,21 @@ const Dashboard = ({ user, onEdit, onCreate, onShare, onEditLearning }) => {
                                         <span className="text-xs text-gray-400">Private</span>
                                     )}
                                 </td>
-                                <td className={`${isCompact ? 'p-3 text-xs' : 'p-4 text-sm'} text-gray-500 dark:text-gray-400`}>
+                                <td className={`p-3 text-xs text-gray-500 dark:text-gray-400`}>
                                     {formatDate(timeline)}
                                 </td>
                                 <td className={isCompact ? 'p-3 text-right' : 'p-4 text-right'} onClick={e => e.stopPropagation()}>
-                                    <div className={`flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity ${isCompact ? 'text-xs' : ''}`}>
+                                    <div className={`flex justify-end gap-2 text-xs`}>
                                         <button
                                             onClick={() => onShare(timeline)}
-                                            className="p-1.5 hover:bg-cyan-100 dark:hover:bg-cyan-900/30 text-gray-400 hover:text-cyan-600 dark:hover:text-cyan-400 rounded"
+                                            className="p-1.5 hover:bg-cyan-100 dark:hover:bg-cyan-900/30 text-gray-500 hover:text-cyan-600 dark:hover:text-cyan-400 rounded"
                                             title="Share"
                                         >
                                             <Share2 size={16} />
                                         </button>
                                         <button
                                             onClick={(e) => handleDelete(timeline.id, e)}
-                                            className={`p-1.5 rounded ${deleteConfirmId === timeline.id ? 'bg-red-500 text-white' : 'hover:bg-red-100 dark:hover:bg-red-900/30 text-gray-400 hover:text-red-500'}`}
+                                            className={`p-1.5 rounded ${deleteConfirmId === timeline.id ? 'bg-red-500 text-white' : 'hover:bg-red-100 dark:hover:bg-red-900/30 text-gray-500 hover:text-red-500'}`}
                                             title="Delete"
                                         >
                                             <Trash2 size={16} />
