@@ -63,7 +63,14 @@ const Dashboard = ({ user, onEdit, onCreate, onShare, onEditLearning }) => {
         setError(null);
         try {
             // Convert sort config to API format
-            const sortStr = `${sortConfig.direction === 'desc' ? '-' : '+'}${sortConfig.key}`;
+            let sortField = sortConfig.key;
+            // map UI keys to stored fields
+            if (sortField === 'type') {
+                sortField = 'style'; // default field for type/category if present
+            } else if (sortField === 'public') {
+                sortField = 'public';
+            }
+            const sortStr = `${sortConfig.direction === 'desc' ? '-' : '+'}${sortField}`;
 
             const result = await listTimelinesByUser(user.id, {
                 page,
@@ -208,8 +215,12 @@ const Dashboard = ({ user, onEdit, onCreate, onShare, onEditLearning }) => {
                         <th className="p-3 w-2/5 cursor-pointer hover:text-black dark:hover:text-white" onClick={() => handleSort('title')}>
                             <div className="flex items-center gap-2 uppercase tracking-wide font-bold">Title <ArrowUpDown size={14} /></div>
                         </th>
-                        <th className="p-3 w-28 uppercase tracking-wide font-bold">Type</th>
-                        <th className="p-3 w-24 uppercase tracking-wide font-bold">Status</th>
+                        <th className="p-3 w-28 uppercase tracking-wide font-bold cursor-pointer hover:text-black dark:hover:text-white" onClick={() => handleSort('type')}>
+                            <div className="flex items-center gap-2">Type <ArrowUpDown size={14} /></div>
+                        </th>
+                        <th className="p-3 w-24 uppercase tracking-wide font-bold cursor-pointer hover:text-black dark:hover:text-white" onClick={() => handleSort('public')}>
+                            <div className="flex items-center gap-2">Status <ArrowUpDown size={14} /></div>
+                        </th>
                         <th className="p-3 w-28 cursor-pointer hover:text-black dark:hover:text-white" onClick={() => handleSort('updated')}>
                             <div className="flex items-center gap-2 uppercase tracking-wide font-bold">Updated <ArrowUpDown size={14} /></div>
                         </th>
