@@ -894,7 +894,15 @@ IMPORTANT:
                     <input
                         type="text"
                         value={topic}
-                        onChange={(e) => setTopic(e.target.value)}
+                        onChange={(e) => {
+                            setTopic(e.target.value);
+                            // Reset prior results so action buttons surface immediately for new topics
+                            setResult('');
+                            setActiveMode(null);
+                            setIsEditing(false);
+                            setReviewComplete(false);
+                            setDeckLooped(false);
+                        }}
                         placeholder="What do you want to learn? (e.g., Quantum Physics, Baking, History of Rome)"
                         className={`w-full ${isCompact ? 'pl-10 pr-3 py-3 text-base' : 'pl-11 pr-4 py-4 text-lg'} border-2 border-black dark:border-white rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-400 bg-white dark:bg-gray-800 text-black dark:text-white placeholder-gray-400 shadow-[4px_4px_0px_#000] dark:shadow-[4px_4px_0px_#FFF]`}
                     />
