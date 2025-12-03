@@ -933,6 +933,7 @@ IMPORTANT:
                             onClick={() => handleAction('explain')}
                             disabled={!topic || loading}
                             color="bg-pink-300"
+                            fullWidth
                         />
                         <ActionButton
                             icon={<List size={16} />}
@@ -940,6 +941,7 @@ IMPORTANT:
                             onClick={() => handleAction('summary')}
                             disabled={!topic || loading}
                             color="bg-blue-300"
+                            fullWidth
                         />
                         <ActionButton
                             icon={<Layers size={16} />}
@@ -947,6 +949,7 @@ IMPORTANT:
                             onClick={() => handleAction('flashcards')}
                             disabled={!topic || loading}
                             color="bg-green-300"
+                            fullWidth
                         />
                         <ActionButton
                             icon={<HelpCircle size={16} />}
@@ -954,6 +957,7 @@ IMPORTANT:
                             onClick={() => handleAction('quiz')}
                             disabled={!topic || loading}
                             color="bg-yellow-300"
+                            fullWidth
                         />
                         <ActionButton
                             icon={<BookOpen size={16} />}
@@ -961,6 +965,7 @@ IMPORTANT:
                             onClick={() => handleAction('missing')}
                             disabled={!topic || loading}
                             color="bg-purple-300"
+                            fullWidth
                         />
                         <ActionButton
                             icon={<ArrowRight size={16} />}
@@ -968,6 +973,7 @@ IMPORTANT:
                             onClick={() => handleAction('stepByStep')}
                             disabled={!topic || loading}
                             color="bg-orange-300"
+                            fullWidth
                         />
                         <div className="col-span-1 md:col-span-2">
                             <ActionButton
@@ -976,6 +982,7 @@ IMPORTANT:
                                 onClick={() => handleAction('deepDive')}
                                 disabled={!topic || loading}
                                 color="bg-cyan-300"
+                                fullWidth
                             />
                         </div>
                     </>
@@ -1133,13 +1140,14 @@ IMPORTANT:
     );
 };
 
-const ActionButton = ({ icon, label, onClick, disabled, color }) => (
+const ActionButton = ({ icon, label, onClick, disabled, color, fullWidth = false }) => (
     <button
         onClick={onClick}
         disabled={disabled}
         className={`
       flex items-center justify-center gap-2 px-3 py-2 text-sm font-bold border-2 border-black dark:border-white rounded-lg
       shadow-[2px_2px_0px_#000] dark:shadow-[2px_2px_0px_#FFF] transition-all
+      ${fullWidth ? 'w-full' : ''}
       ${disabled
                 ? 'opacity-50 cursor-not-allowed bg-gray-200 dark:bg-gray-700'
                 : `${color} hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none active:bg-black active:text-white`
