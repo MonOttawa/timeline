@@ -392,7 +392,8 @@ const TimelineGenerator = ({ isDemoMode = false, initialTimeline = null, onBack 
       const datedData = { ...data, updated: new Date().toISOString() };
 
       // Enforce unique title: block save and ask for a new title if it already exists
-      const existingByTitle = await findTimelineByTitle(user.id, baseTitle);
+      const escapedTitle = baseTitle.replace(/"/g, '\\"');
+      const existingByTitle = await findTimelineByTitle(user.id, escapedTitle);
       if (existingByTitle?.id && existingByTitle.id !== currentTimelineId) {
         setWarning('Title already exists. Please choose a different title.');
         setIsSaving(false);
