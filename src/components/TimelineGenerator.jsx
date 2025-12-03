@@ -404,7 +404,7 @@ const TimelineGenerator = ({ isDemoMode = false, initialTimeline = null, onBack 
       }
 
       if (targetId) {
-        record = await updateTimeline(currentTimelineId, datedData);
+        record = await updateTimeline(targetId, datedData);
       } else {
         record = await createTimeline(datedData);
         setCurrentTimelineId(record.id);
