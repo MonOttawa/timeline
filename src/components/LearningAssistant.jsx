@@ -51,6 +51,11 @@ const [isSaving, setIsSaving] = useState(false);
 const [saveSuccess, setSaveSuccess] = useState(false);
 const [deleteConfirmId, setDeleteConfirmId] = useState(null);
 const [nextReviewHint, setNextReviewHint] = useState(null);
+const formatDate = (value) => {
+    if (!value) return '—';
+    const d = new Date(value);
+    return Number.isNaN(d.getTime()) ? '—' : d.toLocaleDateString();
+};
 
     // History State
     const [showHistory, setShowHistory] = useState(false);
@@ -1094,7 +1099,7 @@ IMPORTANT:
                                                     <h3 className={`font-bold truncate ${isCompact ? 'text-sm' : 'text-base'}`}>{item.title || 'Untitled'}</h3>
                                                     <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 shrink-0">
                                                         <Calendar size={12} />
-                                                        {new Date(item.updated).toLocaleDateString()}
+                                                        {formatDate(item.updated || item.created)}
                                                     </div>
                                                 </div>
                                                 <button
