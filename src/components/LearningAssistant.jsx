@@ -50,7 +50,6 @@ export const LearningAssistant = ({ initialItem = null }) => {
     const [isSaving, setIsSaving] = useState(false);
     const [saveSuccess, setSaveSuccess] = useState(false);
     const [deleteConfirmId, setDeleteConfirmId] = useState(null);
-    const [reviewComplete, setReviewComplete] = useState(false);
 
     // History State
     const [showHistory, setShowHistory] = useState(false);
@@ -166,7 +165,6 @@ export const LearningAssistant = ({ initialItem = null }) => {
 
         try {
             // Fetch due cards
-            setReviewComplete(false);
             const items = await getDueFlashcards(user.id);
 
             if (items.length === 0) {
@@ -192,7 +190,6 @@ export const LearningAssistant = ({ initialItem = null }) => {
             setFlashcardIndex(0);
             setIsFlipped(false);
             setDeckLooped(false);
-            setReviewComplete(false);
             setDueCardsCount(flashcards.length);
         } catch (err) {
             console.error('Error fetching due cards:', err);
@@ -234,7 +231,6 @@ export const LearningAssistant = ({ initialItem = null }) => {
         setIsEditing(false);
         setSaveSuccess(false);
         setDeckLooped(false);
-        setReviewComplete(false);
 
         // Reset interactive states
         setFlashcardIndex(0);
@@ -491,9 +487,7 @@ IMPORTANT:
             setFlashcardIndex(0);
             setIsFlipped(false);
             setDeckLooped(false);
-            setReviewComplete(true);
             setDueCardsCount(0);
-            setTimeout(() => setReviewComplete(false), 4500);
         }
     };
 
@@ -903,7 +897,6 @@ IMPORTANT:
                             setResult('');
                             setActiveMode(null);
                             setIsEditing(false);
-                            setReviewComplete(false);
                             setDeckLooped(false);
                         }}
                         placeholder="What do you want to learn? (e.g., Quantum Physics, Baking, History of Rome)"
@@ -1004,18 +997,6 @@ IMPORTANT:
             {
                 result && !loading && (
                     <div className="border-4 border-black dark:border-white rounded-xl p-8 bg-white dark:bg-gray-800 shadow-[8px_8px_0px_#000] dark:shadow-[8px_8px_0px_#FFF] animate-in fade-in slide-in-from-bottom-4 duration-500 relative">
-                        {reviewComplete && (
-                            <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-                                <div className="bg-white/90 dark:bg-gray-900/90 border-4 border-green-500 rounded-xl px-6 py-4 shadow-[6px_6px_0px_#000] dark:shadow-[6px_6px_0px_#FFF] animate-in fade-in zoom-in-95">
-                                    <div className="text-2xl font-black text-green-600 dark:text-green-300 flex items-center gap-2">
-                                        <span role="img" aria-label="confetti">🎉</span>
-                                        Review complete!
-                                        <span role="img" aria-label="confetti">🎊</span>
-                                    </div>
-                                    <p className="text-sm font-semibold text-gray-700 dark:text-gray-200 mt-1 text-center">All due cards reviewed. Great job!</p>
-                                </div>
-                            </div>
-                        )}
                         <div className="flex justify-between items-start mb-6 border-b-4 border-black dark:border-white pb-2">
                             <h3 className="text-2xl font-bold">
                                 {modeForTitle === 'explain' && "Simple Explanation"}
