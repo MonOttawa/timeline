@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Plus, Search, Calendar, Trash2, Edit2, Share2, MoreVertical, FileText, Loader, Brain, BookOpen, Filter, LayoutGrid, List, ChevronLeft, ChevronRight, CheckSquare, Square, ArrowUpDown, Clock } from 'lucide-react';
-import { listTimelinesByUser, deleteTimeline } from '../lib/api/timelines';
+import { listTimelinesByUser, deleteTimeline, updateTimeline } from '../lib/api/timelines';
 
 const Dashboard = ({ user, onEdit, onCreate, onShare, onEditLearning }) => {
     const [timelines, setTimelines] = useState([]);
@@ -36,6 +36,27 @@ const Dashboard = ({ user, onEdit, onCreate, onShare, onEditLearning }) => {
         return '—';
     };
 
+    const ensureTimestamps = async (items) => {
+        const now = new Date().toISOString();
+        const normalized = [];
+        for (const item of items) {
+            const hasUpdated = Boolean(item.updated);
+            const updatedValue = item.updated || item.created || now;
+
+            normalized.push({ ...item, updated: updatedValue, created: item.created || now });
+
+            // If the record is missing an updated field, persist it so future reads have a date
+            if (!hasUpdated && item.id) {
+                try {
+                    await updateTimeline(item.id, { updated: updatedValue });
+                } catch (e) {
+                    console.warn('Failed to backfill updated timestamp', item.id, e);
+                }
+            }
+        }
+        return normalized;
+    };
+
     const fetchTimelines = useCallback(async () => {
         if (!user) return;
         setLoading(true);
@@ -50,7 +71,8 @@ const Dashboard = ({ user, onEdit, onCreate, onShare, onEditLearning }) => {
                 sort: sortStr
             });
 
-            setTimelines(result.items);
+            const normalized = await ensureTimestamps(result.items);
+            setTimelines(normalized);
             setTotalPages(result.totalPages);
             setTotalItems(result.totalItems);
         } catch (error) {
