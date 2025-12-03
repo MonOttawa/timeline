@@ -916,64 +916,62 @@ IMPORTANT:
             }
 
             <div className={`grid grid-cols-1 md:grid-cols-2 ${isCompact ? 'gap-3 mb-6' : 'gap-4 mb-10'}`}>
-                <ActionButton
-                    icon={<Brain />}
-                    label="Explain like I'm 12"
-                    onClick={() => handleAction('explain')}
-                    disabled={!topic || loading}
-                    color="bg-pink-300"
-                    compact={isCompact}
-                />
-                <ActionButton
-                    icon={<List />}
-                    label="Summary (5 bullets)"
-                    onClick={() => handleAction('summary')}
-                    disabled={!topic || loading}
-                    color="bg-blue-300"
-                    compact={isCompact}
-                />
-                <ActionButton
-                    icon={<Layers />}
-                    label="Create Flashcards"
-                    onClick={() => handleAction('flashcards')}
-                    disabled={!topic || loading}
-                    color="bg-green-300"
-                    compact={isCompact}
-                />
-                <ActionButton
-                    icon={<HelpCircle />}
-                    label="Quiz Me"
-                    onClick={() => handleAction('quiz')}
-                    disabled={!topic || loading}
-                    color="bg-yellow-300"
-                    compact={isCompact}
-                />
-                <ActionButton
-                    icon={<BookOpen />}
-                    label="What am I missing?"
-                    onClick={() => handleAction('missing')}
-                    disabled={!topic || loading}
-                    color="bg-purple-300"
-                    compact={isCompact}
-                />
-                <ActionButton
-                    icon={<ArrowRight />}
-                    label="Step-by-step Guide"
-                    onClick={() => handleAction('stepByStep')}
-                    disabled={!topic || loading}
-                    color="bg-orange-300"
-                    compact={isCompact}
-                />
-            </div>
-            <div className="col-span-1 md:col-span-2">
-                <ActionButton
-                    icon={<GraduationCap />}
-                    label="Deep Dive (Complete Guide)"
-                    onClick={() => handleAction('deepDive')}
-                    disabled={!topic || loading}
-                    color="bg-cyan-300"
-                    compact={isCompact}
-                />
+                {/* Action buttons hidden while showing results/review to keep focus */}
+                {topic.trim() && !loading && !result && activeMode !== 'flashcards' && (
+                    <>
+                        <ActionButton
+                            icon={<Brain size={16} />}
+                            label="Explain like I'm 12"
+                            onClick={() => handleAction('explain')}
+                            disabled={!topic || loading}
+                            color="bg-pink-300"
+                        />
+                        <ActionButton
+                            icon={<List size={16} />}
+                            label="Summary"
+                            onClick={() => handleAction('summary')}
+                            disabled={!topic || loading}
+                            color="bg-blue-300"
+                        />
+                        <ActionButton
+                            icon={<Layers size={16} />}
+                            label="Flashcards"
+                            onClick={() => handleAction('flashcards')}
+                            disabled={!topic || loading}
+                            color="bg-green-300"
+                        />
+                        <ActionButton
+                            icon={<HelpCircle size={16} />}
+                            label="Quiz"
+                            onClick={() => handleAction('quiz')}
+                            disabled={!topic || loading}
+                            color="bg-yellow-300"
+                        />
+                        <ActionButton
+                            icon={<BookOpen size={16} />}
+                            label="Blind Spots"
+                            onClick={() => handleAction('missing')}
+                            disabled={!topic || loading}
+                            color="bg-purple-300"
+                        />
+                        <ActionButton
+                            icon={<ArrowRight size={16} />}
+                            label="Action Plan"
+                            onClick={() => handleAction('stepByStep')}
+                            disabled={!topic || loading}
+                            color="bg-orange-300"
+                        />
+                        <div className="col-span-1 md:col-span-2">
+                            <ActionButton
+                                icon={<GraduationCap size={16} />}
+                                label="Deep Dive"
+                                onClick={() => handleAction('deepDive')}
+                                disabled={!topic || loading}
+                                color="bg-cyan-300"
+                            />
+                        </div>
+                    </>
+                )}
             </div>
 
             {
@@ -1127,17 +1125,16 @@ IMPORTANT:
     );
 };
 
-const ActionButton = ({ icon, label, onClick, disabled, color, compact = false }) => (
+const ActionButton = ({ icon, label, onClick, disabled, color }) => (
     <button
         onClick={onClick}
         disabled={disabled}
         className={`
-      flex items-center justify-center gap-3 ${compact ? 'p-3 text-sm' : 'p-4 text-lg'} font-bold border-4 border-black dark:border-white rounded-xl
-      ${compact ? 'shadow-[3px_3px_0px_#000]' : 'shadow-[4px_4px_0px_#000]'} dark:shadow-[4px_4px_0px_#FFF]
-      transition-all
+      flex items-center justify-center gap-2 px-3 py-2 text-sm font-bold border-2 border-black dark:border-white rounded-lg
+      shadow-[2px_2px_0px_#000] dark:shadow-[2px_2px_0px_#FFF] transition-all
       ${disabled
                 ? 'opacity-50 cursor-not-allowed bg-gray-200 dark:bg-gray-700'
-                : `${color} hover:translate-x-1 hover:translate-y-1 hover:shadow-none active:bg-black active:text-white`
+                : `${color} hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none active:bg-black active:text-white`
             }
     `}
     >
