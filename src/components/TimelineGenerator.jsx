@@ -381,10 +381,12 @@ const TimelineGenerator = ({ isDemoMode = false, initialTimeline = null, onBack 
       data.public = typeof isPublic === 'boolean' ? isPublic : false;
       data.viewCount = typeof viewCount === 'number' ? viewCount : 0;
 
+      const datedData = { ...data, updated: new Date().toISOString() };
+
       if (currentTimelineId) {
-        record = await updateTimeline(currentTimelineId, data);
+        record = await updateTimeline(currentTimelineId, datedData);
       } else {
-        record = await createTimeline(data);
+        record = await createTimeline(datedData);
         setCurrentTimelineId(record.id);
       }
 
@@ -547,7 +549,8 @@ Outcome, impact, and next steps.
       const newPublicStatus = !isPublic;
       const record = await updateTimeline(currentTimelineId, {
         public: newPublicStatus,
-        slug: slugToUse
+        slug: slugToUse,
+        updated: new Date().toISOString(),
       });
 
       setIsPublic(newPublicStatus);

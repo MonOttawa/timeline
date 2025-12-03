@@ -588,7 +588,8 @@ IMPORTANT:
                     user: user.id,
                     title: title,
                     content: result,
-                    style: 'bauhaus' // Default style
+                    style: 'bauhaus', // Default style
+                    updated: new Date().toISOString()
                 });
             }
 
