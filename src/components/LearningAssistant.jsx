@@ -482,8 +482,9 @@ IMPORTANT:
         if (total > 0 && !isLast) {
             handleNextCard(total);
         } else if (total > 0 && isLast) {
-            setResult('All due cards reviewed! 🎉');
-            setActiveMode('custom');
+            // End the review session silently and clear the current content
+            setResult('');
+            setActiveMode(null);
             setFlashcardIndex(0);
             setIsFlipped(false);
             setDeckLooped(false);
