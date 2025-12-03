@@ -47,9 +47,10 @@ export const LearningAssistant = ({ initialItem = null }) => {
     const [error, setError] = useState('');
     const [activeMode, setActiveMode] = useState(null);
     const [isEditing, setIsEditing] = useState(false);
-    const [isSaving, setIsSaving] = useState(false);
-    const [saveSuccess, setSaveSuccess] = useState(false);
-    const [deleteConfirmId, setDeleteConfirmId] = useState(null);
+const [isSaving, setIsSaving] = useState(false);
+const [saveSuccess, setSaveSuccess] = useState(false);
+const [deleteConfirmId, setDeleteConfirmId] = useState(null);
+const [nextReviewHint, setNextReviewHint] = useState(null);
 
     // History State
     const [showHistory, setShowHistory] = useState(false);
@@ -191,6 +192,7 @@ export const LearningAssistant = ({ initialItem = null }) => {
             setIsFlipped(false);
             setDeckLooped(false);
             setDueCardsCount(flashcards.length);
+            setNextReviewHint(null);
         } catch (err) {
             console.error('Error fetching due cards:', err);
             setError('Failed to load due cards.');
@@ -231,6 +233,7 @@ export const LearningAssistant = ({ initialItem = null }) => {
         setIsEditing(false);
         setSaveSuccess(false);
         setDeckLooped(false);
+        setNextReviewHint(null);
 
         // Reset interactive states
         setFlashcardIndex(0);
@@ -470,6 +473,10 @@ IMPORTANT:
 
             // Make sure any older due entries for this card are pushed to the new schedule
             await snoozeDueReviewsForCard(user.id, cardId, srsData);
+            setNextReviewHint({
+                interval: srsData.interval,
+                date: srsData.next_review
+            });
             console.log('Review saved with next review:', srsData.next_review);
         } catch (e) {
             console.warn('Failed to save review', e);
@@ -647,6 +654,12 @@ IMPORTANT:
                         {deckLooped && (
                             <div className="text-sm text-green-600 dark:text-green-300 font-bold">
                                 Deck complete! Restarted at card 1.
+                            </div>
+                        )}
+
+                        {nextReviewHint && (
+                            <div className="text-xs text-gray-600 dark:text-gray-300 font-semibold">
+                                Next review in {nextReviewHint.interval} day{nextReviewHint.interval === 1 ? '' : 's'} • {new Date(nextReviewHint.date).toLocaleDateString()}
                             </div>
                         )}
 
