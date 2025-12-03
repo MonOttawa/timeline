@@ -15,6 +15,8 @@ import { createTimeline, updateTimeline, listTimelinesByUser, deleteTimeline as 
 import { buildShareUrl } from '../lib/shareLinks';
 
 const TimelineGenerator = ({ isDemoMode = false, initialTimeline = null, onBack = null }) => {
+  const compactBtn = (bg) => `inline-flex items-center gap-2 px-3 py-2 text-sm font-bold border-2 border-black dark:border-white rounded-lg ${bg} text-black shadow-[3px_3px_0px_#000] dark:shadow-[3px_3px_0px_#FFF] hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-[4px_4px_0px_#000] dark:hover:shadow-[4px_4px_0px_#FFF] transition-all`;
+
   const [events, setEvents] = useState([]);
   const [fileName, setFileName] = useState('');
   const [markdownContent, setMarkdownContent] = useState('');
@@ -716,8 +718,8 @@ Outcome, impact, and next steps.
 
         <div className="flex flex-wrap gap-4 justify-center items-center">
           <label className="cursor-pointer">
-            <div className="w-auto inline-flex items-center gap-2 border-2 border-black dark:border-white font-bold py-3 px-6 bg-blue-400 text-black shadow-[4px_4px_0px_#000] dark:shadow-[4px_4px_0px_#FFF] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_#000] dark:hover:shadow-[6px_6px_0px_#FFF] transition-all rounded-lg">
-              <Upload size={20} />
+            <div className={`${compactBtn('bg-blue-300')} w-auto px-4`}>
+              <Upload size={18} />
               {fileName || 'Upload'}
             </div>
             <input type="file" accept=".md" onChange={handleFileSelect} className="hidden" />
