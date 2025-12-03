@@ -237,12 +237,12 @@ const Dashboard = ({ user, onEdit, onCreate, onShare, onEditLearning }) => {
                                 </td>
                                 <td className={isCompact ? 'p-3' : 'p-4'}>
                                     {isLearning ? (
-                                        <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-bold bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
-                                            <Brain size={12} /> Learning
+                                        <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300">
+                                            <Brain size={14} />
                                         </span>
                                     ) : (
-                                        <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-bold bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
-                                            <FileText size={12} /> Timeline
+                                        <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-900/30 border border-purple-200 dark:border-purple-800 text-purple-700 dark:text-purple-300">
+                                            <FileText size={14} />
                                         </span>
                                     )}
                                 </td>
