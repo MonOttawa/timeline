@@ -390,18 +390,12 @@ const TimelineGenerator = ({ isDemoMode = false, initialTimeline = null, onBack 
 
       const datedData = { ...data, updated: new Date().toISOString() };
 
-      // Enforce unique title by appending a counter when needed
+      // Enforce unique title: block save and ask for a new title if it already exists
       const existingByTitle = await findTimelineByTitle(user.id, baseTitle);
-      if (existingByTitle?.id) {
-        // Append suffix until unique
-        let counter = 2;
-        let uniqueTitle = `${baseTitle} (${counter})`;
-        while (await findTimelineByTitle(user.id, uniqueTitle)) {
-          counter += 1;
-          uniqueTitle = `${baseTitle} (${counter})`;
-        }
-        baseTitle = uniqueTitle;
-        datedData.title = baseTitle;
+      if (existingByTitle?.id && existingByTitle.id !== currentTimelineId) {
+        alert('A timeline with this title already exists. Please choose a different title.');
+        setIsSaving(false);
+        return null;
       }
 
       if (currentTimelineId) {
