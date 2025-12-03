@@ -56,7 +56,7 @@ const [nextReviewHint, setNextReviewHint] = useState(null);
     const [showHistory, setShowHistory] = useState(false);
     const [historyItems, setHistoryItems] = useState([]);
     const [isLoadingHistory, setIsLoadingHistory] = useState(false);
-    const [isCompact, setIsCompact] = useState(false);
+    const [isCompact] = useState(true);
     const [deckLooped, setDeckLooped] = useState(false);
 
     // Interactive Mode State
@@ -866,12 +866,12 @@ IMPORTANT:
                     {user && (
                         <button
                             onClick={handleReviewMode}
-                        className={`flex items-center gap-2 px-3 py-2 ${isCompact ? 'text-xs' : 'text-sm'} rounded-lg font-bold border-2 border-purple-500 text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-900/30 shadow-[2px_2px_0px_#000] dark:shadow-[2px_2px_0px_#FFF] hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-[3px_3px_0px_#000] dark:hover:shadow-[3px_3px_0px_#FFF]`}
-                        title="Review Due Cards"
-                    >
-                        <GraduationCap size={18} />
-                        <span className="hidden md:inline">Review</span>
-                        {dueCardsCount > 0 && (
+                            className="flex items-center gap-2 px-3 py-2 text-sm rounded-lg font-bold border-2 border-purple-500 text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-900/30 shadow-[2px_2px_0px_#000] dark:shadow-[2px_2px_0px_#FFF] hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-[3px_3px_0px_#000] dark:hover:shadow-[3px_3px_0px_#FFF]"
+                            title="Review Due Cards"
+                        >
+                            <GraduationCap size={18} />
+                            <span className="hidden md:inline">Review</span>
+                            {dueCardsCount > 0 && (
                                 <span className="bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
                                     {dueCardsCount}
                                 </span>
@@ -891,12 +891,6 @@ IMPORTANT:
                     >
                         <History size={22} className={user ? "text-gray-600 dark:text-gray-400" : "text-gray-400 dark:text-gray-600"} />
                     </button>
-                    <button
-                        onClick={() => setIsCompact(!isCompact)}
-                    className="px-3 py-2 rounded-lg border-2 border-black dark:border-white bg-gray-100 dark:bg-gray-700 text-sm font-bold shadow-[2px_2px_0px_#000] dark:shadow-[2px_2px_0px_#FFF] hover:translate-x-[-1px] hover:translate-y-[-1px]"
-                >
-                    {isCompact ? 'Comfortable' : 'Compact'}
-                </button>
                 </div>
             </div>
 
