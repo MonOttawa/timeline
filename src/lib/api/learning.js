@@ -76,6 +76,28 @@ export async function createFlashcardReview(data) {
 }
 
 /**
+ * Update all due reviews for a specific card to the new SRS schedule
+ * Useful to avoid duplicate due entries from older runs
+ */
+export async function snoozeDueReviewsForCard(userId, cardId, srsData) {
+    const client = getDataClient();
+    const now = new Date().toISOString();
+    const due = await client.collection(REVIEWS_COLLECTION).getFullList({
+        filter: `user = "${userId}" && card_id = "${cardId}" && next_review <= "${now}"`,
+    });
+
+    for (const review of due) {
+        await client.collection(REVIEWS_COLLECTION).update(review.id, {
+            interval: srsData.interval,
+            repetitions: srsData.repetitions,
+            ease_factor: srsData.ease_factor,
+            next_review: srsData.next_review,
+            rating: srsData.rating ?? review.rating,
+        });
+    }
+}
+
+/**
  * Update an existing flashcard review record
  * @param {string} id
  * @param {Object} data

@@ -5,7 +5,7 @@ import { marked } from 'marked';
 import { generateContent } from '../lib/providers';
 import { sanitizeMarkdownHtml } from '../lib/sanitizeMarkdown';
 import { listTimelinesByUser, deleteTimeline, updateTimeline, createTimeline, findTimelineByTitle } from '../lib/api/timelines';
-import { getDueFlashcardsCount, getDueFlashcards, createFlashcardReview, updateFlashcardReview, getLastReview, checkLearningCache, saveLearningCache } from '../lib/api/learning';
+import { getDueFlashcardsCount, getDueFlashcards, createFlashcardReview, updateFlashcardReview, snoozeDueReviewsForCard, getLastReview, checkLearningCache, saveLearningCache } from '../lib/api/learning';
 import { useAuth } from '../hooks/useAuth';
 
 // Utilities to safely detect and parse structured learning content
@@ -470,6 +470,9 @@ IMPORTANT:
                     next_review: srsData.next_review
                 });
             }
+
+            // Make sure any older due entries for this card are pushed to the new schedule
+            await snoozeDueReviewsForCard(user.id, cardId, srsData);
             console.log('Review saved with next review:', srsData.next_review);
         } catch (e) {
             console.warn('Failed to save review', e);
