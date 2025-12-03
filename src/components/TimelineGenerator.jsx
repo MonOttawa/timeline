@@ -727,24 +727,30 @@ Outcome, impact, and next steps.
 
   return (
     <div className="max-w-4xl mx-auto">
+      {warning && (
+        <div className="fixed top-4 right-4 z-50 max-w-sm">
+          <div className="p-4 border-4 border-yellow-500 bg-yellow-100 dark:bg-yellow-900/60 text-yellow-800 dark:text-yellow-200 rounded-xl shadow-[6px_6px_0px_#000] dark:shadow-[6px_6px_0px_#FFF] flex items-start gap-3">
+            <AlertTriangle size={20} className="mt-0.5" />
+            <div className="text-sm font-bold leading-snug">
+              {warning}
+              <button onClick={() => setWarning('')} className="ml-2 underline text-xs text-yellow-800 dark:text-yellow-200">Dismiss</button>
+            </div>
+          </div>
+        </div>
+      )}
       <div className="bg-white dark:bg-gray-800 p-8 mb-8 text-center border-4 border-black dark:border-white shadow-[8px_8px_0px_#000] dark:shadow-[8px_8px_0px_#FFF] rounded-lg">
         <input
           value={timelineTitle}
-          onChange={(e) => setTimelineTitle(e.target.value)}
+          onChange={(e) => {
+            setTimelineTitle(e.target.value);
+            if (warning) setWarning('');
+          }}
           className="text-4xl font-black mb-4 font-display text-center bg-white dark:bg-gray-800 border-2 border-black dark:border-white rounded-lg px-4 py-2 shadow-[3px_3px_0px_#000] dark:shadow-[3px_3px_0px_#FFF] focus:outline-none focus:ring-4 focus:ring-yellow-300"
           aria-label="Timeline title"
         />
         <p className="mb-8 text-lg text-gray-600 dark:text-gray-300">Upload your Markdown file to generate a beautiful timeline.</p>
 
         <div className="flex flex-wrap gap-4 justify-center items-center">
-          {warning && (
-            <div className="mb-4 p-4 border-4 border-yellow-500 bg-yellow-100 dark:bg-yellow-900/40 text-yellow-800 dark:text-yellow-200 rounded-xl flex items-center gap-3 font-bold">
-              <AlertTriangle size={20} />
-              <span>{warning}</span>
-              <button onClick={() => setWarning('')} className="ml-auto underline text-yellow-800 dark:text-yellow-200">Dismiss</button>
-            </div>
-          )}
-
           <label className="cursor-pointer">
             <div className={`${compactBtn('bg-blue-300')} w-auto px-4`}>
               <Upload size={18} />
@@ -984,7 +990,10 @@ Outcome, impact, and next steps.
             {/* Timeline Title */}
             <input
               value={timelineTitle}
-              onChange={(e) => setTimelineTitle(e.target.value)}
+              onChange={(e) => {
+                setTimelineTitle(e.target.value);
+                if (warning) setWarning('');
+              }}
               className={`text-5xl font-black font-display mb-12 text-black dark:text-white tracking-tighter bg-transparent border-none focus:outline-none ${timelineStyle === 'bauhaus' ? 'text-left pl-16' : 'text-center'}`}
               aria-label="Timeline title"
             />
