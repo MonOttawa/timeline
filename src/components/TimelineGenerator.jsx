@@ -50,6 +50,7 @@ const TimelineGenerator = ({ isDemoMode = false, initialTimeline = null, onBack 
   const [isPublic, setIsPublic] = useState(false);
   const [currentSlug, setCurrentSlug] = useState('');
   const [viewCount, setViewCount] = useState(0);
+  const [warning, setWarning] = useState('');
 
   // SVG arrow for dropdown buttons
   const arrowSvg = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>';
@@ -393,7 +394,7 @@ const TimelineGenerator = ({ isDemoMode = false, initialTimeline = null, onBack 
       // Enforce unique title: block save and ask for a new title if it already exists
       const existingByTitle = await findTimelineByTitle(user.id, baseTitle);
       if (existingByTitle?.id && existingByTitle.id !== currentTimelineId) {
-        alert('A timeline with this title already exists. Please choose a different title.');
+        setWarning('Title already exists. Please choose a different title.');
         setIsSaving(false);
         return null;
       }
@@ -413,6 +414,7 @@ const TimelineGenerator = ({ isDemoMode = false, initialTimeline = null, onBack 
       // Show simple success feedback (could be a toast in a real app)
       const originalTitle = timelineTitle;
       setTimelineTitle('Saved! ✓');
+      setWarning('');
       setTimeout(() => setTimelineTitle(originalTitle), 2000);
     } catch (error) {
       console.error('Error saving timeline:', error);
@@ -735,6 +737,14 @@ Outcome, impact, and next steps.
         <p className="mb-8 text-lg text-gray-600 dark:text-gray-300">Upload your Markdown file to generate a beautiful timeline.</p>
 
         <div className="flex flex-wrap gap-4 justify-center items-center">
+          {warning && (
+            <div className="mb-4 p-4 border-4 border-yellow-500 bg-yellow-100 dark:bg-yellow-900/40 text-yellow-800 dark:text-yellow-200 rounded-xl flex items-center gap-3 font-bold">
+              <AlertTriangle size={20} />
+              <span>{warning}</span>
+              <button onClick={() => setWarning('')} className="ml-auto underline text-yellow-800 dark:text-yellow-200">Dismiss</button>
+            </div>
+          )}
+
           <label className="cursor-pointer">
             <div className={`${compactBtn('bg-blue-300')} w-auto px-4`}>
               <Upload size={18} />
