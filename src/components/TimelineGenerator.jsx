@@ -358,14 +358,14 @@ const TimelineGenerator = ({ isDemoMode = false, initialTimeline = null, onBack 
     setIsSaving(true);
     let record = null;
     try {
-    const safeTitle = (timelineTitle || '').trim() || 'Untitled Timeline';
-    if (safeTitle !== timelineTitle) {
-      setTimelineTitle(safeTitle);
+    let baseTitle = (timelineTitle || '').trim() || 'Untitled Timeline';
+    if (baseTitle !== timelineTitle) {
+      setTimelineTitle(baseTitle);
     }
 
     const data = {
       user: user.id,
-      title: safeTitle,
+      title: baseTitle,
       content: markdownContent,
       style: timelineStyle,
     };
@@ -373,7 +373,7 @@ const TimelineGenerator = ({ isDemoMode = false, initialTimeline = null, onBack 
       // Ensure every saved timeline has a slug, even for older records
       let slugToUse = currentSlug;
       if (!slugToUse) {
-        const baseSlug = slugify(safeTitle || 'timeline');
+        const baseSlug = slugify(baseTitle || "timeline");
         slugToUse = makeUniqueSlug(baseSlug);
         setCurrentSlug(slugToUse);
 
@@ -390,21 +390,22 @@ const TimelineGenerator = ({ isDemoMode = false, initialTimeline = null, onBack 
 
       const datedData = { ...data, updated: new Date().toISOString() };
 
-      // If no current ID, check for existing title to avoid duplicates and update instead of create
-      let targetId = currentTimelineId;
-      if (!targetId) {
-        const existingByTitle = await findTimelineByTitle(user.id, safeTitle);
-        if (existingByTitle?.id) {
-          targetId = existingByTitle.id;
-          setCurrentTimelineId(targetId);
-          setCurrentSlug(existingByTitle.slug || slugToUse);
-          setIsPublic(Boolean(existingByTitle.public));
-          setViewCount(existingByTitle.viewCount || 0);
+      // Enforce unique title by appending a counter when needed
+      const existingByTitle = await findTimelineByTitle(user.id, baseTitle);
+      if (existingByTitle?.id) {
+        // Append suffix until unique
+        let counter = 2;
+        let uniqueTitle = `${baseTitle} (${counter})`;
+        while (await findTimelineByTitle(user.id, uniqueTitle)) {
+          counter += 1;
+          uniqueTitle = `${baseTitle} (${counter})`;
         }
+        baseTitle = uniqueTitle;
+        datedData.title = baseTitle;
       }
 
-      if (targetId) {
-        record = await updateTimeline(targetId, datedData);
+      if (currentTimelineId) {
+        record = await updateTimeline(currentTimelineId, datedData);
       } else {
         record = await createTimeline(datedData);
         setCurrentTimelineId(record.id);
