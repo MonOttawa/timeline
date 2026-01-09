@@ -45,17 +45,49 @@ export async function createTimeline(data) {
     return await client.collection(TIMELINES_COLLECTION).create(data);
   } catch (error) {
     // Backward-compatible fallback for older PocketBase schemas (e.g. before slug/public/viewCount).
-    if (error?.status === 400 && data && typeof data === 'object') {
-      const withCoreFields = pick(data, ['user', 'title', 'content', 'style']);
-      if (import.meta.env.DEV) console.warn('PocketBase create failed; retrying with core fields only.', error);
+    if (error?.status !== 400 || !data || typeof data !== 'object') throw error;
+
+    const attempts = [
+      // Drop any newer/unknown fields first.
+      pick(data, ['user', 'title', 'content', 'style', 'slug', 'public', 'viewCount']),
+      // Older schema without sharing fields.
+      pick(data, ['user', 'title', 'content', 'style']),
+      // Minimal schema.
+      pick(data, ['user', 'title', 'content']),
+    ];
+
+    const originalKeys = Object.keys(data).sort().join(',');
+    const attemptedKeySigs = new Set([originalKeys]);
+    let lastError = error;
+    const summarizePayload = (payload) => ({
+      keys: Object.keys(payload),
+      contentLength: typeof payload?.content === 'string' ? payload.content.length : undefined,
+    });
+
+    for (const attempt of attempts) {
+      const keySig = Object.keys(attempt).sort().join(',');
+      if (!keySig || attemptedKeySigs.has(keySig)) continue;
+      attemptedKeySigs.add(keySig);
+
+      if (import.meta.env.DEV) {
+        console.warn('PocketBase create failed; retrying with reduced payload.', {
+          original: summarizePayload(data),
+          attempt: summarizePayload(attempt),
+        });
+      }
+
       try {
-        return await client.collection(TIMELINES_COLLECTION).create(withCoreFields);
-      } catch {
-        // Preserve the original error (often contains the most actionable validation details).
-        throw error;
+        return await client.collection(TIMELINES_COLLECTION).create(attempt);
+      } catch (nextError) {
+        lastError = nextError;
       }
     }
-    throw error;
+
+    const hasValidation = (err) => {
+      const response = err?.response || err?.data;
+      return response?.data && typeof response.data === 'object' && Object.keys(response.data).length > 0;
+    };
+    throw hasValidation(lastError) || !hasValidation(error) ? lastError : error;
   }
 }
 
@@ -65,16 +97,46 @@ export async function updateTimeline(timelineId, data) {
     return await client.collection(TIMELINES_COLLECTION).update(timelineId, data);
   } catch (error) {
     // Backward-compatible fallback for older PocketBase schemas.
-    if (error?.status === 400 && data && typeof data === 'object') {
-      const withCoreFields = pick(data, ['title', 'content', 'style', 'slug', 'public', 'viewCount', 'user']);
-      if (import.meta.env.DEV) console.warn('PocketBase update failed; retrying with supported fields only.', error);
+    if (error?.status !== 400 || !data || typeof data !== 'object') throw error;
+
+    const attempts = [
+      pick(data, ['title', 'content', 'style', 'slug', 'public', 'viewCount', 'user']),
+      pick(data, ['title', 'content', 'style']),
+      pick(data, ['title', 'content']),
+    ];
+
+    const originalKeys = Object.keys(data).sort().join(',');
+    const attemptedKeySigs = new Set([originalKeys]);
+    let lastError = error;
+    const summarizePayload = (payload) => ({
+      keys: Object.keys(payload),
+      contentLength: typeof payload?.content === 'string' ? payload.content.length : undefined,
+    });
+
+    for (const attempt of attempts) {
+      const keySig = Object.keys(attempt).sort().join(',');
+      if (!keySig || attemptedKeySigs.has(keySig)) continue;
+      attemptedKeySigs.add(keySig);
+
+      if (import.meta.env.DEV) {
+        console.warn('PocketBase update failed; retrying with reduced payload.', {
+          original: summarizePayload(data),
+          attempt: summarizePayload(attempt),
+        });
+      }
+
       try {
-        return await client.collection(TIMELINES_COLLECTION).update(timelineId, withCoreFields);
-      } catch {
-        throw error;
+        return await client.collection(TIMELINES_COLLECTION).update(timelineId, attempt);
+      } catch (nextError) {
+        lastError = nextError;
       }
     }
-    throw error;
+
+    const hasValidation = (err) => {
+      const response = err?.response || err?.data;
+      return response?.data && typeof response.data === 'object' && Object.keys(response.data).length > 0;
+    };
+    throw hasValidation(lastError) || !hasValidation(error) ? lastError : error;
   }
 }
 

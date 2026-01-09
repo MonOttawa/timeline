@@ -77,7 +77,7 @@ const Dashboard = ({ user, onEdit, onCreate, onShare, onEditLearning }) => {
                 setTimelines([]);
             } else {
                 const status = error?.status || 'Unknown';
-                const message = error?.data?.message || error?.message || '';
+                const message = error?.response?.message || error?.data?.message || error?.message || '';
                 const hint = import.meta.env.DEV && status === 500
                     ? ' (Check PocketBase is running and VITE_POCKETBASE_URL points to it.)'
                     : '';

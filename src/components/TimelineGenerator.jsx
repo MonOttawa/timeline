@@ -13,6 +13,7 @@ import { slugify, makeUniqueSlug } from '../lib/slugify';
 import { sampleTimelines } from '../data/sampleTimelines';
 import { createTimeline, updateTimeline, listTimelinesByUser, deleteTimeline as deleteTimelineApi, findTimelineByTitle } from '../lib/api/timelines';
 import { buildShareUrl } from '../lib/shareLinks';
+import { getPocketBaseErrorMessage, formatPocketBaseValidationErrors } from '../lib/pocketbaseError';
 
 const TimelineGenerator = ({ isDemoMode = false, initialTimeline = null, onBack = null }) => {
   const compactBtn = (bg) => `inline-flex items-center gap-2 px-3 py-2 text-sm font-bold border-2 border-black dark:border-white rounded-lg ${bg} text-black shadow-[3px_3px_0px_#000] dark:shadow-[3px_3px_0px_#FFF] hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-[4px_4px_0px_#000] dark:hover:shadow-[4px_4px_0px_#FFF] transition-all`;
@@ -427,8 +428,10 @@ const TimelineGenerator = ({ isDemoMode = false, initialTimeline = null, onBack 
       setTimeout(() => setTimelineTitle(originalTitle), 2000);
     } catch (error) {
       console.error('Error saving timeline:', error);
-      const msg = error?.data?.message || error?.message || 'Unknown error';
-      setWarning(`Failed to save timeline: ${msg}`);
+      const statusHint = error?.status ? `Status: ${error.status}. ` : '';
+      const msg = getPocketBaseErrorMessage(error);
+      const validationErrors = formatPocketBaseValidationErrors(error);
+      setWarning(`Failed to save timeline: ${statusHint}${msg}${validationErrors ? ` (${validationErrors})` : ''}`);
     } finally {
       setIsSaving(false);
     }

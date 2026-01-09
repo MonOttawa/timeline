@@ -7,6 +7,7 @@ import { sanitizeMarkdownHtml } from '../lib/sanitizeMarkdown';
 import { listTimelinesByUser, deleteTimeline, updateTimeline, createTimeline, findTimelineByTitle } from '../lib/api/timelines';
 import { getDueFlashcardsCount, getDueFlashcards, createFlashcardReview, updateFlashcardReview, snoozeDueReviewsForCard, getLastReview, checkLearningCache, saveLearningCache } from '../lib/api/learning';
 import { slugify, makeUniqueSlug } from '../lib/slugify';
+import { getPocketBaseErrorMessage, getPocketBaseValidationErrors, formatPocketBaseValidationErrors } from '../lib/pocketbaseError';
 import { useAuth } from '../hooks/useAuth';
 
 // Utilities to safely detect and parse structured learning content
@@ -608,12 +609,15 @@ IMPORTANT:
         } catch (err) {
             console.error('Save failed:', err);
             const statusHint = err?.status ? `Status: ${err.status}. ` : '';
-            const message = err?.data?.message || err?.message || 'Unknown error';
-            const validationErrors = err?.data?.data
-                ? Object.entries(err.data.data).map(([key, val]) => `${key}: ${val.message}`).join(', ')
-                : '';
+            const message = getPocketBaseErrorMessage(err);
+            const validation = getPocketBaseValidationErrors(err);
+            const validationErrors = formatPocketBaseValidationErrors(err);
             const contentSizeHint = (() => {
                 if (err?.status !== 400) return '';
+                const contentError = validation?.content?.message || validation?.content?.code || '';
+                if (/max|too long|length|size/i.test(String(contentError))) {
+                    return ' (Tip: Ensure PocketBase `timelines.content` is an Editor field, not Text, to avoid size limits.)';
+                }
                 if (typeof result !== 'string') return '';
                 // PocketBase "text" fields default to ~5000 chars; editor fields allow much larger content.
                 if (result.length < 4800) return '';
