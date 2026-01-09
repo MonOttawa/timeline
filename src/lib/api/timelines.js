@@ -13,6 +13,27 @@ const pick = (obj, keys) => {
   return out;
 };
 
+const userValueVariants = (payload) => {
+  if (!payload || typeof payload !== 'object') return [];
+  if (!Object.prototype.hasOwnProperty.call(payload, 'user')) return [];
+
+  const user = payload.user;
+  if (typeof user === 'string' && user.trim() !== '') {
+    return [{ ...payload, user: [user] }];
+  }
+  if (Array.isArray(user) && user.length === 1 && typeof user[0] === 'string' && user[0].trim() !== '') {
+    return [{ ...payload, user: user[0] }];
+  }
+  return [];
+};
+
+const attemptSignature = (payload) => {
+  const keys = Object.keys(payload || {}).sort();
+  const userType = Array.isArray(payload?.user) ? 'array' : typeof payload?.user;
+  const userLen = Array.isArray(payload?.user) ? payload.user.length : undefined;
+  return JSON.stringify({ keys, userType, userLen });
+};
+
 export async function listTimelinesByUser(userId, { page = 1, perPage = 50, sort = '-title' } = {}) {
   if (!userId) return { items: [], totalItems: 0, totalPages: 0 };
   const client = getDataClient();
@@ -56,18 +77,18 @@ export async function createTimeline(data) {
       pick(data, ['user', 'title', 'content']),
     ];
 
-    const originalKeys = Object.keys(data).sort().join(',');
-    const attemptedKeySigs = new Set([originalKeys]);
+    const attemptedSigs = new Set([attemptSignature(data)]);
     let lastError = error;
     const summarizePayload = (payload) => ({
       keys: Object.keys(payload),
       contentLength: typeof payload?.content === 'string' ? payload.content.length : undefined,
+      userType: Array.isArray(payload?.user) ? 'array' : typeof payload?.user,
     });
 
-    for (const attempt of attempts) {
-      const keySig = Object.keys(attempt).sort().join(',');
-      if (!keySig || attemptedKeySigs.has(keySig)) continue;
-      attemptedKeySigs.add(keySig);
+    for (const attempt of attempts.flatMap((payload) => [payload, ...userValueVariants(payload)])) {
+      const sig = attemptSignature(attempt);
+      if (!sig || attemptedSigs.has(sig)) continue;
+      attemptedSigs.add(sig);
 
       if (import.meta.env.DEV) {
         console.warn('PocketBase create failed; retrying with reduced payload.', {
@@ -105,18 +126,18 @@ export async function updateTimeline(timelineId, data) {
       pick(data, ['title', 'content']),
     ];
 
-    const originalKeys = Object.keys(data).sort().join(',');
-    const attemptedKeySigs = new Set([originalKeys]);
+    const attemptedSigs = new Set([attemptSignature(data)]);
     let lastError = error;
     const summarizePayload = (payload) => ({
       keys: Object.keys(payload),
       contentLength: typeof payload?.content === 'string' ? payload.content.length : undefined,
+      userType: Array.isArray(payload?.user) ? 'array' : typeof payload?.user,
     });
 
-    for (const attempt of attempts) {
-      const keySig = Object.keys(attempt).sort().join(',');
-      if (!keySig || attemptedKeySigs.has(keySig)) continue;
-      attemptedKeySigs.add(keySig);
+    for (const attempt of attempts.flatMap((payload) => [payload, ...userValueVariants(payload)])) {
+      const sig = attemptSignature(attempt);
+      if (!sig || attemptedSigs.has(sig)) continue;
+      attemptedSigs.add(sig);
 
       if (import.meta.env.DEV) {
         console.warn('PocketBase update failed; retrying with reduced payload.', {
