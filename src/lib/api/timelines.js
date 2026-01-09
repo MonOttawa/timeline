@@ -3,6 +3,16 @@ import { pbFilterString } from '../pocketbaseFilter';
 
 const TIMELINES_COLLECTION = 'timelines';
 
+const pick = (obj, keys) => {
+  const out = {};
+  for (const key of keys) {
+    if (Object.prototype.hasOwnProperty.call(obj, key) && obj[key] !== undefined) {
+      out[key] = obj[key];
+    }
+  }
+  return out;
+};
+
 export async function listTimelinesByUser(userId, { page = 1, perPage = 50, sort = '-title' } = {}) {
   if (!userId) return { items: [], totalItems: 0, totalPages: 0 };
   const client = getDataClient();
@@ -31,12 +41,41 @@ export async function deleteTimeline(timelineId) {
 
 export async function createTimeline(data) {
   const client = getDataClient();
-  return client.collection(TIMELINES_COLLECTION).create(data);
+  try {
+    return await client.collection(TIMELINES_COLLECTION).create(data);
+  } catch (error) {
+    // Backward-compatible fallback for older PocketBase schemas (e.g. before slug/public/viewCount).
+    if (error?.status === 400 && data && typeof data === 'object') {
+      const withCoreFields = pick(data, ['user', 'title', 'content', 'style']);
+      if (import.meta.env.DEV) console.warn('PocketBase create failed; retrying with core fields only.', error);
+      try {
+        return await client.collection(TIMELINES_COLLECTION).create(withCoreFields);
+      } catch {
+        // Preserve the original error (often contains the most actionable validation details).
+        throw error;
+      }
+    }
+    throw error;
+  }
 }
 
 export async function updateTimeline(timelineId, data) {
   const client = getDataClient();
-  return client.collection(TIMELINES_COLLECTION).update(timelineId, data);
+  try {
+    return await client.collection(TIMELINES_COLLECTION).update(timelineId, data);
+  } catch (error) {
+    // Backward-compatible fallback for older PocketBase schemas.
+    if (error?.status === 400 && data && typeof data === 'object') {
+      const withCoreFields = pick(data, ['title', 'content', 'style', 'slug', 'public', 'viewCount', 'user']);
+      if (import.meta.env.DEV) console.warn('PocketBase update failed; retrying with supported fields only.', error);
+      try {
+        return await client.collection(TIMELINES_COLLECTION).update(timelineId, withCoreFields);
+      } catch {
+        throw error;
+      }
+    }
+    throw error;
+  }
 }
 
 export async function findTimelineByTitle(userId, title) {

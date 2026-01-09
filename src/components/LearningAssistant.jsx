@@ -612,7 +612,14 @@ IMPORTANT:
             const validationErrors = err?.data?.data
                 ? Object.entries(err.data.data).map(([key, val]) => `${key}: ${val.message}`).join(', ')
                 : '';
-            setError(`Failed to save: ${statusHint}${message}${validationErrors ? ` (${validationErrors})` : ''}`);
+            const contentSizeHint = (() => {
+                if (err?.status !== 400) return '';
+                if (typeof result !== 'string') return '';
+                // PocketBase "text" fields default to ~5000 chars; editor fields allow much larger content.
+                if (result.length < 4800) return '';
+                return ' (Tip: Ensure PocketBase `timelines.content` is an Editor field, not Text, to avoid size limits.)';
+            })();
+            setError(`Failed to save: ${statusHint}${message}${validationErrors ? ` (${validationErrors})` : ''}${contentSizeHint}`);
         } finally {
             setIsSaving(false);
         }
