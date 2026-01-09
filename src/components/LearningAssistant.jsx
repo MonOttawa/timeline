@@ -6,6 +6,7 @@ import { generateContent } from '../lib/providers';
 import { sanitizeMarkdownHtml } from '../lib/sanitizeMarkdown';
 import { listTimelinesByUser, deleteTimeline, updateTimeline, createTimeline, findTimelineByTitle } from '../lib/api/timelines';
 import { getDueFlashcardsCount, getDueFlashcards, createFlashcardReview, updateFlashcardReview, snoozeDueReviewsForCard, getLastReview, checkLearningCache, saveLearningCache } from '../lib/api/learning';
+import { slugify, makeUniqueSlug } from '../lib/slugify';
 import { useAuth } from '../hooks/useAuth';
 
 // Utilities to safely detect and parse structured learning content
@@ -575,8 +576,9 @@ IMPORTANT:
                                     activeMode === 'deepDive' ? 'Deep Dive' : 'Custom';
 
             // Truncate topic if too long to prevent 400 errors (max 255 usually)
-            const safeTopic = topic.length > 150 ? topic.substring(0, 150) + '...' : topic;
-            const title = `${safeTopic} - ${modeLabel}`;
+            const trimmedTopic = (topic || '').trim();
+            const safeTopic = trimmedTopic.length > 150 ? trimmedTopic.substring(0, 150) + '...' : trimmedTopic;
+            const title = `${safeTopic || 'Untitled'} - ${modeLabel}`;
 
             // Check for existing record to prevent duplicates
             const existingRecord = await findTimelineByTitle(user.id, title);
@@ -588,11 +590,16 @@ IMPORTANT:
                 });
             } else {
                 // Create new record
+                const baseSlug = slugify(title || 'learning');
+                const slug = makeUniqueSlug(baseSlug || 'learning');
                 await createTimeline({
                     user: user.id,
                     title: title,
                     content: result,
-                    style: 'bauhaus' // Default style
+                    style: 'bauhaus', // Default style
+                    slug,
+                    public: false,
+                    viewCount: 0,
                 });
             }
 
@@ -600,8 +607,12 @@ IMPORTANT:
             setTimeout(() => setSaveSuccess(false), 3000);
         } catch (err) {
             console.error('Save failed:', err);
-            const validationErrors = err.data?.data ? Object.entries(err.data.data).map(([key, val]) => `${key}: ${val.message}`).join(', ') : '';
-            setError(`Failed to save: ${err.message} ${validationErrors ? `(${validationErrors})` : ''}`);
+            const statusHint = err?.status ? `Status: ${err.status}. ` : '';
+            const message = err?.data?.message || err?.message || 'Unknown error';
+            const validationErrors = err?.data?.data
+                ? Object.entries(err.data.data).map(([key, val]) => `${key}: ${val.message}`).join(', ')
+                : '';
+            setError(`Failed to save: ${statusHint}${message}${validationErrors ? ` (${validationErrors})` : ''}`);
         } finally {
             setIsSaving(false);
         }
