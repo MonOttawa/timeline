@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Plus, Search, Calendar, Trash2, Edit2, Share2, MoreVertical, FileText, Loader, Brain, BookOpen, Filter, LayoutGrid, List, ChevronLeft, ChevronRight, CheckSquare, Square, ArrowUpDown, Clock } from 'lucide-react';
-import { listTimelinesByUser, deleteTimeline, updateTimeline } from '../lib/api/timelines';
+import { listTimelinesByUser, deleteTimeline } from '../lib/api/timelines';
 
 const Dashboard = ({ user, onEdit, onCreate, onShare, onEditLearning }) => {
     const [timelines, setTimelines] = useState([]);
@@ -36,25 +36,13 @@ const Dashboard = ({ user, onEdit, onCreate, onShare, onEditLearning }) => {
         return '—';
     };
 
-    const ensureTimestamps = async (items) => {
+    const normalizeTimestamps = (items) => {
         const now = new Date().toISOString();
-        const normalized = [];
-        for (const item of items) {
-            const hasUpdated = Boolean(item.updated);
-            const updatedValue = item.updated || item.created || now;
-
-            normalized.push({ ...item, updated: updatedValue, created: item.created || now });
-
-            // If the record is missing an updated field, persist it so future reads have a date
-            if (!hasUpdated && item.id) {
-                try {
-                    await updateTimeline(item.id, { updated: updatedValue });
-                } catch (e) {
-                    console.warn('Failed to backfill updated timestamp', item.id, e);
-                }
-            }
-        }
-        return normalized;
+        return (items || []).map((item) => ({
+            ...item,
+            created: item.created || now,
+            updated: item.updated || item.created || now,
+        }));
     };
 
     const fetchTimelines = useCallback(async () => {
@@ -78,7 +66,7 @@ const Dashboard = ({ user, onEdit, onCreate, onShare, onEditLearning }) => {
                 sort: sortStr
             });
 
-            const normalized = await ensureTimestamps(result.items);
+            const normalized = normalizeTimestamps(result.items);
             setTimelines(normalized);
             setTotalPages(result.totalPages);
             setTotalItems(result.totalItems);
@@ -88,7 +76,12 @@ const Dashboard = ({ user, onEdit, onCreate, onShare, onEditLearning }) => {
             if (error?.status === 404) {
                 setTimelines([]);
             } else {
-                setError(`Unable to load timelines. Status: ${error?.status || 'Unknown'}.`);
+                const status = error?.status || 'Unknown';
+                const message = error?.data?.message || error?.message || '';
+                const hint = import.meta.env.DEV && status === 500
+                    ? ' (Check PocketBase is running and VITE_POCKETBASE_URL points to it.)'
+                    : '';
+                setError(`Unable to load timelines. Status: ${status}.${message ? ` ${message}` : ''}${hint}`);
             }
         } finally {
             setLoading(false);

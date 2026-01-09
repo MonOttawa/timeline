@@ -31,6 +31,6 @@ export async function signUpWithPassword(email, password, passwordConfirm) {
     email,
     password,
     passwordConfirm,
-    emailVisibility: true,
+    emailVisibility: false,
   });
 }

@@ -54,6 +54,9 @@ The remote PocketBase deployment is not responding. Cloudflare returns HTTP 521 
 - Enforce unique timeline titles server-side to avoid race conditions; current check is client-only.
 - Avoid overwriting historical `updated` dates during dashboard backfill; prefer a guarded migration instead of writing on fetch.
 - Standardize warning/toast UI across Timeline/Learning/Settings (extract reusable component).
+- Fix the duplicate-title guard for names containing quotes—`TimelineGenerator` pre-escapes titles before calling `findTimelineByTitle`, so quoted titles skip the collision check.
+- Escape PocketBase filters in learning helpers (cache lookups, due card queries) and avoid unbounded `getFullList` calls so topics with quotes or large datasets don’t break requests or hang the UI.
+- Move public view counts to an atomic server-side increment; current read-then-write per view can double count and lose increments under load.
 
 ## PocketBase Local Setup
 - **Issue**: Automated schema import fails for `relation` fields.

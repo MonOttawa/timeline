@@ -58,11 +58,13 @@ export default class ZAIClient {
                 const errorData = await response.json().catch(() => ({}));
 
                 // Log full error for debugging
-                console.error('Z.AI API Error Details:', {
-                    status: response.status,
-                    statusText: response.statusText,
-                    errorData: errorData
-                });
+                if (import.meta.env.DEV) {
+                    console.error('Z.AI API Error Details:', {
+                        status: response.status,
+                        statusText: response.statusText,
+                        errorData: errorData
+                    });
+                }
 
                 // Handle Z.AI specific error messages
                 const errorMessage = errorData.error?.message
@@ -80,7 +82,7 @@ export default class ZAIClient {
             const data = await response.json();
             return data.choices[0]?.message?.content || '';
         } catch (error) {
-            console.error('Z.AI generation error:', error);
+            if (import.meta.env.DEV) console.error('Z.AI generation error:', error);
             throw error;
         }
     }

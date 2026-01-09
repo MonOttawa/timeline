@@ -83,19 +83,42 @@ export const setSelectedProvider = (providerId) => {
     localStorage.setItem('ai_provider', providerId);
 };
 
+const safeLocalStorageGet = (key) => {
+    try {
+        return localStorage.getItem(key);
+    } catch {
+        return null;
+    }
+};
+
+const getDevEnvProviderApiKey = (providerId) => {
+    // Never bake provider keys into production bundles. Vite `VITE_` vars are client-exposed.
+    if (!import.meta.env.DEV) return '';
+
+    switch (providerId) {
+        case 'openrouter':
+            return import.meta.env.VITE_OPENROUTER_API_KEY || '';
+        case 'groq':
+            return import.meta.env.VITE_GROQ_API_KEY || '';
+        case 'cerebras':
+            return import.meta.env.VITE_CEREBRAS_API_KEY || '';
+        case 'openai':
+            return import.meta.env.VITE_OPENAI_API_KEY || '';
+        case 'anthropic':
+            return import.meta.env.VITE_ANTHROPIC_API_KEY || '';
+        case 'gemini':
+            return import.meta.env.VITE_GEMINI_API_KEY || '';
+        case 'zai':
+            return import.meta.env.VITE_ZAI_API_KEY || '';
+        default:
+            return '';
+    }
+};
+
 // Get API key for a specific provider
 export const getProviderApiKey = (providerId) => {
-    const envKeys = {
-        'openrouter': import.meta.env.VITE_OPENROUTER_API_KEY,
-        'groq': import.meta.env.VITE_GROQ_API_KEY,
-        'cerebras': import.meta.env.VITE_CEREBRAS_API_KEY,
-        'openai': import.meta.env.VITE_OPENAI_API_KEY,
-        'anthropic': import.meta.env.VITE_ANTHROPIC_API_KEY,
-        'gemini': import.meta.env.VITE_GEMINI_API_KEY,
-        'zai': import.meta.env.VITE_ZAI_API_KEY
-    };
-
-    return envKeys[providerId] || localStorage.getItem(`${providerId}_api_key`) || '';
+    const envKey = getDevEnvProviderApiKey(providerId);
+    return (envKey || safeLocalStorageGet(`${providerId}_api_key`) || '').trim();
 };
 
 // Set API key for a specific provider

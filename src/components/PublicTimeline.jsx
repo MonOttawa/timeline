@@ -14,6 +14,20 @@ const PublicTimeline = ({ slug, recordId = null, embedMode = false, styleOverrid
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
+    const shouldIncrementViewCount = (timelineId) => {
+        try {
+            const key = `timeline_viewed_${timelineId}`;
+            const last = Number(localStorage.getItem(key) || 0);
+            const now = Date.now();
+            const throttleMs = 60 * 60 * 1000; // 1 hour
+            if (last && now - last < throttleMs) return false;
+            localStorage.setItem(key, String(now));
+            return true;
+        } catch {
+            return true;
+        }
+    };
+
     useEffect(() => {
         if (!slug && !recordId) {
             setError('No timeline specified');
@@ -28,10 +42,12 @@ const PublicTimeline = ({ slug, recordId = null, embedMode = false, styleOverrid
                 setTimeline(data);
 
                 // Increment view count
-                await incrementViewCount(data.id);
+                if (shouldIncrementViewCount(data.id)) {
+                    await incrementViewCount(data.id);
+                }
 
                 // Parse markdown content
-                parseMarkdown(data.content);
+                parseMarkdown(data.content || '');
             } catch (err) {
                 console.error('Error fetching public timeline:', err);
                 setError(err.message || 'Timeline not found');
@@ -66,17 +82,23 @@ const PublicTimeline = ({ slug, recordId = null, embedMode = false, styleOverrid
         const rawEvents = contentToProcess.split('---').filter(event => event.trim() !== '');
 
         const parsedEvents = rawEvents.map((eventMarkdown) => {
+            const lines = eventMarkdown.split('\n');
             let date = '';
-            const dateRegex = /\*(.*?)\*/;
-            const dateMatch = eventMarkdown.match(dateRegex);
+            let contentLines = lines;
 
-            let contentMarkdown = eventMarkdown;
-            if (dateMatch) {
-                date = dateMatch[1];
-                contentMarkdown = eventMarkdown.replace(dateMatch[0], '').trim();
+            // Treat the first non-empty line as the date only if it is a standalone `*...*` line.
+            for (let i = 0; i < lines.length; i++) {
+                const trimmed = lines[i].trim();
+                if (!trimmed) continue;
+                const match = trimmed.match(/^\*(.*?)\*$/);
+                if (match) {
+                    date = match[1].trim();
+                    contentLines = [...lines.slice(0, i), ...lines.slice(i + 1)];
+                }
+                break;
             }
 
-            const htmlContent = marked.parse(contentMarkdown.trim());
+            const htmlContent = marked.parse(contentLines.join('\n').trim());
             return {
                 date,
                 content: sanitizeMarkdownHtml(htmlContent)

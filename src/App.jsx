@@ -28,6 +28,13 @@ function App() {
     const embedParam = params.get('embed');
     const styleParamRaw = params.get('style');
     const styleParam = styleParamRaw ? styleParamRaw.toLowerCase() : null;
+    const decodePathSegment = (value) => {
+      try {
+        return decodeURIComponent(value);
+      } catch {
+        return value;
+      }
+    };
 
     const route = {
       publicSlug: null,
@@ -37,9 +44,9 @@ function App() {
     };
 
     if (timelineMatch) {
-      route.publicSlug = timelineMatch[1];
+      route.publicSlug = decodePathSegment(timelineMatch[1]);
     } else if (embedMatch) {
-      route.publicSlug = embedMatch[1];
+      route.publicSlug = decodePathSegment(embedMatch[1]);
       route.embedMode = true;
     }
 

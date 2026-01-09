@@ -210,7 +210,7 @@ const formatDate = (value) => {
         try {
             const content = await checkLearningCache(topic, mode);
             if (content) {
-                console.log('Cache hit!');
+                if (import.meta.env.DEV) console.log('Cache hit!');
                 return content;
             }
         } catch (err) {
@@ -222,7 +222,7 @@ const formatDate = (value) => {
     const saveToCache = async (mode, topic, content) => {
         try {
             await saveLearningCache(topic, mode, content);
-            console.log('Saved to cache');
+            if (import.meta.env.DEV) console.log('Saved to cache');
         } catch (err) {
             console.warn('Failed to save to cache:', err);
         }
@@ -482,7 +482,7 @@ IMPORTANT:
                 interval: srsData.interval,
                 date: srsData.next_review
             });
-            console.log('Review saved with next review:', srsData.next_review);
+            if (import.meta.env.DEV) console.log('Review saved with next review:', srsData.next_review);
         } catch (e) {
             console.warn('Failed to save review', e);
         }
@@ -584,8 +584,7 @@ IMPORTANT:
             if (existingRecord) {
                 // Update existing record
                 await updateTimeline(existingRecord.id, {
-                    content: result,
-                    updated: new Date().toISOString()
+                    content: result
                 });
             } else {
                 // Create new record
@@ -593,8 +592,7 @@ IMPORTANT:
                     user: user.id,
                     title: title,
                     content: result,
-                    style: 'bauhaus', // Default style
-                    updated: new Date().toISOString()
+                    style: 'bauhaus' // Default style
                 });
             }
 

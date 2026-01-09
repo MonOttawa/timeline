@@ -1,4 +1,5 @@
 import { getDataClient } from './client';
+import { pbFilterString } from '../pocketbaseFilter';
 
 const REVIEWS_COLLECTION = 'flashcard_reviews';
 const CACHE_COLLECTION = 'learning_cache';
@@ -14,7 +15,7 @@ export async function getDueFlashcardsCount(userId) {
     const now = new Date().toISOString();
     try {
         const dueReviews = await client.collection(REVIEWS_COLLECTION).getFullList({
-            filter: `user = "${userId}" && next_review <= "${now}"`,
+            filter: `user = ${pbFilterString(userId)} && next_review <= ${pbFilterString(now)}`,
             fields: 'card_id',
         });
         const unique = new Set((dueReviews || []).map(r => r.card_id));
@@ -37,7 +38,7 @@ export async function getDueFlashcards(userId, limit = 50) {
     const now = new Date().toISOString();
     try {
         const dueReviews = await client.collection(REVIEWS_COLLECTION).getFullList({
-            filter: `user = "${userId}" && next_review <= "${now}"`,
+            filter: `user = ${pbFilterString(userId)} && next_review <= ${pbFilterString(now)}`,
             sort: 'next_review',
         });
 
@@ -67,7 +68,7 @@ export async function getLastReview(userId, cardId) {
     const client = getDataClient();
     try {
         const existingReviews = await client.collection(REVIEWS_COLLECTION).getList(1, 1, {
-            filter: `user = "${userId}" && card_id = "${cardId}"`,
+            filter: `user = ${pbFilterString(userId)} && card_id = ${pbFilterString(cardId)}`,
             sort: '-created'
         });
         return existingReviews.items.length > 0 ? existingReviews.items[0] : null;
@@ -95,7 +96,7 @@ export async function snoozeDueReviewsForCard(userId, cardId, srsData) {
     const client = getDataClient();
     const now = new Date().toISOString();
     const due = await client.collection(REVIEWS_COLLECTION).getFullList({
-        filter: `user = "${userId}" && card_id = "${cardId}" && next_review <= "${now}"`,
+        filter: `user = ${pbFilterString(userId)} && card_id = ${pbFilterString(cardId)} && next_review <= ${pbFilterString(now)}`,
     });
 
     for (const review of due) {
@@ -131,7 +132,7 @@ export async function checkLearningCache(topic, mode) {
     try {
         const normalizedTopic = topic.trim().toLowerCase();
         const records = await client.collection(CACHE_COLLECTION).getList(1, 1, {
-            filter: `topic = "${normalizedTopic}" && mode = "${mode}"`,
+            filter: `topic = ${pbFilterString(normalizedTopic)} && mode = ${pbFilterString(mode)}`,
             sort: '-created'
         });
 

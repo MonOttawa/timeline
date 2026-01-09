@@ -1,24 +1,23 @@
 import { getDataClient } from './client';
+import { pbFilterString } from '../pocketbaseFilter';
 
 const TIMELINES_COLLECTION = 'timelines';
 
 export async function listTimelinesByUser(userId, { page = 1, perPage = 50, sort = '-title' } = {}) {
   if (!userId) return { items: [], totalItems: 0, totalPages: 0 };
   const client = getDataClient();
+  const normalizedSort = sort?.startsWith('+') ? sort.slice(1) : sort;
   try {
     const records = await client.collection(TIMELINES_COLLECTION).getList(page, perPage, {
-      sort: sort,
-      filter: `user = "${userId}"`,
-      // Ask for system fields explicitly so created/updated are available
-      fields: '*,created,updated',
+      sort: normalizedSort,
+      filter: `user = ${pbFilterString(userId)}`,
       requestKey: null, // Disable auto-cancellation
     });
     return records;
   } catch {
     // Fallback: drop sort if PocketBase rejects the query (e.g., invalid sort field).
     const records = await client.collection(TIMELINES_COLLECTION).getList(page, perPage, {
-      filter: `user = "${userId}"`,
-      fields: '*,created,updated',
+      filter: `user = ${pbFilterString(userId)}`,
       requestKey: null, // Disable auto-cancellation
     });
     return records;
@@ -32,27 +31,19 @@ export async function deleteTimeline(timelineId) {
 
 export async function createTimeline(data) {
   const client = getDataClient();
-  const now = new Date().toISOString();
-  return client.collection(TIMELINES_COLLECTION).create({
-    updated: now,
-    ...data,
-  });
+  return client.collection(TIMELINES_COLLECTION).create(data);
 }
 
 export async function updateTimeline(timelineId, data) {
   const client = getDataClient();
-  const now = new Date().toISOString();
-  return client.collection(TIMELINES_COLLECTION).update(timelineId, {
-    updated: now,
-    ...data,
-  });
+  return client.collection(TIMELINES_COLLECTION).update(timelineId, data);
 }
 
 export async function findTimelineByTitle(userId, title) {
+  if (!userId || !title) return null;
   const client = getDataClient();
-  const safeTitle = title.replace(/"/g, '\\"');
   const records = await client.collection(TIMELINES_COLLECTION).getList(1, 1, {
-    filter: `user = "${userId}" && title = "${safeTitle}"`,
+    filter: `user = ${pbFilterString(userId)} && title = ${pbFilterString(title)}`,
   });
   return records.items.length > 0 ? records.items[0] : null;
 }
@@ -60,10 +51,10 @@ export async function findTimelineByTitle(userId, title) {
 export async function getPublicTimeline(slug, recordId = null) {
   const client = getDataClient();
   try {
-    const safeSlug = slug?.replace(/"/g, '\\"') || '';
+    const safeSlug = typeof slug === 'string' ? slug : '';
     const timeline = await client
       .collection(TIMELINES_COLLECTION)
-      .getFirstListItem(`slug="${safeSlug}" && public=true`);
+      .getFirstListItem(`slug=${pbFilterString(safeSlug)} && public=true`);
     return timeline;
   } catch (error) {
     console.warn('Public timeline lookup by slug failed, trying fallbacks', error);

@@ -20,14 +20,18 @@ PocketBase-backed timelines and learning content. Dev uses the Vite `/api` proxy
 
 ## Environment Variables
 
-- `VITE_POCKETBASE_URL` (required): PocketBase endpoint, e.g. `https://substantifiquedb.rosehilltech.com`.
+- `VITE_POCKETBASE_URL` (required unless reverse-proxying `/api`): PocketBase endpoint, e.g. `https://substantifiquedb.rosehilltech.com`.
  - `VITE_DATA_PROVIDER` (default `pocketbase`): Switch provider when Supabase is added.
 - `VITE_APP_URL` (recommended): Public site URL for share/embed links, e.g. `https://timeline.example.com`.
 - `VITE_COMMIT_HASH` (optional): Short git SHA to display in the footer build tag.
 
+For a production deployment checklist (CSP/headers, PocketBase rules, key handling), see `PRODUCTION.md`.
+
 ### AI Provider Configuration (Optional)
 
-The application supports multiple AI providers. Users can configure these via the Settings modal in the UI, or you can provide default API keys via environment variables:
+The application supports multiple AI providers. Users can configure these via the Settings modal in the UI (BYOK, stored locally in the browser).
+
+You can also set provider keys via `VITE_...` env vars for local development, but note that **any `VITE_` value is embedded into the client bundle and is not secret**. To avoid accidental key exposure, the app ignores these env keys in production builds.
 
 - `VITE_OPENROUTER_API_KEY`: OpenRouter API key
 - `VITE_GROQ_API_KEY`: Groq API key
@@ -37,7 +41,7 @@ The application supports multiple AI providers. Users can configure these via th
 - `VITE_GEMINI_API_KEY`: Google Gemini API key
 - `VITE_ZAI_API_KEY`: Z.AI (Zhipu GLM) API key
 
-**Note:** Users can override these defaults by configuring their own API keys in the Settings modal (accessible via the gear icon in the header).
+If you need a single shared key for a public deployment, add a backend proxy that holds the secret server-side and call that proxy from the UI.
 
 ### Architecture & Backend Migration
 

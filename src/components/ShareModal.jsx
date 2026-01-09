@@ -5,9 +5,18 @@ const ShareModal = ({ isOpen, onClose, isPublic, onTogglePublic, shareUrl, viewC
     const [copied, setCopied] = useState(false);
     const [copiedEmbed, setCopiedEmbed] = useState(false);
 
-    const embedUrl = shareUrl
-        ? `${shareUrl}${shareUrl.includes('?') ? '&' : '?'}embed=1`
-        : '';
+    const embedUrl = (() => {
+        if (!shareUrl) return '';
+        try {
+            const url = new URL(shareUrl);
+            url.pathname = url.pathname.replace(/^\/timeline\//, '/embed/');
+            url.searchParams.delete('embed');
+            return url.toString();
+        } catch {
+            // Fallback for non-URL-safe inputs
+            return `${shareUrl}${shareUrl.includes('?') ? '&' : '?'}embed=1`;
+        }
+    })();
     const embedCode = embedUrl
         ? `<iframe src="${embedUrl}" width="100%" height="800" style="border:0;" loading="lazy" referrerpolicy="no-referrer-when-downgrade" allowfullscreen></iframe>`
         : '';

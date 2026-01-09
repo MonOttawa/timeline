@@ -15,7 +15,8 @@ export function buildShareUrl({ slug, id, style, embed = false, appUrl } = {}) {
 
   if (!base || (!slug && !id)) return '';
 
-  const path = `${base}/timeline/${slug || id}`;
+  const identifier = encodeURIComponent(slug || id);
+  const path = `${base}/timeline/${identifier}`;
   const params = new URLSearchParams();
 
   if (id && !slug) params.set('rid', id);

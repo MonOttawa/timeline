@@ -77,7 +77,7 @@ const TimelineGenerator = ({ isDemoMode = false, initialTimeline = null, onBack 
 
   // Parse markdown to extract events only (without changing title)
   const parseMarkdownEvents = useCallback((markdownContent) => {
-    console.log('parseMarkdownEvents called with content length:', markdownContent?.length);
+    if (import.meta.env.DEV) console.log('parseMarkdownEvents called with content length:', markdownContent?.length);
     if (!markdownContent) {
       setEvents([]);
       return;
@@ -103,20 +103,25 @@ const TimelineGenerator = ({ isDemoMode = false, initialTimeline = null, onBack 
     }
 
     const rawEvents = contentToProcess.split('---').filter(event => event.trim() !== '');
-    console.log('Found raw events:', rawEvents.length);
+    if (import.meta.env.DEV) console.log('Found raw events:', rawEvents.length);
 
     const parsedEvents = rawEvents.map((eventMarkdown) => {
+      const lines = eventMarkdown.split('\n');
       let date = '';
-      const dateRegex = /\*(.*?)\*/;
-      const dateMatch = eventMarkdown.match(dateRegex);
+      let contentLines = lines;
 
-      let contentMarkdown = eventMarkdown;
-      if (dateMatch) {
-        date = dateMatch[1];
-        contentMarkdown = eventMarkdown.replace(dateMatch[0], '').trim();
+      for (let i = 0; i < lines.length; i++) {
+        const trimmed = lines[i].trim();
+        if (!trimmed) continue;
+        const match = trimmed.match(/^\*(.*?)\*$/);
+        if (match) {
+          date = match[1].trim();
+          contentLines = [...lines.slice(0, i), ...lines.slice(i + 1)];
+        }
+        break;
       }
 
-      const htmlContent = marked.parse(contentMarkdown.trim());
+      const htmlContent = marked.parse(contentLines.join('\n').trim());
       return {
         date,
         content: sanitizeMarkdownHtml(htmlContent)
@@ -151,16 +156,16 @@ const TimelineGenerator = ({ isDemoMode = false, initialTimeline = null, onBack 
       return dateA - dateB;
     });
 
-    console.log('Setting events:', sortedEvents.length);
+    if (import.meta.env.DEV) console.log('Setting events:', sortedEvents.length);
     setEvents(sortedEvents);
   }, []);
 
   // Load initial timeline if provided
   useEffect(() => {
-    console.log('initialTimeline changed:', initialTimeline);
+    if (import.meta.env.DEV) console.log('initialTimeline changed:', initialTimeline);
     if (initialTimeline) {
       const content = initialTimeline.content || '';
-      console.log('Loading timeline:', initialTimeline.title, 'Content length:', content.length);
+      if (import.meta.env.DEV) console.log('Loading timeline:', initialTimeline.title, 'Content length:', content.length);
 
       // Set all timeline properties first
       setTimelineTitle(initialTimeline.title || 'My Project Timeline');
@@ -173,10 +178,10 @@ const TimelineGenerator = ({ isDemoMode = false, initialTimeline = null, onBack 
 
       // Parse markdown to extract events (without overwriting title)
       if (content) {
-        console.log('Parsing events from content');
+        if (import.meta.env.DEV) console.log('Parsing events from content');
         parseMarkdownEvents(content);
       } else {
-        console.log('No content to parse');
+        if (import.meta.env.DEV) console.log('No content to parse');
         setEvents([]);
       }
     }
@@ -246,17 +251,23 @@ const TimelineGenerator = ({ isDemoMode = false, initialTimeline = null, onBack 
     const rawEvents = contentToProcess.split('---').filter(event => event.trim() !== '');
 
     const parsedEvents = rawEvents.map((eventMarkdown) => {
+      const lines = eventMarkdown.split('\n');
       let date = '';
-      const dateRegex = /\*(.*?)\*/; // Look for *Date*
-      const dateMatch = eventMarkdown.match(dateRegex);
+      let contentLines = lines;
 
-      let contentMarkdown = eventMarkdown;
-      if (dateMatch) {
-        date = dateMatch[1];
-        contentMarkdown = eventMarkdown.replace(dateMatch[0], '').trim();
+      // Treat the first non-empty line as the date only if it is a standalone `*...*` line.
+      for (let i = 0; i < lines.length; i++) {
+        const trimmed = lines[i].trim();
+        if (!trimmed) continue;
+        const match = trimmed.match(/^\*(.*?)\*$/);
+        if (match) {
+          date = match[1].trim();
+          contentLines = [...lines.slice(0, i), ...lines.slice(i + 1)];
+        }
+        break;
       }
 
-      const htmlContent = marked.parse(contentMarkdown.trim());
+      const htmlContent = marked.parse(contentLines.join('\n').trim());
       return {
         date,
         content: sanitizeMarkdownHtml(htmlContent)
@@ -389,11 +400,8 @@ const TimelineGenerator = ({ isDemoMode = false, initialTimeline = null, onBack 
       data.public = typeof isPublic === 'boolean' ? isPublic : false;
       data.viewCount = typeof viewCount === 'number' ? viewCount : 0;
 
-      const datedData = { ...data, updated: new Date().toISOString() };
-
       // Enforce unique title: block save and ask for a new title if it already exists
-      const escapedTitle = baseTitle.replace(/"/g, '\\"');
-      const existingByTitle = await findTimelineByTitle(user.id, escapedTitle);
+      const existingByTitle = await findTimelineByTitle(user.id, baseTitle);
       if (existingByTitle?.id && existingByTitle.id !== currentTimelineId) {
         setWarning('Title already exists. Please choose a different title.');
         setIsSaving(false);
@@ -401,9 +409,9 @@ const TimelineGenerator = ({ isDemoMode = false, initialTimeline = null, onBack 
       }
 
       if (currentTimelineId) {
-        record = await updateTimeline(currentTimelineId, datedData);
+        record = await updateTimeline(currentTimelineId, data);
       } else {
-        record = await createTimeline(datedData);
+        record = await createTimeline(data);
         setCurrentTimelineId(record.id);
       }
 
@@ -569,7 +577,6 @@ Outcome, impact, and next steps.
       const record = await updateTimeline(currentTimelineId, {
         public: newPublicStatus,
         slug: slugToUse,
-        updated: new Date().toISOString(),
       });
 
       setIsPublic(newPublicStatus);
