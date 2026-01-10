@@ -9,6 +9,7 @@ import { getDueFlashcardsCount, getDueFlashcards, createFlashcardReview, updateF
 import { slugify, makeUniqueSlug } from '../lib/slugify';
 import { getPocketBaseErrorMessage, getPocketBaseValidationErrors, formatPocketBaseValidationErrors } from '../lib/pocketbaseError';
 import { useAuth } from '../hooks/useAuth';
+import { useToast } from '../contexts/ToastContext';
 
 // Utilities to safely detect and parse structured learning content
 const cleanAndParseJson = (raw) => {
@@ -43,6 +44,7 @@ const detectContentMode = (raw) => {
 
 export const LearningAssistant = ({ initialItem = null }) => {
     const { user } = useAuth();
+    const { showToast } = useToast();
     const [topic, setTopic] = useState('');
     const [result, setResult] = useState('');
     const [loading, setLoading] = useState(false);
@@ -50,6 +52,7 @@ export const LearningAssistant = ({ initialItem = null }) => {
     const [activeMode, setActiveMode] = useState(null);
     const [isEditing, setIsEditing] = useState(false);
 const [isSaving, setIsSaving] = useState(false);
+const [isDirty, setIsDirty] = useState(false);
 const [saveSuccess, setSaveSuccess] = useState(false);
 const [deleteConfirmId, setDeleteConfirmId] = useState(null);
 const [nextReviewHint, setNextReviewHint] = useState(null);
@@ -123,6 +126,19 @@ const formatDate = (value) => {
 
 
 
+    // Warn on unsaved changes
+    useEffect(() => {
+        const handleBeforeUnload = (e) => {
+            if (isDirty) {
+                e.preventDefault();
+                e.returnValue = '';
+                return '';
+            }
+        };
+        window.addEventListener('beforeunload', handleBeforeUnload);
+        return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+    }, [isDirty]);
+
     const handleLoadHistory = (item) => {
         setResult(item.content);
         // Try to extract topic from title "Topic - Mode"
@@ -149,6 +165,7 @@ const formatDate = (value) => {
         }
         setShowHistory(false);
         setIsEditing(false);
+        setIsDirty(false);
     };
 
     const handleDeleteHistory = async (id) => {
@@ -156,15 +173,17 @@ const formatDate = (value) => {
             await deleteTimeline(id);
             setHistoryItems(historyItems.filter(item => item.id !== id));
             setDeleteConfirmId(null);
+            showToast({ type: 'success', message: 'Item deleted' });
         } catch (err) {
             console.error('Error deleting item:', err);
             setError('Failed to delete item.');
+            showToast({ type: 'error', message: 'Failed to delete item' });
         }
     };
 
     const handleReviewMode = async () => {
-        if (!user) {
-            setError('You must be logged in to review cards.');
+        if (!user?.id) {
+            setError('Session expired. Please log in again.');
             return;
         }
 
@@ -177,6 +196,7 @@ const formatDate = (value) => {
 
             if (items.length === 0) {
                 setError('No cards due for review! 🎉');
+                showToast({ type: 'success', message: 'No cards due for review! 🎉' });
                 setDueCardsCount(0);
                 setLoading(false);
                 return;
@@ -328,6 +348,7 @@ IMPORTANT:
 
             // Save to cache in background
             saveToCache(mode, topic, content);
+            setIsDirty(true);
         } catch (err) {
             console.error('AI Generation error:', err);
             let userMessage = err.message;
@@ -425,7 +446,7 @@ IMPORTANT:
     };
 
     const handleRateCard = async (rating) => {
-        if (!user) return;
+        if (!user?.id) return;
 
         const cards = extractFlashcards(result) || [];
         const total = cards.length;
@@ -560,8 +581,8 @@ IMPORTANT:
     };
 
     const handleSaveToFiles = async () => {
-        if (!user) {
-            setError('You must be logged in to save files.');
+        if (!user?.id) {
+            setError('Session expired. Please log in again.');
             return;
         }
         if (!result) return;
@@ -606,6 +627,8 @@ IMPORTANT:
 
             setSaveSuccess(true);
             setTimeout(() => setSaveSuccess(false), 3000);
+            setIsDirty(false);
+            showToast({ type: 'success', message: 'Saved to files!' });
         } catch (err) {
             console.error('Save failed:', err);
             const statusHint = err?.status ? `Status: ${err.status}. ` : '';
@@ -623,7 +646,9 @@ IMPORTANT:
                 if (result.length < 4800) return '';
                 return ' (Tip: Ensure PocketBase `timelines.content` is an Editor field, not Text, to avoid size limits.)';
             })();
-            setError(`Failed to save: ${statusHint}${message}${validationErrors ? ` (${validationErrors})` : ''}${contentSizeHint}`);
+            const errMsg = `Failed to save: ${statusHint}${message}${validationErrors ? ` (${validationErrors})` : ''}${contentSizeHint}`;
+            setError(errMsg);
+            showToast({ type: 'error', message: errMsg });
         } finally {
             setIsSaving(false);
         }
@@ -884,9 +909,17 @@ IMPORTANT:
             <div className="flex flex-col md:flex-row justify-between items-center mb-4 gap-3">
                 <div>
                     <h1 className="text-2xl font-black font-display text-black dark:text-white mb-1">Learning Workspace</h1>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                        {user ? `${dueCardsCount} cards due • AI-powered learning` : 'Log in to save and review'}
-                    </p>
+                    <div className="flex items-center gap-2">
+                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                            {user ? `${dueCardsCount} cards due • AI-powered learning` : 'Log in to save and review'}
+                        </p>
+                        {isDirty && (
+                            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-yellow-100 dark:bg-yellow-900/50 text-yellow-800 dark:text-yellow-200 text-[10px] font-bold border border-yellow-500">
+                                <div className="w-1.5 h-1.5 rounded-full bg-yellow-500 animate-pulse" />
+                                Unsaved
+                            </span>
+                        )}
+                    </div>
                 </div>
                 <div className="flex gap-2 md:gap-3 items-center">
                     {user && (
@@ -1068,7 +1101,10 @@ IMPORTANT:
                         {isEditing ? (
                             <textarea
                                 value={result}
-                                onChange={(e) => setResult(e.target.value)}
+                                onChange={(e) => {
+                                    setResult(e.target.value);
+                                    setIsDirty(true);
+                                }}
                                 className="w-full h-96 p-4 font-mono text-sm border-2 border-black dark:border-white rounded-lg bg-gray-50 dark:bg-gray-900 text-black dark:text-white focus:outline-none focus:ring-4 focus:ring-purple-400"
                             />
                         ) : (

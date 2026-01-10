@@ -9,6 +9,7 @@ import PublicTimeline from './components/PublicTimeline';
 import ErrorBoundary from './components/ErrorBoundary';
 import Dashboard from './components/Dashboard';
 import SettingsModal from './components/SettingsModal';
+import ToastContainer from './components/Toast';
 import { useAuth } from './hooks/useAuth';
 
 function App() {
@@ -241,6 +242,8 @@ function App() {
           onClose={() => setShowSettingsModal(false)}
         />
       )}
+
+      <ToastContainer />
     </div>
   );
 

@@ -1,36 +1,132 @@
-# Repository Guidelines
+# Repository Guidelines & Agent Instructions
 
-## Project Structure & Module Organization
-- `src/main.jsx` seeds the React + Vite app; `App.jsx` coordinates auth, landing, generator, and legal views.
-- UI modules live in `src/components/`, shared state in `src/contexts/AuthContext.jsx`, helpers in `src/lib/`, seed content in `src/data/` + `src/poemlearning_reference/`, and assets/styles under `src/assets/`, `App.css`, and `index.css` (static files live in `public/`).
-- Deployment artifacts (`Dockerfile`, `nginx.conf`) sit at the repo root; `dist/` stores build output consumed by Dokploy.
+## 1. Build, Lint, and Test Commands
 
-## Build, Test, and Development Commands
-- `npm install` – install React 19, Vite, Tailwind 4, and the PocketBase client.
-- `npm run dev` – start the HMR dev server on `http://localhost:5173` for UI/auth iteration.
-- `npm run build` – emit optimized assets into `dist/` for the Docker + Nginx image.
-- `npm run preview` – serve the production bundle locally to validate routing and static assets.
-- `npm run lint` – apply the ESLint config (hooks, React Refresh, globals).
+### core-commands
+- **Install Dependencies**: `npm install`
+  - Installs React 19, Vite, Tailwind 4, PocketBase client, and other dependencies.
+- **Development Server**: `npm run dev`
+  - Starts Vite HMR server on `http://localhost:5173`.
+  - Use this for rapid iteration on UI and logic.
+- **Build for Production**: `npm run build`
+  - Generates optimized assets in `dist/`.
+  - Used for Docker + Nginx deployment.
+- **Preview Production Build**: `npm run preview`
+  - Serves the `dist/` folder locally to verify routing and assets before deployment.
+- **Linting**: `npm run lint`
+  - Runs ESLint with the flat config (`eslint.config.js`).
+  - Checks for unused variables, React hooks rules, and global ignore patterns.
+  - **Always run this before committing changes.**
 
-## Coding Style & Naming Conventions
-- Stick to functional components with hooks; name files/components in PascalCase (`Header.jsx`), contexts/hooks camelCase.
-- Use Tailwind utility classes for layout; reserve custom CSS for app-wide tweaks in `App.css`.
-- Keep 2-space indentation, single-quoted strings, and descriptive prop names.
-- Run `npm run lint` prior to committing and prefer code fixes over disabling rules.
-- Design constraints: never use solid black buttons; rely on alternative background colors. When adding icons, use only the Lucide icon set.
+### testing-strategy
+- **Automated Tests**: There is currently **no automated test suite** (Jest/Vitest).
+- **Manual Verification**:
+  - You must manually exercise user flows via `npm run dev`.
+  - Key flows to check:
+    1. **Authentication**: Sign up, login, logout.
+    2. **Timeline Generation**: Create, edit, save, load, and export (PNG/SVG/JPG).
+    3. **AI Generation**: Verify AI prompts and markdown parsing.
+    4. **Learning Assistant**: Flashcards, quizzes, and SRS logic.
+    5. **PocketBase Sync**: ensure data persists (check network tab/console logs).
+- **Debugging**:
+  - Log PocketBase/AI responses in the console during development.
+  - Remove debug logs before pushing to production.
 
-## Testing Guidelines
-- No automated suite yet—exercise flows manually via `npm run dev`, covering auth, AI generation, templates, exports, and PocketBase sync.
-- Log PocketBase/OpenRouter responses in `TimelineGenerator.jsx` when debugging; clean up diagnostics before pushing.
-- Use linting as the minimum gate; if you add complex helpers in `src/lib/`, stand up short-lived unit harnesses.
+---
 
-## Commit & Pull Request Guidelines
-- Follow the existing format (`Feat:`, `Fix:`, `Update:` + Title Case verb). Add scopes when touching a narrow surface (`Feat(auth): …`).
-- PRs must state intent, verification steps (`npm run build`, manual scenarios), and link issues or deployment tickets.
-- Include screenshots or short clips for UI changes, ideally captured from `npm run preview`.
-- Keep PRs focused; split auth, template, and infrastructure work when changes grow beyond ~300 lines.
+## 2. Code Style Guidelines
 
-## PocketBase & Environment
-- Define `VITE_POCKETBASE_URL` in a local `.env` or Dokploy secrets (see `POCKETBASE_SETUP.md` for bootstrap guidance).
-- Never commit API tokens or admin credentials; rely on the Vite `VITE_` prefix so values stay client-readable yet controlled.
-- When testing remote databases, reset mock entries in `src/data/` after experiments to avoid leaking sample content.
+### formatting-and-structure
+- **Indentation**: Prefer **2 spaces**. (Note: Legacy files might use 4; follow local file consistency if editing, but new files should use 2).
+- **Quotes**: Single quotes `'` preferred for JS/JSX strings, double quotes `"` for HTML attributes if needed, though consistency is key.
+- **Component Structure**:
+  - Use **Functional Components** with Hooks.
+  - Avoid Class components unless using Error Boundaries.
+  - Place hooks at the top of the component.
+  - Group related state and effects.
+- **File Organization**:
+  - `src/components/`: UI components (PascalCase, e.g., `Header.jsx`).
+  - `src/contexts/`: React contexts (camelCase, e.g., `AuthContext.js`).
+  - `src/hooks/`: Custom hooks (camelCase, e.g., `useAuth.js`).
+  - `src/lib/`: Logic helpers and API clients.
+  - `src/data/`: Static data and seed content.
+
+### naming-conventions
+- **Files**:
+  - React Components: `PascalCase.jsx` (e.g., `TimelineGenerator.jsx`).
+  - Logic/Helpers: `camelCase.js` (e.g., `pocketbaseError.js`).
+- **Variables & Functions**:
+  - `camelCase` for variables and functions.
+  - `PascalCase` for React components and Contexts.
+  - `UPPER_CASE` for constants (e.g., `DEFAULT_TIMEOUT`).
+- **Props**:
+  - Descriptive names (e.g., `onNavigateHome`, `showDashboard`).
+  - Boolean props should start with `is`, `has`, or `show` (e.g., `isLoading`, `showModal`).
+
+### styling-system
+- **Framework**: Tailwind CSS 4.
+- **Approach**: Utility-first.
+- **Design Language**: "Neo-Brutalist".
+  - **Key traits**: Hard borders (`border-2 border-black`), hard shadows (`shadow-[4px_4px_0px_#000]`), bold colors (Yellow-300, Purple-400), no border-radius smoothing.
+  - **Constraints**:
+    - Never use solid black backgrounds for buttons (accessibility/style choice).
+    - Use specific colors defined in the theme (e.g., `bg-yellow-300` for accents).
+- **Icons**: Use **Lucide React** exclusively. Import individual icons (e.g., `import { Sun, Moon } from 'lucide-react'`).
+
+### error-handling
+- **PocketBase**:
+  - Wrap async calls in `try/catch`.
+  - Use helper functions in `src/lib/pocketbaseError.js` to format messages.
+  - Display user-friendly errors, not raw stack traces.
+- **UI Boundaries**:
+  - Major views (Dashboard, Editor) are wrapped in `ErrorBoundary`.
+  - Ensure fallback UIs match the brutalist aesthetic.
+
+### imports-and-deps
+- **Order**:
+  1. React + Hooks
+  2. Third-party libraries (`lucide-react`, `marked`, `pocketbase`)
+  3. Internal Components
+  4. Contexts/Hooks
+  5. Helpers/Lib
+  6. Assets/CSS
+- **Restrictions**:
+  - Do not introduce new heavy dependencies without user approval.
+  - Use `fetch` for simple requests if PocketBase SDK is not applicable.
+
+---
+
+## 3. Project Architecture & Environment
+
+### key-files
+- `src/main.jsx`: App entry point.
+- `src/App.jsx`: Main routing and layout coordinator.
+- `src/lib/api/`: API wrapper functions (separation of concerns).
+- `pocketbase-schema.json`: Database schema definition.
+
+### environment-variables
+- `VITE_POCKETBASE_URL`: URL of the PocketBase instance.
+- **Security**:
+  - Secrets (API keys) should generally be backend-managed or carefully exposed via `VITE_` if client-side is absolutely necessary (e.g. OpenRouter direct access in demo mode).
+  - Never commit `.env` files containing real secrets.
+
+### deployment
+- **Docker**: Root `Dockerfile` builds the app and serves via Nginx.
+- **Nginx**: `nginx.conf` handles routing for SPA (rewrites to `index.html`).
+- **Output**: Build artifacts go to `dist/`.
+
+---
+
+## 4. Workflow for Agents
+
+1. **Analysis**:
+   - Start by listing files or searching for relevant components.
+   - Read `package.json` to verify dependencies.
+2. **Implementation**:
+   - Follow the **Neo-Brutalist** style for any new UI.
+   - Use `lucide-react` for icons.
+   - Ensure `npm run lint` passes after changes.
+3. **Verification**:
+   - Since there are no tests, clearly state how the user should manually verify the change.
+   - Example: "Go to Dashboard, click 'Create New', and verify the editor loads."
+

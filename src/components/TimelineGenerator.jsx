@@ -1,8 +1,9 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { marked } from 'marked';
-import { Upload, Download, FileText, Palette, Save, FolderOpen, ChevronDown, Sparkles, Layout, Share2 } from 'lucide-react';
+import { Upload, Download, FileText, Palette, Save, FolderOpen, ChevronDown, Sparkles, Layout, Share2, Loader, AlertTriangle, Plus, Image, Type, Monitor, X, Menu, ChevronLeft } from 'lucide-react';
 import domtoimage from 'dom-to-image-more';
 import { useAuth } from '../hooks/useAuth';
+import { useToast } from '../contexts/ToastContext';
 import { sanitizeMarkdownHtml } from '../lib/sanitizeMarkdown';
 import AuthModal from './AuthModal';
 import SavedTimelinesModal from './SavedTimelinesModal';
@@ -16,8 +17,6 @@ import { buildShareUrl } from '../lib/shareLinks';
 import { getPocketBaseErrorMessage, formatPocketBaseValidationErrors } from '../lib/pocketbaseError';
 
 const TimelineGenerator = ({ isDemoMode = false, initialTimeline = null, onBack = null }) => {
-  const compactBtn = (bg) => `inline-flex items-center gap-2 px-3 py-2 text-sm font-bold border-2 border-black dark:border-white rounded-lg ${bg} text-black shadow-[3px_3px_0px_#000] dark:shadow-[3px_3px_0px_#FFF] hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-[4px_4px_0px_#000] dark:hover:shadow-[4px_4px_0px_#FFF] transition-all`;
-
   const [events, setEvents] = useState([]);
   const [fileName, setFileName] = useState('');
   const [markdownContent, setMarkdownContent] = useState('');
@@ -26,12 +25,11 @@ const TimelineGenerator = ({ isDemoMode = false, initialTimeline = null, onBack 
   const [timelineStyle, setTimelineStyle] = useState('bauhaus');
   const [exportFormat, setExportFormat] = useState('');
   const timelineRef = useRef(null);
-  const [isSampleDropdownOpen, setIsSampleDropdownOpen] = useState(false);
-  const [isExportDropdownOpen, setIsExportDropdownOpen] = useState(false);
-  const [isStyleDropdownOpen, setIsStyleDropdownOpen] = useState(false);
-  const sampleDropdownRef = useRef(null);
-  const exportDropdownRef = useRef(null);
-  const styleDropdownRef = useRef(null);
+  
+  // Unified Menu State
+  const [activeMenu, setActiveMenu] = useState(null); // 'file', 'insert', 'style', 'export'
+  const menuRef = useRef(null);
+  
   const [editingEvent, setEditingEvent] = useState(null); // { index, field: 'date' | 'content' }
   const [hasLoadedDemo, setHasLoadedDemo] = useState(false);
 
@@ -42,9 +40,16 @@ const TimelineGenerator = ({ isDemoMode = false, initialTimeline = null, onBack 
   const [savedTimelines, setSavedTimelines] = useState([]);
   const [currentTimelineId, setCurrentTimelineId] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
   const [isLoadingTimelines, setIsLoadingTimelines] = useState(false);
   const [showAIModal, setShowAIModal] = useState(false);
   const [showTemplatesModal, setShowTemplatesModal] = useState(false);
+  
+  // Dirty state for unsaved changes
+  const [isDirty, setIsDirty] = useState(false);
+
+  // Toast
+  const { showToast } = useToast();
 
   // Sharing state
   const [showShareModal, setShowShareModal] = useState(false);
@@ -53,20 +58,11 @@ const TimelineGenerator = ({ isDemoMode = false, initialTimeline = null, onBack 
   const [viewCount, setViewCount] = useState(0);
   const [warning, setWarning] = useState('');
 
-  // SVG arrow for dropdown buttons
-  const arrowSvg = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>';
-
-
+  // Close menus on click outside
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (sampleDropdownRef.current && !sampleDropdownRef.current.contains(event.target)) {
-        setIsSampleDropdownOpen(false);
-      }
-      if (exportDropdownRef.current && !exportDropdownRef.current.contains(event.target)) {
-        setIsExportDropdownOpen(false);
-      }
-      if (styleDropdownRef.current && !styleDropdownRef.current.contains(event.target)) {
-        setIsStyleDropdownOpen(false);
+      if (menuRef.current && !menuRef.current.contains(event.target)) {
+        setActiveMenu(null);
       }
     };
 
@@ -200,6 +196,29 @@ const TimelineGenerator = ({ isDemoMode = false, initialTimeline = null, onBack 
     }
   }, [isDemoMode, hasLoadedDemo, initialTimeline]);
 
+  // Warn on unsaved changes
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      if (isDirty) {
+        e.preventDefault();
+        e.returnValue = '';
+        return '';
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [isDirty]);
+
+  // Handle back navigation with unsaved changes
+  const handleBack = () => {
+    if (isDirty) {
+      if (!window.confirm('You have unsaved changes. Are you sure you want to leave?')) {
+        return;
+      }
+    }
+    if (onBack) onBack();
+  };
+
   const handleFileSelect = (event) => {
     const file = event.target.files[0];
     if (!file) return;
@@ -211,11 +230,10 @@ const TimelineGenerator = ({ isDemoMode = false, initialTimeline = null, onBack 
       setMarkdownContent(content);
       parseMarkdown(content);
       setShowEditor(false);
+      setIsDirty(true);
     };
     reader.readAsText(file);
   };
-
-
 
   const parseMarkdown = (markdownContent) => {
     if (!markdownContent) {
@@ -337,12 +355,14 @@ const TimelineGenerator = ({ isDemoMode = false, initialTimeline = null, onBack 
     // Regenerate and update markdown content
     const newMarkdown = regenerateMarkdown(updatedEvents);
     setMarkdownContent(newMarkdown);
+    setIsDirty(true);
   };
 
   const handleMarkdownChange = (e) => {
     const content = e.target.value;
     setMarkdownContent(content);
     parseMarkdown(content);
+    setIsDirty(true);
   };
 
   const handleDownloadMarkdown = () => {
@@ -365,6 +385,11 @@ const TimelineGenerator = ({ isDemoMode = false, initialTimeline = null, onBack 
       setShowAuthModal(true);
       return null;
     }
+    if (!user?.id) {
+      setWarning('Session expired. Please log in again.');
+      setShowAuthModal(true);
+      return null;
+    }
 
     if (!markdownContent) return null;
 
@@ -377,7 +402,7 @@ const TimelineGenerator = ({ isDemoMode = false, initialTimeline = null, onBack 
     }
 
     const data = {
-      user: user.id,
+      user: String(user.id), // Ensure string
       title: baseTitle,
       content: markdownContent,
       style: timelineStyle,
@@ -409,11 +434,31 @@ const TimelineGenerator = ({ isDemoMode = false, initialTimeline = null, onBack 
         return null;
       }
 
-      if (currentTimelineId) {
-        record = await updateTimeline(currentTimelineId, data);
-      } else {
-        record = await createTimeline(data);
-        setCurrentTimelineId(record.id);
+      console.log('Saving timeline payload:', JSON.stringify(data));
+
+      try {
+        if (currentTimelineId) {
+          record = await updateTimeline(currentTimelineId, data);
+        } else {
+          record = await createTimeline(data);
+          setCurrentTimelineId(record.id);
+        }
+      } catch (err) {
+        // Fallback: If 400 Bad Request on create, try minimal payload (ignoring extra fields like slug/style)
+        if (!currentTimelineId && err.status === 400) {
+           console.warn('First save attempt failed with 400, attempting minimal payload fallback...');
+           const minimal = {
+             user: String(user.id),
+             title: baseTitle,
+             content: markdownContent
+           };
+           // This will throw if it fails, which is caught by the outer catch
+           record = await createTimeline(minimal);
+           setCurrentTimelineId(record.id);
+           showToast({ type: 'warning', message: 'Saved (some settings reset due to error)' });
+        } else {
+           throw err;
+        }
       }
 
       // Update state with saved data
@@ -421,17 +466,26 @@ const TimelineGenerator = ({ isDemoMode = false, initialTimeline = null, onBack 
       if (typeof record.public !== 'undefined') setIsPublic(record.public);
       if (typeof record.viewCount !== 'undefined') setViewCount(record.viewCount);
 
-      // Show simple success feedback (could be a toast in a real app)
-      const originalTitle = timelineTitle;
-      setTimelineTitle('Saved! ✓');
+      showToast({ type: 'success', message: 'Timeline saved successfully!' });
+      setIsDirty(false);
       setWarning('');
-      setTimeout(() => setTimelineTitle(originalTitle), 2000);
     } catch (error) {
       console.error('Error saving timeline:', error);
       const statusHint = error?.status ? `Status: ${error.status}. ` : '';
       const msg = getPocketBaseErrorMessage(error);
       const validationErrors = formatPocketBaseValidationErrors(error);
-      setWarning(`Failed to save timeline: ${statusHint}${msg}${validationErrors ? ` (${validationErrors})` : ''}`);
+      
+      let details = validationErrors ? ` (${validationErrors})` : '';
+      // Debug: If 400 with no validation, show raw data to help debug
+      if (error?.status === 400 && !validationErrors && error?.response?.data) {
+         try {
+           const raw = JSON.stringify(error.response.data);
+           if (raw !== '{}') details = ` (Debug: ${raw})`;
+         } catch (e) { /* ignore */ }
+      }
+
+      showToast({ type: 'error', message: `Failed to save: ${msg}` });
+      setWarning(`Failed to save timeline: ${statusHint}${msg}${details}`);
     } finally {
       setIsSaving(false);
     }
@@ -447,7 +501,7 @@ const TimelineGenerator = ({ isDemoMode = false, initialTimeline = null, onBack 
       setTimelineTitle(sample.name);
       setFileName(`${sample.name}.md`);
       setCurrentTimelineId(null); // Reset ID as this is a new "file"
-      setIsSampleDropdownOpen(false);
+      setActiveMenu(null);
     }
   };
 
@@ -495,6 +549,7 @@ Outcome, impact, and next steps.
     parseMarkdown(normalized);
     setFileName('AI Generated Timeline.md');
     setCurrentTimelineId(null); // Reset ID as this is a new "file"
+    setIsDirty(true);
   };
 
   const handleSelectTemplate = (template) => {
@@ -503,6 +558,7 @@ Outcome, impact, and next steps.
     setTimelineTitle(template.name);
     setFileName(`${template.name}.md`);
     setCurrentTimelineId(null); // Reset ID as this is a new "file"
+    setIsDirty(true);
   };
 
   const fetchTimelines = useCallback(async () => {
@@ -521,12 +577,12 @@ Outcome, impact, and next steps.
       console.error('Error fetching timelines:', error);
       // Don't alert 404s (collection empty/missing), just show empty list
       if (error.status !== 404) {
-        alert('Failed to fetch timelines. Make sure the "timelines" collection exists.');
+        showToast({ type: 'error', message: 'Failed to fetch timelines' });
       }
     } finally {
       setIsLoadingTimelines(false);
     }
-  }, [user]);
+  }, [user, showToast]);
 
   const handleLoadTimeline = (record) => {
     setMarkdownContent(record.content);
@@ -539,6 +595,7 @@ Outcome, impact, and next steps.
     setIsPublic(record.public || false);
     setViewCount(record.viewCount || 0);
     setShowSavedTimelines(false);
+    setIsDirty(false);
   };
 
   const handleDeleteTimeline = async (id) => {
@@ -550,7 +607,7 @@ Outcome, impact, and next steps.
       }
     } catch (error) {
       console.error('Error deleting timeline:', error);
-      alert('Failed to delete timeline.');
+      showToast({ type: 'error', message: 'Failed to delete timeline' });
     }
   };
 
@@ -588,7 +645,7 @@ Outcome, impact, and next steps.
       }
     } catch (error) {
       console.error('Error toggling public status:', error);
-      alert('Failed to update sharing settings.');
+      showToast({ type: 'error', message: 'Failed to update sharing settings' });
     } finally {
       setIsSaving(false);
     }
@@ -599,6 +656,8 @@ Outcome, impact, and next steps.
 
     const element = timelineRef.current;
     const filename = sanitizeFilename(timelineTitle);
+    
+    setIsExporting(true);
 
     try {
       // Ensure all fonts are loaded before exporting
@@ -731,16 +790,44 @@ Outcome, impact, and next steps.
         link.href = dataUrl;
         link.click();
       }
+      
+      showToast({ type: 'success', message: `Exported ${filename}.${format}` });
     } catch (error) {
       console.error('Export failed:', error);
-      alert(`Export failed: ${error.message}`);
+      showToast({ type: 'error', message: `Export failed: ${error.message}` });
+    } finally {
+      setIsExporting(false);
     }
   };
 
+  const ToolbarButton = ({ icon: Icon, label, onClick, isActive, color = "bg-white dark:bg-gray-800" }) => (
+    <button
+      onClick={onClick}
+      className={`flex items-center gap-2 px-2.5 py-1.5 text-sm font-bold border-2 border-black dark:border-white rounded-md transition-all ${isActive ? 'bg-black text-white dark:bg-white dark:text-black' : `${color} text-black dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700`}`}
+      title={label}
+    >
+      <Icon size={16} />
+      <span className="hidden md:inline">{label}</span>
+    </button>
+  );
+
+  const isBauhausStyle = timelineStyle === 'bauhaus' || timelineStyle === 'bauhaus-mono';
+  const isBauhausMono = timelineStyle === 'bauhaus-mono';
+
   return (
-    <div className="max-w-4xl mx-auto">
+    <div className="max-w-6xl mx-auto">
+      {isExporting && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100]">
+          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg border-4 border-black dark:border-white shadow-[8px_8px_0px_#000] dark:shadow-[8px_8px_0px_#FFF] flex flex-col items-center">
+            <Loader className="animate-spin mb-3 text-black dark:text-white" size={32} />
+            <p className="font-bold text-black dark:text-white">Exporting {exportFormat ? exportFormat.toUpperCase() : 'Image'}...</p>
+          </div>
+        </div>
+      )}
+      
+      {/* Warning Toast */}
       {warning && (
-        <div className="fixed top-4 right-4 z-50 max-w-sm">
+        <div className="fixed top-4 right-4 z-50 max-w-sm animate-in slide-in-from-right">
           <div className="p-4 border-4 border-yellow-500 bg-yellow-100 dark:bg-yellow-900/60 text-yellow-800 dark:text-yellow-200 rounded-xl shadow-[6px_6px_0px_#000] dark:shadow-[6px_6px_0px_#FFF] flex items-start gap-3">
             <AlertTriangle size={20} className="mt-0.5" />
             <div className="text-sm font-bold leading-snug">
@@ -750,274 +837,222 @@ Outcome, impact, and next steps.
           </div>
         </div>
       )}
-      <div className="bg-white dark:bg-gray-800 p-8 mb-8 text-center border-4 border-black dark:border-white shadow-[8px_8px_0px_#000] dark:shadow-[8px_8px_0px_#FFF] rounded-lg">
-        <input
-          value={timelineTitle}
-          onChange={(e) => {
-            setTimelineTitle(e.target.value);
-            if (warning) setWarning('');
-          }}
-          className="text-4xl font-black mb-4 font-display text-center bg-white dark:bg-gray-800 border-2 border-black dark:border-white rounded-lg px-4 py-2 shadow-[3px_3px_0px_#000] dark:shadow-[3px_3px_0px_#FFF] focus:outline-none focus:ring-4 focus:ring-yellow-300"
-          aria-label="Timeline title"
-        />
-        <p className="mb-8 text-lg text-gray-600 dark:text-gray-300">Upload your Markdown file to generate a beautiful timeline.</p>
 
-        <div className="flex flex-wrap gap-4 justify-center items-center">
-          <label className="cursor-pointer">
-            <div className={`${compactBtn('bg-blue-300')} w-auto px-4`}>
-              <Upload size={18} />
-              {fileName || 'Upload'}
-            </div>
-            <input type="file" accept=".md" onChange={handleFileSelect} className="hidden" />
-          </label>
-
-          <div className="relative" ref={sampleDropdownRef}>
-            <button
-              onClick={() => {
-                setIsSampleDropdownOpen(!isSampleDropdownOpen);
-                setIsExportDropdownOpen(false);
-                setIsStyleDropdownOpen(false);
-              }}
-              style={{
-                backgroundImage: `url("${arrowSvg}")`,
-                backgroundRepeat: 'no-repeat',
-                backgroundPosition: 'right 1rem center',
-                backgroundSize: '1.2em'
-              }}
-              className="appearance-none inline-flex items-center gap-2 border-2 border-black dark:border-white font-bold py-3 pl-6 pr-10 bg-yellow-400 text-black shadow-[4px_4px_0px_#000] dark:shadow-[4px_4px_0px_#FFF] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_#000] dark:hover:shadow-[6px_6px_0px_#FFF] transition-all rounded-lg cursor-pointer text-center min-w-[180px] justify-center"
-            >
-              <FileText size={20} />
-              Load Sample
-            </button>
-
-            {isSampleDropdownOpen && (
-              <div className="absolute top-full left-0 mt-2 w-full bg-white dark:bg-gray-800 border-2 border-black dark:border-white shadow-[4px_4px_0px_#000] dark:shadow-[4px_4px_0px_#FFF] rounded-lg overflow-hidden z-50 flex flex-col">
-                {sampleTimelines.map((sample) => (
-                  <button
-                    key={sample.id}
-                    onClick={() => handleLoadSample(sample.id)}
-                    className="py-3 px-4 text-left font-bold text-black dark:text-white hover:bg-yellow-400 hover:text-black transition-colors"
-                  >
-                    {sample.name}
+      {/* Main Toolbar */}
+      <div className="sticky top-0 z-30 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm border-b-4 border-black dark:border-white mb-6 pb-2 pt-1 -mx-4 px-4 shadow-sm transition-all">
+        <div className="flex flex-col gap-3">
+          
+          {/* Top Row: Navigation & Title */}
+          <div className="flex items-center justify-between gap-3">
+             <div className="flex items-center gap-2 flex-1 min-w-0">
+                {onBack && (
+                  <button onClick={handleBack} className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors">
+                    <ChevronLeft size={20} />
                   </button>
-                ))}
-              </div>
-            )}
+                )}
+                <input
+                  value={timelineTitle}
+                  onChange={(e) => {
+                    setTimelineTitle(e.target.value);
+                    if (warning) setWarning('');
+                  }}
+                  className="text-xl font-black font-display bg-transparent border-b border-transparent hover:border-gray-300 focus:border-purple-500 focus:outline-none w-full flex-1 min-w-0 px-1"
+                  aria-label="Timeline title"
+                />
+                 {isDirty && (
+                    <span className="flex-shrink-0 w-2 h-2 rounded-full bg-yellow-500 animate-pulse" title="Unsaved changes" />
+                  )}
+             </div>
+             
+             <div className="flex items-center gap-2" />
           </div>
 
-          <button
-            onClick={() => setShowTemplatesModal(true)}
-            className="inline-flex items-center gap-2 border-2 border-black dark:border-white font-bold py-3 px-6 bg-orange-400 text-black shadow-[4px_4px_0px_#000] dark:shadow-[4px_4px_0px_#FFF] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_#000] dark:hover:shadow-[6px_6px_0px_#FFF] transition-all rounded-lg"
-          >
-            <Layout size={20} />
-            Templates
-          </button>
-
-          <button
-            onClick={() => setShowAIModal(true)}
-            className="inline-flex items-center gap-2 border-2 border-black dark:border-white font-bold py-3 px-6 bg-purple-400 text-black shadow-[4px_4px_0px_#000] dark:shadow-[4px_4px_0px_#FFF] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_#000] dark:hover:shadow-[6px_6px_0px_#FFF] transition-all rounded-lg"
-          >
-            <Sparkles size={20} />
-            Generate with AI
-          </button>
-
-          {user && (
-            <>
-              <button
-                onClick={handleSave}
-                className="inline-flex items-center gap-2 border-2 border-black dark:border-white font-bold py-3 px-6 bg-green-400 text-black shadow-[4px_4px_0px_#000] dark:shadow-[4px_4px_0px_#FFF] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_#000] dark:hover:shadow-[6px_6px_0px_#FFF] transition-all rounded-lg disabled:opacity-50"
-                disabled={isSaving}
-              >
-                <Save size={20} />
-                {isSaving ? 'Saving...' : 'Save'}
-              </button>
-
-              <button
-                onClick={fetchTimelines}
-                className="inline-flex items-center gap-2 border-2 border-black dark:border-white font-bold py-3 px-6 bg-cyan-200 text-black shadow-[4px_4px_0px_#000] dark:shadow-[4px_4px_0px_#FFF] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_#000] dark:hover:shadow-[6px_6px_0px_#FFF] transition-all rounded-lg"
-              >
-                <FolderOpen size={20} />
-                Load Saved
-              </button>
-
-              {onBack && (
-                <button
-                  onClick={onBack}
-                  className="inline-flex items-center gap-2 border-2 border-black dark:border-white font-bold py-3 px-6 bg-gray-200 dark:bg-gray-700 text-black dark:text-white shadow-[4px_4px_0px_#000] dark:shadow-[4px_4px_0px_#FFF] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_#000] dark:hover:shadow-[6px_6px_0px_#FFF] transition-all rounded-lg"
-                >
-                  <ChevronDown className="rotate-90" size={20} />
-                  Back
-                </button>
-              )}
-
-
-
-
-            </>
-          )}
-
-          {events.length > 0 && (
-            <>
-              <div className="relative" ref={exportDropdownRef}>
-                <button
-                  onClick={() => {
-                    setIsExportDropdownOpen(!isExportDropdownOpen);
-                    setIsSampleDropdownOpen(false);
-                    setIsStyleDropdownOpen(false);
-                  }}
-                  style={{
-                    backgroundImage: `url("${arrowSvg}")`,
-                    backgroundRepeat: 'no-repeat',
-                    backgroundPosition: 'right 1rem center',
-                    backgroundSize: '1.2em'
-                  }}
-                  className="appearance-none inline-flex items-center gap-2 border-2 border-black dark:border-white font-bold py-3 pl-6 pr-10 bg-green-400 text-black shadow-[4px_4px_0px_#000] dark:shadow-[4px_4px_0px_#FFF] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_#000] dark:hover:shadow-[6px_6px_0px_#FFF] transition-all rounded-lg cursor-pointer text-center min-w-[180px] justify-center"
-                >
-                  <Download size={20} />
-                  Export As...
-                </button>
-
-                {isExportDropdownOpen && (
-                  <div className="absolute top-full left-0 mt-2 w-full bg-white dark:bg-gray-800 border-2 border-black dark:border-white shadow-[4px_4px_0px_#000] dark:shadow-[4px_4px_0px_#FFF] rounded-lg overflow-hidden z-50 flex flex-col">
-                    {[
-                      { value: 'png', label: 'PNG (Transparent)' },
-                      { value: 'jpg', label: 'JPG' },
-                      { value: 'svg', label: 'SVG (Transparent)' }
-                    ].map((option) => (
-                      <button
-                        key={option.value}
-                        onClick={async () => {
-                          setExportFormat(option.value);
-                          await handleExport(option.value);
-                          setExportFormat('');
-                          setIsExportDropdownOpen(false);
-                        }}
-                        className="py-3 px-4 text-left font-bold text-black dark:text-white hover:bg-green-400 hover:text-black transition-colors"
-                      >
-                        {option.label}
+          {/* Bottom Row: Editor Tools */}
+          <div className="flex items-center justify-between gap-2 flex-wrap" ref={menuRef}>
+            <div className="flex items-center gap-2">
+              
+              {/* File Menu */}
+              <div className="relative">
+                <ToolbarButton icon={FolderOpen} label="File" onClick={() => setActiveMenu(activeMenu === 'file' ? null : 'file')} isActive={activeMenu === 'file'} />
+                {activeMenu === 'file' && (
+                  <div className="absolute top-full left-0 mt-2 w-48 bg-white dark:bg-gray-800 border-2 border-black dark:border-white shadow-[4px_4px_0px_#000] dark:shadow-[4px_4px_0px_#FFF] rounded-lg overflow-hidden z-50 flex flex-col">
+                    <label className="flex items-center gap-2 px-4 py-3 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer font-bold">
+                       <Upload size={16} /> Upload MD
+                       <input type="file" accept=".md" onChange={handleFileSelect} className="hidden" />
+                    </label>
+                    <button onClick={() => { setActiveMenu('samples'); }} className="flex items-center gap-2 px-4 py-3 hover:bg-gray-100 dark:hover:bg-gray-700 text-left font-bold">
+                       <FileText size={16} /> Load Sample
+                    </button>
+                    {user && (
+                      <button onClick={fetchTimelines} className="flex items-center gap-2 px-4 py-3 hover:bg-gray-100 dark:hover:bg-gray-700 text-left font-bold">
+                         <FolderOpen size={16} /> Open Saved
+                      </button>
+                    )}
+                  </div>
+                )}
+                {/* Nested Samples Menu */}
+                 {activeMenu === 'samples' && (
+                  <div className="absolute top-full left-0 mt-2 w-48 bg-white dark:bg-gray-800 border-2 border-black dark:border-white shadow-[4px_4px_0px_#000] dark:shadow-[4px_4px_0px_#FFF] rounded-lg overflow-hidden z-50 flex flex-col">
+                    <button onClick={() => setActiveMenu('file')} className="px-4 py-2 text-xs text-gray-500 uppercase font-bold border-b border-gray-100 dark:border-gray-700">← Back</button>
+                    {sampleTimelines.map(sample => (
+                      <button key={sample.id} onClick={() => handleLoadSample(sample.id)} className="px-4 py-3 hover:bg-yellow-400 hover:text-black text-left font-bold transition-colors">
+                        {sample.name}
                       </button>
                     ))}
                   </div>
                 )}
               </div>
 
-              <button
-                onClick={() => setShowEditor(!showEditor)}
-                className="inline-flex items-center gap-2 border-2 border-black dark:border-white font-bold py-3 px-6 bg-yellow-400 text-black shadow-[4px_4px_0px_#000] dark:shadow-[4px_4px_0px_#FFF] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_#000] dark:hover:shadow-[6px_6px_0px_#FFF] transition-all rounded-lg"
-              >
-                <FileText size={20} />
-                {showEditor ? 'Hide' : 'Show'} Editor
-              </button>
+              {/* Insert Menu */}
+              <div className="relative">
+                 <ToolbarButton icon={Plus} label="Insert" onClick={() => setActiveMenu(activeMenu === 'insert' ? null : 'insert')} isActive={activeMenu === 'insert'} />
+                 {activeMenu === 'insert' && (
+                  <div className="absolute top-full left-0 mt-2 w-56 bg-white dark:bg-gray-800 border-2 border-black dark:border-white shadow-[4px_4px_0px_#000] dark:shadow-[4px_4px_0px_#FFF] rounded-lg overflow-hidden z-50 flex flex-col">
+                    <button onClick={() => { setShowAIModal(true); setActiveMenu(null); }} className="flex items-center gap-2 px-4 py-3 hover:bg-purple-100 dark:hover:bg-purple-900/30 text-left font-bold text-purple-600 dark:text-purple-400">
+                       <Sparkles size={16} /> Generate with AI
+                    </button>
+                    <button onClick={() => { setShowTemplatesModal(true); setActiveMenu(null); }} className="flex items-center gap-2 px-4 py-3 hover:bg-orange-100 dark:hover:bg-orange-900/30 text-left font-bold text-orange-600 dark:text-orange-400">
+                       <Layout size={16} /> Use Template
+                    </button>
+                  </div>
+                 )}
+              </div>
+            </div>
 
-              <div className="relative" ref={styleDropdownRef}>
-                <button
-                  onClick={() => {
-                    setIsStyleDropdownOpen(!isStyleDropdownOpen);
-                    setIsSampleDropdownOpen(false);
-                    setIsExportDropdownOpen(false);
-                  }}
-                  style={{
-                    backgroundImage: `url("${arrowSvg}")`,
-                    backgroundRepeat: 'no-repeat',
-                    backgroundPosition: 'right 1rem center',
-                    backgroundSize: '1.2em'
-                  }}
-                  className="appearance-none inline-flex items-center gap-2 border-2 border-black dark:border-white font-bold py-3 pl-6 pr-10 bg-purple-400 text-black shadow-[4px_4px_0px_#000] dark:shadow-[4px_4px_0px_#FFF] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_#000] dark:hover:shadow-[6px_6px_0px_#FFF] transition-all rounded-lg cursor-pointer text-center min-w-[200px] justify-center"
-                >
-                  <Palette size={20} />
-                  {timelineStyle === 'bauhaus' ? 'Bauhaus' :
-                    timelineStyle === 'neo-brutalist' ? 'Neo-Brutalist' :
-                      timelineStyle === 'corporate' ? 'Corporate' :
-                        'Handwritten'}
-                </button>
-
-                {isStyleDropdownOpen && (
-                  <div className="absolute top-full left-0 mt-2 w-full bg-white dark:bg-gray-800 border-2 border-black dark:border-white shadow-[4px_4px_0px_#000] dark:shadow-[4px_4px_0px_#FFF] rounded-lg overflow-hidden z-50 flex flex-col">
-                    {[
+            <div className="flex items-center gap-2">
+               {/* Style Dropdown */}
+               <div className="relative">
+                 <ToolbarButton icon={Palette} label="Style" onClick={() => setActiveMenu(activeMenu === 'style' ? null : 'style')} isActive={activeMenu === 'style'} />
+                 {activeMenu === 'style' && (
+                  <div className="absolute top-full right-0 mt-2 w-48 bg-white dark:bg-gray-800 border-2 border-black dark:border-white shadow-[4px_4px_0px_#000] dark:shadow-[4px_4px_0px_#FFF] rounded-lg overflow-hidden z-50 flex flex-col">
+                     {[
                       { value: 'bauhaus', label: 'Bauhaus' },
+                      { value: 'bauhaus-mono', label: 'Bauhaus Mono' },
                       { value: 'neo-brutalist', label: 'Neo-Brutalist' },
                       { value: 'corporate', label: 'Corporate' },
                       { value: 'handwritten', label: 'Handwritten' }
-                    ].map((option) => (
+                    ].map(option => (
                       <button
                         key={option.value}
-                        onClick={() => {
-                          setTimelineStyle(option.value);
-                          setIsStyleDropdownOpen(false);
-                        }}
-                        className={`py-3 px-4 text-left font-bold hover:bg-purple-400 hover:text-black transition-colors ${timelineStyle === option.value ? 'bg-purple-200 dark:bg-purple-900' : 'text-black dark:text-white'}`}
+                        onClick={() => { setTimelineStyle(option.value); setActiveMenu(null); }}
+                        className={`px-4 py-3 text-left font-bold hover:bg-gray-100 dark:hover:bg-gray-700 ${timelineStyle === option.value ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300' : ''}`}
                       >
                         {option.label}
                       </button>
                     ))}
                   </div>
-                )}
-              </div>
-            </>
-          )}
-        </div>
+                 )}
+               </div>
 
-        {events.length > 0 && (
-          <p className="mt-4 text-sm text-gray-500 dark:text-gray-400">
-            Tip: PNG & SVG exports have transparent backgrounds • JPG has white background
-          </p>
-        )}
+               <ToolbarButton 
+                 icon={showEditor ? Monitor : FileText} 
+                 label={showEditor ? "Preview" : "Editor"} 
+                 onClick={() => setShowEditor(!showEditor)} 
+                 isActive={showEditor}
+                 color="bg-yellow-100 dark:bg-yellow-900/20"
+               />
+
+               {user && (
+                  <button
+                    onClick={handleSave}
+                    disabled={isSaving}
+                    className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-green-400 text-black font-bold border-2 border-black dark:border-white rounded-md shadow-[2px_2px_0px_#000] dark:shadow-[2px_2px_0px_#FFF] hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-[3px_3px_0px_#000] active:translate-x-[1px] active:translate-y-[1px] active:shadow-none transition-all disabled:opacity-50 text-sm"
+                  >
+                    <Save size={16} />
+                    {isSaving ? 'Saving...' : 'Save'}
+                  </button>
+               )}
+               <button
+                  onClick={() => setActiveMenu(activeMenu === 'export' ? null : 'export')}
+                  className="flex items-center gap-2 px-3 py-1.5 bg-black text-white dark:bg-white dark:text-black font-bold border-2 border-black dark:border-white rounded-md shadow-[2px_2px_0px_#000] dark:shadow-[2px_2px_0px_#FFF] hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-[3px_3px_0px_#000] transition-all relative text-sm"
+               >
+                  <Download size={16} />
+                  <span className="hidden sm:inline">Export</span>
+               </button>
+            </div>
+          </div>
+          
+           {/* Export Menu (Positioned Absolute to avoid overflow clip in flex container if needed, but relative works usually) */}
+           {activeMenu === 'export' && (
+              <div className="absolute top-[80px] right-4 w-48 bg-white dark:bg-gray-800 border-2 border-black dark:border-white shadow-[4px_4px_0px_#000] dark:shadow-[4px_4px_0px_#FFF] rounded-lg overflow-hidden z-50 flex flex-col animate-in fade-in zoom-in-95 duration-200">
+                 {[
+                      { value: 'png', label: 'PNG Image', icon: Image },
+                      { value: 'jpg', label: 'JPG Image', icon: Image },
+                      { value: 'svg', label: 'SVG Vector', icon: Type }
+                  ].map((option) => (
+                    <button
+                      key={option.value}
+                      onClick={async () => {
+                        setExportFormat(option.value);
+                        setActiveMenu(null);
+                        await handleExport(option.value);
+                        setExportFormat('');
+                      }}
+                      className="flex items-center gap-2 px-4 py-3 hover:bg-green-100 dark:hover:bg-green-900/30 text-left font-bold"
+                    >
+                      <option.icon size={16} /> {option.label}
+                    </button>
+                  ))}
+                  <button onClick={handleDownloadMarkdown} className="flex items-center gap-2 px-4 py-3 hover:bg-blue-100 dark:hover:bg-blue-900/30 text-left font-bold border-t border-gray-100 dark:border-gray-700">
+                     <FileText size={16} /> Download MD
+                  </button>
+              </div>
+           )}
+
+        </div>
       </div>
 
-      {/* Markdown Editor */}
+      {/* Markdown Editor Panel */}
       {
         showEditor && markdownContent && (
-          <div className="bg-white dark:bg-gray-800 p-6 mb-8 border-4 border-black dark:border-white shadow-[8px_8px_0px_#000] dark:shadow-[8px_8px_0px_#FFF] rounded-lg">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-2xl font-black font-display">Edit Markdown</h2>
-              <button
-                onClick={handleDownloadMarkdown}
-                className="inline-flex items-center gap-2 border-2 border-black dark:border-white font-bold py-2 px-4 bg-blue-400 text-black shadow-[4px_4px_0px_#000] dark:shadow-[4px_4px_0px_#FFF] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_#000] transition-all rounded-lg text-sm"
-              >
-                <Download size={16} />
-                Download MD
-              </button>
-            </div>
+          <div className="bg-white dark:bg-gray-800 p-4 mb-8 border-4 border-black dark:border-white shadow-[8px_8px_0px_#000] dark:shadow-[8px_8px_0px_#FFF] rounded-lg animate-in slide-in-from-top-4">
             <textarea
               value={markdownContent}
               onChange={handleMarkdownChange}
-              className="w-full h-96 p-4 font-mono text-sm border-2 border-black dark:border-white rounded-lg bg-gray-50 dark:bg-gray-900 text-black dark:text-white focus:outline-none focus:ring-4 focus:ring-yellow-400 focus:ring-offset-2"
+              className="w-full h-96 p-4 font-mono text-sm border-2 border-black dark:border-white rounded-lg bg-gray-50 dark:bg-gray-900 text-black dark:text-white focus:outline-none focus:ring-4 focus:ring-yellow-400 focus:ring-offset-2 resize-y"
               placeholder="Enter your markdown here..."
             />
-            <p className="mt-2 text-sm text-gray-500 text-gray-400">
-              Changes are reflected in real-time on the timeline below
+            <p className="mt-2 text-xs font-bold text-gray-500 uppercase tracking-wide text-right">
+              Live Preview Below
             </p>
           </div>
         )
       }
 
+      {/* Empty State / Upload Prompt */}
+      {events.length === 0 && !markdownContent && (
+         <div className="text-center py-20 border-4 border-dashed border-gray-300 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-900/50">
+            <Upload size={48} className="mx-auto mb-4 text-gray-400" />
+            <h3 className="text-xl font-bold text-gray-500 mb-2">No timeline content yet</h3>
+            <p className="text-gray-400 mb-6">Use the Insert menu to create or upload content</p>
+            <button onClick={() => setActiveMenu('insert')} className="px-6 py-2 bg-purple-500 text-white font-bold rounded-lg shadow-lg hover:bg-purple-600 transition-colors">
+               Get Started
+            </button>
+         </div>
+      )}
+
+      {/* Timeline Render Area */}
       {
         events.length > 0 && (
           <div
             id="timeline-container"
             ref={timelineRef}
-            className={`relative max-w-3xl mx-auto p-8 ${timelineStyle === 'bauhaus' ? 'pl-10' : ''}`}
+            className={`relative max-w-3xl mx-auto p-8 ${isBauhausStyle ? 'pl-10' : ''}`}
             style={{ backgroundColor: 'transparent' }}
           >
-            {/* Timeline Title */}
-            <input
-              value={timelineTitle}
-              onChange={(e) => {
-                setTimelineTitle(e.target.value);
-                if (warning) setWarning('');
-              }}
-              className={`text-5xl font-black font-display mb-12 text-black dark:text-white tracking-tighter bg-transparent border-none focus:outline-none ${timelineStyle === 'bauhaus' ? 'text-left pl-16' : 'text-center'}`}
-              aria-label="Timeline title"
-            />
+            {/* Timeline Title (Hidden in export mostly, but useful context) */}
+            <h1 className={`text-5xl font-black mb-12 text-black dark:text-white tracking-tighter ${isBauhausStyle ? 'text-left pl-16' : 'text-center'} ${isBauhausMono ? 'font-doto' : 'font-display'}`}>
+              {timelineTitle}
+            </h1>
 
-            {timelineStyle === 'bauhaus' ? (
+            {isBauhausStyle ? (
               /* Bauhaus Style */
               <div className="relative">
                 {/* Vertical Line - starts at center of first red dot (top-5 = 1.25rem = top-2 + half h-6) */}
                 <div className="absolute left-0 top-5 bottom-0 w-0.5 bg-black dark:bg-white"></div>
 
                 {events.map((event, index) => (
-                  <div key={index} className="relative mb-16 pl-16">
+                  <div key={index} className="relative mb-10 pl-16">
                     {/* Dot */}
                     <div className="absolute left-[-11px] top-2 w-6 h-6 bg-[#C41E3A] rounded-full z-10"></div>
 
@@ -1032,12 +1067,12 @@ Outcome, impact, and next steps.
                             onChange={(e) => handleEventUpdate(index, 'date', e.target.value)}
                             onBlur={() => setEditingEvent(null)}
                             autoFocus
-                            className="text-4xl font-black font-display text-black dark:text-white mb-1 tracking-tighter bg-yellow-100 dark:bg-yellow-900 px-2 py-1 rounded border-2 border-yellow-400 focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                            className={`text-4xl font-black text-black dark:text-white mb-1 tracking-tighter bg-yellow-100 dark:bg-yellow-900 px-2 py-1 rounded border-2 border-yellow-400 focus:outline-none focus:ring-2 focus:ring-yellow-500 ${isBauhausMono ? 'font-doto' : 'font-display'}`}
                           />
                         ) : (
                           <div
                             onClick={() => setEditingEvent({ index, field: 'date' })}
-                            className="text-4xl font-black font-display text-black dark:text-white mb-1 tracking-tighter cursor-pointer hover:bg-yellow-50 dark:hover:bg-gray-700 px-2 py-1 rounded transition-colors"
+                            className={`text-4xl font-black text-black dark:text-white mb-1 tracking-tighter cursor-pointer hover:bg-yellow-50 dark:hover:bg-gray-700 px-2 py-1 rounded transition-colors ${isBauhausMono ? 'font-doto' : 'font-display'}`}
                           >
                             {event.date}
                           </div>
@@ -1051,12 +1086,12 @@ Outcome, impact, and next steps.
                           onChange={(e) => handleEventUpdate(index, 'content', e.target.value)}
                           onBlur={() => setEditingEvent(null)}
                           autoFocus
-                          className="w-full min-h-[100px] markdown-content prose prose-invert max-w-none font-sans text-lg font-medium uppercase tracking-wide text-gray-800 dark:text-gray-200 leading-snug bg-yellow-100 dark:bg-yellow-900 px-2 py-1 rounded border-2 border-yellow-400 focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                          className={`w-full min-h-[100px] markdown-content prose prose-invert max-w-none text-lg font-medium uppercase tracking-wide text-gray-800 dark:text-gray-200 leading-snug bg-yellow-100 dark:bg-yellow-900 px-2 py-1 rounded border-2 border-yellow-400 focus:outline-none focus:ring-2 focus:ring-yellow-500 ${isBauhausMono ? 'font-vt323' : 'font-sans'}`}
                         />
                       ) : (
                         <div
                           onClick={() => setEditingEvent({ index, field: 'content' })}
-                          className="markdown-content prose prose-invert max-w-none font-sans text-lg font-medium uppercase tracking-wide text-gray-800 dark:text-gray-200 leading-snug cursor-pointer hover:bg-yellow-50 dark:hover:bg-gray-700 px-2 py-1 rounded transition-colors"
+                          className={`markdown-content prose prose-invert max-w-none text-lg font-medium uppercase tracking-wide text-gray-800 dark:text-gray-200 leading-snug cursor-pointer hover:bg-yellow-50 dark:hover:bg-gray-700 px-2 py-1 rounded transition-colors ${isBauhausMono ? 'font-vt323' : 'font-sans'}`}
                           dangerouslySetInnerHTML={{ __html: event.content }}
                         />
                       )}
@@ -1066,7 +1101,7 @@ Outcome, impact, and next steps.
               </div>
             ) : timelineStyle === 'neo-brutalist' ? (
               /* Neo-Brutalist Style */
-              <div className="flex flex-col gap-6">
+              <div className="flex flex-col gap-4">
                 {events.map((event, index) => {
                   const lightColors = ['bg-yellow-300', 'bg-orange-300', 'bg-pink-300', 'bg-purple-300', 'bg-blue-300', 'bg-green-300'];
                   const darkColors = ['dark:bg-yellow-600', 'dark:bg-orange-600', 'dark:bg-pink-600', 'dark:bg-purple-600', 'dark:bg-blue-600', 'dark:bg-green-600'];
@@ -1185,68 +1220,39 @@ Outcome, impact, and next steps.
               </div>
             ) : timelineStyle === 'handwritten' ? (
               /* Handwritten Style */
-              <div className="relative">
-                {/* Vertical Line */}
-                <div className="absolute left-[7.5rem] top-[2.5rem] bottom-0 w-0.5 bg-slate-300 dark:bg-slate-600"></div>
-
+              <div className="relative font-cursive">
+                {/* Center vertical line - hand drawn look */}
+                <div className="absolute left-1/2 top-0 bottom-0 w-1 bg-black dark:bg-gray-500 transform -translate-x-1/2 opacity-70" style={{ clipPath: 'polygon(0% 0%, 100% 0%, 85% 100%, 15% 100%)' }}></div>
+                
                 {events.map((event, index) => (
-                  <div key={index} className="relative mb-6 pl-40">
-                    {/* Date - positioned on left side of vertical line */}
-                    {event.date && (
-                      editingEvent?.index === index && editingEvent?.field === 'date' ? (
-                        <input
-                          type="text"
-                          value={event.date}
-                          onChange={(e) => handleEventUpdate(index, 'date', e.target.value)}
-                          onBlur={() => setEditingEvent(null)}
-                          autoFocus
-                          className="absolute left-0 top-[1.6rem] w-28 text-right pr-4 text-2xl font-handwritten text-slate-600 dark:text-slate-400 bg-yellow-100 dark:bg-yellow-900 px-2 py-1 rounded border-2 border-yellow-400 focus:outline-none focus:ring-2 focus:ring-yellow-500"
-                        />
-                      ) : (
-                        <div
-                          onClick={() => setEditingEvent({ index, field: 'date' })}
-                          className="absolute left-0 top-[1.6rem] w-28 text-right pr-4 text-2xl font-handwritten text-slate-600 dark:text-slate-400 cursor-pointer hover:bg-yellow-50 dark:hover:bg-gray-700 px-2 py-1 rounded transition-colors"
-                        >
+                    <div key={index} className="relative mb-6">
+                       {/* Date - alternating sides */}
+                       <div className={`absolute top-0 w-1/3 text-2xl font-bold ${index % 2 === 0 ? 'left-[10%] text-right' : 'right-[10%] text-left'}`} style={{ fontFamily: 'Caveat, cursive' }}>
                           {event.date}
-                        </div>
-                      )
-                    )}
+                       </div>
+                       
+                       {/* Node on line */}
+                       <div className="w-4 h-4 bg-black rounded-full border-2 border-white mx-auto z-10 relative mb-4"></div>
 
-                    {/* Dot */}
-                    <div className="absolute left-[7.3rem] top-8 w-3 h-3 bg-slate-600 dark:bg-slate-500 rounded-full z-10 ring-4 ring-white dark:ring-gray-800"></div>
-
-                    {/* Content Container - positioned above dot */}
-                    <div className="flex flex-col gap-0">
-
-                      {/* Event Title - using purple color from old label */}
-                      {editingEvent?.index === index && editingEvent?.field === 'content' ? (
-                        <textarea
-                          value={event.content.replace(/<[^>]*>/g, '')}
-                          onChange={(e) => handleEventUpdate(index, 'content', e.target.value)}
-                          onBlur={() => setEditingEvent(null)}
-                          autoFocus
-                          className="w-full min-h-[100px] font-body text-slate-700 dark:text-slate-300 bg-yellow-100 dark:bg-yellow-900 px-2 py-1 rounded border-2 border-yellow-400 focus:outline-none focus:ring-2 focus:ring-yellow-500"
-                        />
-                      ) : (
-                        <div
-                          onClick={() => setEditingEvent({ index, field: 'content' })}
-                          className="font-handwritten text-4xl text-slate-700 dark:text-slate-300 leading-tight cursor-pointer hover:bg-yellow-50 dark:hover:bg-gray-700 px-2 py-1 rounded transition-colors"
-                        >
-                          {event.content.replace(/<[^>]*>/g, '').split('\n')[0] || 'Event'}
-                        </div>
-                      )}
-
-                      {/* Event Description */}
-                      {!(editingEvent?.index === index && editingEvent?.field === 'content') && event.content.replace(/<[^>]*>/g, '').split('\n').slice(1).join('\n').trim() && (
-                        <div
-                          onClick={() => setEditingEvent({ index, field: 'content' })}
-                          className="font-body text-slate-600 dark:text-slate-400 leading-relaxed cursor-pointer hover:bg-yellow-50 dark:hover:bg-gray-700 px-2 py-1 rounded transition-colors"
-                        >
-                          {event.content.replace(/<[^>]*>/g, '').split('\n').slice(1).join('\n')}
-                        </div>
-                      )}
+                       {/* Content Box */}
+                       <div className={`w-2/3 mx-auto border-2 border-black p-4 rounded-lg bg-white dark:bg-gray-800 shadow-[4px_4px_0px_#000] dark:shadow-[4px_4px_0px_#FFF] transform ${index % 2 === 0 ? '-rotate-1' : 'rotate-1'}`}>
+                          {editingEvent?.index === index && editingEvent?.field === 'content' ? (
+                            <textarea
+                              value={event.content.replace(/<[^>]*>/g, '')}
+                              onChange={(e) => handleEventUpdate(index, 'content', e.target.value)}
+                              onBlur={() => setEditingEvent(null)}
+                              autoFocus
+                              className="w-full min-h-[80px] font-cursive text-xl bg-transparent focus:outline-none"
+                            />
+                          ) : (
+                            <div
+                              onClick={() => setEditingEvent({ index, field: 'content' })}
+                              className="font-cursive text-xl markdown-content"
+                              dangerouslySetInnerHTML={{ __html: event.content }}
+                            />
+                          )}
+                       </div>
                     </div>
-                  </div>
                 ))}
               </div>
             ) : null}
@@ -1254,27 +1260,13 @@ Outcome, impact, and next steps.
         )
       }
 
-      {/* Bottom Share Button */}
-      {events.length > 0 && (
-        <div className="max-w-3xl mx-auto px-8 pb-12 flex justify-center">
-          <button
-            onClick={handleShareClick}
-            className="inline-flex items-center gap-3 border-4 border-black dark:border-white font-black text-xl py-4 px-8 bg-cyan-400 text-black shadow-[8px_8px_0px_#000] dark:shadow-[8px_8px_0px_#FFF] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[12px_12px_0px_#000] dark:hover:shadow-[12px_12px_0px_#FFF] transition-all rounded-xl transform hover:scale-105 disabled:opacity-60 disabled:cursor-not-allowed"
-            disabled={isSaving}
-          >
-            <Share2 size={28} />
-            Share Timeline
-          </button>
-        </div>
-      )}
-
       {/* Modals */}
       {showAuthModal && (
         <AuthModal
           onClose={() => setShowAuthModal(false)}
           onSuccess={() => {
             setShowAuthModal(false);
-            // If we were trying to save, save now? Or just let user click again.
+            if (activeMenu === 'file') fetchTimelines(); // Refresh saved if auth successful
           }}
         />
       )}
@@ -1285,14 +1277,17 @@ Outcome, impact, and next steps.
           onClose={() => setShowSavedTimelines(false)}
           onLoad={handleLoadTimeline}
           onDelete={handleDeleteTimeline}
-          loading={isLoadingTimelines}
+          isLoading={isLoadingTimelines}
         />
       )}
 
       {showAIModal && (
         <AIGenerateModal
           onClose={() => setShowAIModal(false)}
-          onGenerate={handleAIGenerate}
+          onGenerate={(content, prompt) => {
+            handleAIGenerate(content, prompt);
+            setShowAIModal(false);
+          }}
         />
       )}
 
@@ -1305,20 +1300,15 @@ Outcome, impact, and next steps.
 
       {showShareModal && (
         <ShareModal
-          isOpen={showShareModal}
           onClose={() => setShowShareModal(false)}
+          title={timelineTitle}
+          slug={currentSlug}
           isPublic={isPublic}
-          onTogglePublic={handleTogglePublic}
-          shareUrl={buildShareUrl({
-            slug: currentSlug || undefined,
-            id: currentTimelineId || undefined,
-            style: timelineStyle || undefined,
-          })}
           viewCount={viewCount}
-          isSaving={isSaving}
+          onTogglePublic={handleTogglePublic}
         />
       )}
-    </div >
+    </div>
   );
 };
 

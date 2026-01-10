@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { onAuthChange, getCurrentUser, clearSession } from '../lib/api/auth';
+import { onAuthChange, getCurrentUser, clearSession, refreshSession } from '../lib/api/auth';
 import { AuthContext } from './AuthContext';
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(() => getCurrentUser());
 
   useEffect(() => {
-    const unsubscribe = onAuthChange((token, model) => setUser(model));
+    refreshSession().then(setUser);
+    const unsubscribe = onAuthChange(() => setUser(getCurrentUser()));
 
     return () => {
       unsubscribe();

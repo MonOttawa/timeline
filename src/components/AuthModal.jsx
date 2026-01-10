@@ -10,6 +10,32 @@ const AuthModal = ({ onClose, onSuccess }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
+  
+  // Validation state
+  const [emailError, setEmailError] = useState('');
+  
+  const validateEmail = (email) => {
+    if (!email) return '';
+    const valid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    return valid ? '' : 'Please enter a valid email address';
+  };
+
+  const getPasswordStrength = (pass) => {
+    if (!pass) return { level: 0, text: '', color: 'bg-gray-200' };
+    if (pass.length < 8) return { level: 1, text: 'Too short', color: 'bg-red-500' };
+    const hasLetters = /[a-zA-Z]/.test(pass);
+    const hasNumbers = /[0-9]/.test(pass);
+    if (pass.length >= 10 && hasLetters && hasNumbers) return { level: 3, text: 'Strong', color: 'bg-green-500' };
+    if (pass.length >= 8) return { level: 2, text: 'Fair', color: 'bg-yellow-500' };
+    return { level: 1, text: 'Weak', color: 'bg-red-500' };
+  };
+
+  const passwordStrength = getPasswordStrength(password);
+  const isFormValid = 
+    email && 
+    !emailError && 
+    password.length >= 8 && 
+    (!isSignUp || (password === passwordConfirm && passwordConfirm));
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -76,11 +102,22 @@ const AuthModal = ({ onClose, onSuccess }) => {
             <input
               type="email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                if (emailError) setEmailError(validateEmail(e.target.value));
+              }}
+              onBlur={(e) => setEmailError(validateEmail(e.target.value))}
               required
-              className="w-full px-4 py-3 border-2 border-black dark:border-white rounded-lg bg-white dark:bg-gray-900 text-black dark:text-white focus:outline-none focus:ring-4 focus:ring-yellow-400 focus:ring-offset-2"
+              className={`w-full px-4 py-3 border-2 rounded-lg bg-white dark:bg-gray-900 text-black dark:text-white focus:outline-none focus:ring-4 focus:ring-yellow-400 focus:ring-offset-2 ${
+                emailError 
+                  ? 'border-red-500 focus:border-red-500' 
+                  : 'border-black dark:border-white'
+              }`}
               placeholder="you@example.com"
             />
+            {emailError && (
+              <p className="text-red-500 text-sm mt-1 font-medium">{emailError}</p>
+            )}
           </div>
 
           <div>
@@ -96,6 +133,21 @@ const AuthModal = ({ onClose, onSuccess }) => {
               className="w-full px-4 py-3 border-2 border-black dark:border-white rounded-lg bg-white dark:bg-gray-900 text-black dark:text-white focus:outline-none focus:ring-4 focus:ring-yellow-400 focus:ring-offset-2"
               placeholder="••••••••"
             />
+            {isSignUp && password && (
+              <div className="mt-2">
+                <div className="flex gap-1 h-1.5 mb-1">
+                  <div className={`flex-1 rounded-full ${passwordStrength.level >= 1 ? passwordStrength.color : 'bg-gray-200 dark:bg-gray-700'}`}></div>
+                  <div className={`flex-1 rounded-full ${passwordStrength.level >= 2 ? passwordStrength.color : 'bg-gray-200 dark:bg-gray-700'}`}></div>
+                  <div className={`flex-1 rounded-full ${passwordStrength.level >= 3 ? passwordStrength.color : 'bg-gray-200 dark:bg-gray-700'}`}></div>
+                </div>
+                <p className={`text-xs font-bold ${
+                  passwordStrength.level === 3 ? 'text-green-600' : 
+                  passwordStrength.level === 2 ? 'text-yellow-600' : 'text-red-600'
+                }`}>
+                  {passwordStrength.text}
+                </p>
+              </div>
+            )}
           </div>
 
           {isSignUp && (
@@ -109,16 +161,23 @@ const AuthModal = ({ onClose, onSuccess }) => {
                 onChange={(e) => setPasswordConfirm(e.target.value)}
                 required
                 minLength={8}
-                className="w-full px-4 py-3 border-2 border-black dark:border-white rounded-lg bg-white dark:bg-gray-900 text-black dark:text-white focus:outline-none focus:ring-4 focus:ring-yellow-400 focus:ring-offset-2"
+                className={`w-full px-4 py-3 border-2 rounded-lg bg-white dark:bg-gray-900 text-black dark:text-white focus:outline-none focus:ring-4 focus:ring-yellow-400 focus:ring-offset-2 ${
+                  passwordConfirm && password !== passwordConfirm
+                    ? 'border-red-500 focus:border-red-500'
+                    : 'border-black dark:border-white'
+                }`}
                 placeholder="••••••••"
               />
+              {passwordConfirm && password !== passwordConfirm && (
+                <p className="text-red-500 text-sm mt-1 font-medium">Passwords do not match</p>
+              )}
             </div>
           )}
 
           <button
             type="submit"
-            disabled={loading}
-            className="w-full border-2 border-black dark:border-white font-bold py-3 px-6 bg-blue-400 text-black shadow-[4px_4px_0px_#000] dark:shadow-[4px_4px_0px_#FFF] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_#000] dark:hover:shadow-[6px_6px_0px_#FFF] transition-all rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={loading || !isFormValid}
+            className="w-full border-2 border-black dark:border-white font-bold py-3 px-6 bg-blue-400 text-black shadow-[4px_4px_0px_#000] dark:shadow-[4px_4px_0px_#FFF] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_#000] dark:hover:shadow-[6px_6px_0px_#FFF] transition-all rounded-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-[4px_4px_0px_#000]"
           >
             {loading ? 'Loading...' : isSignUp ? 'Create Account' : 'Sign In'}
           </button>

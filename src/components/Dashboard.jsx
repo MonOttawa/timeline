@@ -1,6 +1,37 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Plus, Search, Calendar, Trash2, Edit2, Share2, MoreVertical, FileText, Loader, Brain, BookOpen, Filter, LayoutGrid, List, ChevronLeft, ChevronRight, CheckSquare, Square, ArrowUpDown, Clock } from 'lucide-react';
 import { listTimelinesByUser, deleteTimeline } from '../lib/api/timelines';
+import { useToast } from '../contexts/ToastContext';
+
+// Skeleton Components
+const SkeletonRow = () => (
+  <tr className="animate-pulse border-b border-gray-100 dark:border-gray-800">
+    <td className="p-4"><div className="h-5 w-5 bg-gray-200 dark:bg-gray-700 rounded" /></td>
+    <td className="p-4"><div className="h-5 bg-gray-200 dark:bg-gray-700 rounded w-48" /></td>
+    <td className="p-4"><div className="h-8 w-8 bg-gray-200 dark:bg-gray-700 rounded-full" /></td>
+    <td className="p-4"><div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-16" /></td>
+    <td className="p-4"><div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-24" /></td>
+    <td className="p-4"><div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-16 ml-auto" /></td>
+  </tr>
+);
+
+const SkeletonCard = () => (
+  <div className="bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 rounded-lg p-3 animate-pulse h-[140px]">
+    <div className="flex justify-between mb-3">
+      <div className="flex gap-2">
+        <div className="h-5 w-5 bg-gray-200 dark:bg-gray-700 rounded" />
+        <div className="h-5 w-5 bg-gray-200 dark:bg-gray-700 rounded-full" />
+      </div>
+      <div className="h-2 w-2 bg-gray-200 dark:bg-gray-700 rounded-full" />
+    </div>
+    <div className="h-5 bg-gray-200 dark:bg-gray-700 rounded mb-2 w-3/4" />
+    <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2" />
+    <div className="flex justify-between mt-auto pt-4">
+      <div className="h-3 w-20 bg-gray-200 dark:bg-gray-700 rounded" />
+      <div className="h-4 w-12 bg-gray-200 dark:bg-gray-700 rounded" />
+    </div>
+  </div>
+);
 
 const Dashboard = ({ user, onEdit, onCreate, onShare, onEditLearning }) => {
     const [timelines, setTimelines] = useState([]);
@@ -9,6 +40,9 @@ const Dashboard = ({ user, onEdit, onCreate, onShare, onEditLearning }) => {
     const [deleteConfirmId, setDeleteConfirmId] = useState(null);
     const [error, setError] = useState(null);
     const [contentFilter, setContentFilter] = useState('all'); // 'all', 'timelines', 'learning'
+    
+    // Toast
+    const { showToast } = useToast();
 
     // View State (force compact grid/table, remove toggle)
     const [viewMode, setViewMode] = useState('table'); // 'table', 'grid'
@@ -81,12 +115,14 @@ const Dashboard = ({ user, onEdit, onCreate, onShare, onEditLearning }) => {
                 const hint = import.meta.env.DEV && status === 500
                     ? ' (Check PocketBase is running and VITE_POCKETBASE_URL points to it.)'
                     : '';
-                setError(`Unable to load timelines. Status: ${status}.${message ? ` ${message}` : ''}${hint}`);
+                const errorMsg = `Unable to load timelines. Status: ${status}.${message ? ` ${message}` : ''}${hint}`;
+                setError(errorMsg);
+                showToast({ type: 'error', message: 'Failed to load timelines' });
             }
         } finally {
             setLoading(false);
         }
-    }, [user, page, sortConfig]);
+    }, [user, page, sortConfig, showToast]);
 
     useEffect(() => {
         fetchTimelines();
@@ -104,9 +140,11 @@ const Dashboard = ({ user, onEdit, onCreate, onShare, onEditLearning }) => {
                     next.delete(id);
                     return next;
                 });
+                showToast({ type: 'success', message: 'Item deleted' });
             } catch (error) {
                 console.error('Error deleting timeline:', error);
                 setError('Failed to delete timeline.');
+                showToast({ type: 'error', message: 'Failed to delete item' });
             }
         } else {
             setDeleteConfirmId(id);
@@ -122,9 +160,11 @@ const Dashboard = ({ user, onEdit, onCreate, onShare, onEditLearning }) => {
             setTimelines(timelines.filter(t => !selectedIds.has(t.id)));
             setSelectedIds(new Set());
             fetchTimelines(); // Refresh to get correct pagination
+            showToast({ type: 'success', message: `${selectedIds.size} items deleted` });
         } catch (error) {
             console.error('Error bulk deleting:', error);
             setError('Failed to delete some items.');
+            showToast({ type: 'error', message: 'Bulk delete failed' });
         }
     };
 
@@ -420,9 +460,29 @@ const Dashboard = ({ user, onEdit, onCreate, onShare, onEditLearning }) => {
 
             {/* Content */}
             {loading ? (
-                <div className="flex justify-center py-12">
-                    <Loader className="animate-spin text-black dark:text-white" size={32} />
-                </div>
+                viewMode === 'table' ? (
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left border-collapse">
+                            <thead>
+                                <tr className="border-b-2 border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 text-sm uppercase tracking-wider">
+                                    <th className="p-3 w-10"><Square size={20} className="text-gray-300" /></th>
+                                    <th className="p-3 w-2/5">Title</th>
+                                    <th className="p-3 w-28">Type</th>
+                                    <th className="p-3 w-24">Status</th>
+                                    <th className="p-3 w-28">Updated</th>
+                                    <th className="p-3 w-24 text-right">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                                {Array.from({ length: 5 }).map((_, i) => <SkeletonRow key={i} />)}
+                            </tbody>
+                        </table>
+                    </div>
+                ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                        {Array.from({ length: 10 }).map((_, i) => <SkeletonCard key={i} />)}
+                    </div>
+                )
             ) : filteredTimelines.length === 0 ? (
                 <div className="text-center py-12 bg-gray-50 dark:bg-gray-900 rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-700">
                     <FileText size={48} className="mx-auto mb-3 text-gray-400" />

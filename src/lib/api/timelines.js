@@ -3,37 +3,6 @@ import { pbFilterString } from '../pocketbaseFilter';
 
 const TIMELINES_COLLECTION = 'timelines';
 
-const pick = (obj, keys) => {
-  const out = {};
-  for (const key of keys) {
-    if (Object.prototype.hasOwnProperty.call(obj, key) && obj[key] !== undefined) {
-      out[key] = obj[key];
-    }
-  }
-  return out;
-};
-
-const userValueVariants = (payload) => {
-  if (!payload || typeof payload !== 'object') return [];
-  if (!Object.prototype.hasOwnProperty.call(payload, 'user')) return [];
-
-  const user = payload.user;
-  if (typeof user === 'string' && user.trim() !== '') {
-    return [{ ...payload, user: [user] }];
-  }
-  if (Array.isArray(user) && user.length === 1 && typeof user[0] === 'string' && user[0].trim() !== '') {
-    return [{ ...payload, user: user[0] }];
-  }
-  return [];
-};
-
-const attemptSignature = (payload) => {
-  const keys = Object.keys(payload || {}).sort();
-  const userType = Array.isArray(payload?.user) ? 'array' : typeof payload?.user;
-  const userLen = Array.isArray(payload?.user) ? payload.user.length : undefined;
-  return JSON.stringify({ keys, userType, userLen });
-};
-
 export async function listTimelinesByUser(userId, { page = 1, perPage = 50, sort = '-title' } = {}) {
   if (!userId) return { items: [], totalItems: 0, totalPages: 0 };
   const client = getDataClient();
@@ -63,101 +32,65 @@ export async function deleteTimeline(timelineId) {
 export async function createTimeline(data) {
   const client = getDataClient();
   try {
-    return await client.collection(TIMELINES_COLLECTION).create(data);
-  } catch (error) {
-    // Backward-compatible fallback for older PocketBase schemas (e.g. before slug/public/viewCount).
-    if (error?.status !== 400 || !data || typeof data !== 'object') throw error;
-
-    const attempts = [
-      // Drop any newer/unknown fields first.
-      pick(data, ['user', 'title', 'content', 'style', 'slug', 'public', 'viewCount']),
-      // Older schema without sharing fields.
-      pick(data, ['user', 'title', 'content', 'style']),
-      // Minimal schema.
-      pick(data, ['user', 'title', 'content']),
-    ];
-
-    const attemptedSigs = new Set([attemptSignature(data)]);
-    let lastError = error;
-    const summarizePayload = (payload) => ({
-      keys: Object.keys(payload),
-      contentLength: typeof payload?.content === 'string' ? payload.content.length : undefined,
-      userType: Array.isArray(payload?.user) ? 'array' : typeof payload?.user,
-    });
-
-    for (const attempt of attempts.flatMap((payload) => [payload, ...userValueVariants(payload)])) {
-      const sig = attemptSignature(attempt);
-      if (!sig || attemptedSigs.has(sig)) continue;
-      attemptedSigs.add(sig);
-
-      if (import.meta.env.DEV) {
-        console.warn('PocketBase create failed; retrying with reduced payload.', {
-          original: summarizePayload(data),
-          attempt: summarizePayload(attempt),
-        });
-      }
-
+    // requestKey: null ensures we don't auto-cancel strictly
+    return await client.collection(TIMELINES_COLLECTION).create(data, { requestKey: null });
+  } catch (err) {
+    // Retry with minimal payload on 400 to handle schema strictness issues (e.g. extra fields)
+    if (err.status === 400) {
       try {
-        return await client.collection(TIMELINES_COLLECTION).create(attempt);
-      } catch (nextError) {
-        lastError = nextError;
+        console.warn('Create failed, retrying with minimal payload...');
+        const minimal = {
+          user: data.user,
+          title: data.title,
+          content: data.content
+        };
+        return await client.collection(TIMELINES_COLLECTION).create(minimal, { requestKey: null });
+      } catch (retryErr) {
+        console.warn('Minimal retry also failed', retryErr);
       }
     }
 
-    const hasValidation = (err) => {
-      const response = err?.response || err?.data;
-      return response?.data && typeof response.data === 'object' && Object.keys(response.data).length > 0;
-    };
-    throw hasValidation(lastError) || !hasValidation(error) ? lastError : error;
+    if (import.meta.env.DEV) {
+      console.error('[createTimeline] Error:', err);
+      try { console.error('[createTimeline] Data:', JSON.stringify(data)); } catch (e) {}
+      if (err.response) {
+         try { console.error('[createTimeline] Response:', JSON.stringify(err.response)); } catch (e) {}
+      }
+    }
+    throw err;
   }
 }
 
 export async function updateTimeline(timelineId, data) {
   const client = getDataClient();
   try {
-    return await client.collection(TIMELINES_COLLECTION).update(timelineId, data);
-  } catch (error) {
-    // Backward-compatible fallback for older PocketBase schemas.
-    if (error?.status !== 400 || !data || typeof data !== 'object') throw error;
-
-    const attempts = [
-      pick(data, ['title', 'content', 'style', 'slug', 'public', 'viewCount', 'user']),
-      pick(data, ['title', 'content', 'style']),
-      pick(data, ['title', 'content']),
-    ];
-
-    const attemptedSigs = new Set([attemptSignature(data)]);
-    let lastError = error;
-    const summarizePayload = (payload) => ({
-      keys: Object.keys(payload),
-      contentLength: typeof payload?.content === 'string' ? payload.content.length : undefined,
-      userType: Array.isArray(payload?.user) ? 'array' : typeof payload?.user,
-    });
-
-    for (const attempt of attempts.flatMap((payload) => [payload, ...userValueVariants(payload)])) {
-      const sig = attemptSignature(attempt);
-      if (!sig || attemptedSigs.has(sig)) continue;
-      attemptedSigs.add(sig);
-
-      if (import.meta.env.DEV) {
-        console.warn('PocketBase update failed; retrying with reduced payload.', {
-          original: summarizePayload(data),
-          attempt: summarizePayload(attempt),
-        });
-      }
-
+    return await client.collection(TIMELINES_COLLECTION).update(timelineId, data, { requestKey: null });
+  } catch (err) {
+    // Retry with minimal payload
+    if (err.status === 400) {
       try {
-        return await client.collection(TIMELINES_COLLECTION).update(timelineId, attempt);
-      } catch (nextError) {
-        lastError = nextError;
+        console.warn('Update failed, retrying with minimal payload...');
+        const minimal = {
+          title: data.title,
+          content: data.content
+        };
+        // Only include user if present (usually not needed for update but good for safety)
+        if (data.user) minimal.user = data.user;
+        
+        return await client.collection(TIMELINES_COLLECTION).update(timelineId, minimal, { requestKey: null });
+      } catch (retryErr) {
+        console.warn('Minimal update retry also failed', retryErr);
       }
     }
 
-    const hasValidation = (err) => {
-      const response = err?.response || err?.data;
-      return response?.data && typeof response.data === 'object' && Object.keys(response.data).length > 0;
-    };
-    throw hasValidation(lastError) || !hasValidation(error) ? lastError : error;
+    if (import.meta.env.DEV) {
+      console.error('[updateTimeline] Error:', err);
+      try { console.error('[updateTimeline] Data:', JSON.stringify(data)); } catch (e) {}
+      if (err.response) {
+         try { console.error('[updateTimeline] Response:', JSON.stringify(err.response)); } catch (e) {}
+      }
+    }
+    throw err;
   }
 }
 

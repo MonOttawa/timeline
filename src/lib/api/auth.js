@@ -11,7 +11,20 @@ export function onAuthChange(callback) {
 }
 
 export function getCurrentUser() {
-  return getDataClient().authStore.model;
+  const client = getDataClient();
+  return client.authStore.isValid ? client.authStore.model : null;
+}
+
+export async function refreshSession() {
+  const client = getDataClient();
+  if (!client.authStore.isValid) return null;
+  try {
+    await client.collection('users').authRefresh();
+    return client.authStore.model;
+  } catch {
+    client.authStore.clear();
+    return null;
+  }
 }
 
 export function clearSession() {

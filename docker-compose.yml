@@ -1,0 +1,29 @@
+version: "3.9"
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        # Leave blank to use same-origin /api proxy
+        VITE_POCKETBASE_URL: ""
+        VITE_APP_URL: ${VITE_APP_URL:-}
+        VITE_DATA_PROVIDER: pocketbase
+    ports:
+      - "80:80"
+    depends_on:
+      - pocketbase
+    restart: unless-stopped
+
+  pocketbase:
+    image: ghcr.io/pocketbase/pocketbase:0.23.4
+    command: ["/pb/pocketbase", "serve", "--http", "0.0.0.0:8090", "--automigrate=false"]
+    volumes:
+      - pocketbase_data:/pb/pb_data
+    restart: unless-stopped
+    ports:
+      - "8090:8090"
+
+volumes:
+  pocketbase_data:

@@ -9,6 +9,10 @@
 - Verify your CSP works with your deployment:
   - `connect-src` allows `https:` and `wss:` (PocketBase realtime + AI providers).
   - If you add any non-HTTPS endpoints, update CSP and prefer migrating to HTTPS instead.
+- The provided `docker-compose.yml` runs Nginx + PocketBase together:
+  - Frontend: port 80
+  - PocketBase: exposed on `8090` (admin UI + API)
+  - `/api` is also proxied through Nginx for same-origin calls.
 
 ## Environment Variables
 - `VITE_POCKETBASE_URL`:

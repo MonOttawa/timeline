@@ -9,6 +9,14 @@ COPY package.json package-lock.json ./
 # Install dependencies
 RUN npm ci
 
+# Build-time env vars for Vite
+ARG VITE_POCKETBASE_URL
+ARG VITE_APP_URL
+ARG VITE_DATA_PROVIDER=pocketbase
+ENV VITE_POCKETBASE_URL=$VITE_POCKETBASE_URL
+ENV VITE_APP_URL=$VITE_APP_URL
+ENV VITE_DATA_PROVIDER=$VITE_DATA_PROVIDER
+
 # Copy source code
 COPY . .
 
