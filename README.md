@@ -30,36 +30,7 @@ For a production deployment checklist (CSP/headers, PocketBase rules, key handli
 
 ## Timeline API (MVP)
 
-A minimal machine-to-machine API is available at `/api/v1/timelines/compose` to generate + render timelines.
-
-**Request**
-```bash
-curl -X POST "https://your-domain.com/api/v1/timelines/compose" \
-  -H "Content-Type: application/json" \
-  -H "x-api-key: $TIMELINE_API_KEY" \
-  -d '{"title":"Startup Journey","notes":"...","style":"bauhaus-mono"}'
-```
-
-**Response**
-```json
-{
-  "timelineId": "pb_record_id",
-  "markdown": "# ...",
-  "imageUrl": "https://garage.mondylab.com/timelines/<id>.png"
-}
-```
-
-**Required env vars (API service)**
-- `TIMELINE_API_KEY`
-- `TIMELINE_SERVICE_EMAIL`
-- `TIMELINE_SERVICE_PASSWORD`
-- `TIMELINE_AI_API_KEY`
-- `TIMELINE_AI_MODEL`
-- `TIMELINE_S3_ENDPOINT`
-- `TIMELINE_S3_BUCKET`
-- `TIMELINE_S3_ACCESS_KEY`
-- `TIMELINE_S3_SECRET_KEY`
-- `TIMELINE_S3_PUBLIC_URL`
+The machine-to-machine API is documented in `API.md`.
 
 ### AI Provider Configuration (Optional)
 

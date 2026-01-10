@@ -105,6 +105,7 @@
 - `src/main.jsx`: App entry point.
 - `src/App.jsx`: Main routing and layout coordinator.
 - `src/lib/api/`: API wrapper functions (separation of concerns).
+- `services/timeline-api/`: Machine-to-machine API service (Fastify + Playwright + S3).
 - `pocketbase-schema.json`: Database schema definition.
 
 ### environment-variables

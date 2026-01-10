@@ -57,6 +57,13 @@ Access the admin dashboard at `http://127.0.0.1:8090/_/` to:
 - Configure auth settings
 - View logs
 
+## Service User (API)
+
+Create a dedicated user for the Timeline API:
+1. Open the PocketBase Admin UI
+2. Go to **Users** and create `api@substantifique.com` (or any service email)
+3. Use that email/password for `TIMELINE_SERVICE_EMAIL` and `TIMELINE_SERVICE_PASSWORD`
+
 ## Running in Production
 
 For production, you'll want to:
