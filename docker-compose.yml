@@ -14,6 +14,7 @@ services:
       - "80:80"
     depends_on:
       - pocketbase
+      - timeline-api
     restart: unless-stopped
 
   pocketbase:
@@ -24,6 +25,31 @@ services:
     restart: unless-stopped
     ports:
       - "8090:8090"
+
+  timeline-api:
+    build:
+      context: ./services/timeline-api
+      dockerfile: Dockerfile
+    environment:
+      API_KEY: ${TIMELINE_API_KEY}
+      POCKETBASE_URL: http://pocketbase:8090
+      POCKETBASE_EMAIL: ${TIMELINE_SERVICE_EMAIL}
+      POCKETBASE_PASSWORD: ${TIMELINE_SERVICE_PASSWORD}
+      RENDER_BASE_URL: http://web
+      AI_BASE_URL: ${TIMELINE_AI_BASE_URL:-https://openrouter.ai/api/v1}
+      AI_API_KEY: ${TIMELINE_AI_API_KEY}
+      AI_MODEL: ${TIMELINE_AI_MODEL}
+      S3_ENDPOINT: ${TIMELINE_S3_ENDPOINT}
+      S3_REGION: ${TIMELINE_S3_REGION:-us-east-1}
+      S3_BUCKET: ${TIMELINE_S3_BUCKET}
+      S3_ACCESS_KEY: ${TIMELINE_S3_ACCESS_KEY}
+      S3_SECRET_KEY: ${TIMELINE_S3_SECRET_KEY}
+      S3_PUBLIC_URL: ${TIMELINE_S3_PUBLIC_URL}
+      S3_FORCE_PATH_STYLE: ${TIMELINE_S3_FORCE_PATH_STYLE:-false}
+    depends_on:
+      - web
+      - pocketbase
+    restart: unless-stopped
 
 volumes:
   pocketbase_data:

@@ -10,6 +10,7 @@ import ErrorBoundary from './components/ErrorBoundary';
 import Dashboard from './components/Dashboard';
 import SettingsModal from './components/SettingsModal';
 import ToastContainer from './components/Toast';
+import TimelineRender from './components/TimelineRender';
 import { useAuth } from './hooks/useAuth';
 
 function App() {
@@ -41,7 +42,8 @@ function App() {
       publicSlug: null,
       publicRecordId: null,
       publicStyle: null,
-      embedMode: false
+      embedMode: false,
+      renderMode: path === '/render'
     };
 
     if (timelineMatch) {
@@ -60,7 +62,7 @@ function App() {
     }
 
     if (styleParam) {
-      const allowed = ['bauhaus', 'neo-brutalist', 'corporate', 'handwritten'];
+      const allowed = ['bauhaus', 'bauhaus-mono', 'neo-brutalist', 'corporate', 'handwritten'];
       if (allowed.includes(styleParam)) {
         route.publicStyle = styleParam;
       }
@@ -72,6 +74,7 @@ function App() {
   const [publicRecordId, setPublicRecordId] = useState(initialRouteState.publicRecordId);
   const [publicStyle, setPublicStyle] = useState(initialRouteState.publicStyle);
   const [embedMode, setEmbedMode] = useState(initialRouteState.embedMode);
+  const [renderMode] = useState(initialRouteState.renderMode);
   const [editingTimeline, setEditingTimeline] = useState(null);
   const [editingLearningItem, setEditingLearningItem] = useState(null);
 
@@ -148,7 +151,9 @@ function App() {
     setViewOverride('editor');
   };
 
-  const appShell = (
+  const appShell = renderMode ? (
+    <TimelineRender />
+  ) : (
     <div className={`min-h-screen bg-white dark:bg-gray-800 text-black dark:text-white transition-colors duration-200`}>
       {(!(publicSlug || publicRecordId) && !embedMode) && (
         <Header

@@ -21,6 +21,17 @@
   - Leave unset only if you reverse-proxy PocketBase under the same origin at `/api`.
 - `VITE_APP_URL`: set to your public site origin for correct share/embed links.
 
+## Timeline API (MVP)
+- `TIMELINE_API_KEY`: API key for machine-to-machine access (Windmill, etc.)
+- `TIMELINE_SERVICE_EMAIL` / `TIMELINE_SERVICE_PASSWORD`: service user for PocketBase writes
+- `TIMELINE_AI_API_KEY` / `TIMELINE_AI_MODEL`: timeline generation provider (OpenAI-compatible)
+- `TIMELINE_AI_BASE_URL` (optional): defaults to OpenRouter
+- `TIMELINE_S3_ENDPOINT`: S3-compatible endpoint (e.g., `https://garage.mondylab.com`)
+- `TIMELINE_S3_BUCKET`: bucket for rendered PNGs
+- `TIMELINE_S3_ACCESS_KEY` / `TIMELINE_S3_SECRET_KEY`
+- `TIMELINE_S3_PUBLIC_URL`: public base URL for returned image links
+- `TIMELINE_S3_FORCE_PATH_STYLE` (optional): `true` for MinIO-style endpoints
+
 ## PocketBase Hardening
 - Enforce access rules (server-side) for all collections:
   - `timelines`: owner-only for private records; allow public read only when `public=true`.
