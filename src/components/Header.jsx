@@ -39,19 +39,19 @@ export const Header = ({
     }, []);
 
     return (
-        <header className="w-full mb-4 md:mb-8 px-8 md:px-12 lg:px-16 pb-2 pt-4">
+        <header className="w-full mb-3 md:mb-6 px-6 md:px-10 lg:px-12 pb-1 pt-2">
             <div className="max-w-7xl mx-auto">
-                <div className="flex flex-wrap md:flex-nowrap items-center gap-4">
+                <div className="flex flex-wrap md:flex-nowrap items-center gap-3">
                     <div
-                        className="flex items-center cursor-pointer bg-white dark:bg-gray-800 border-2 border-black dark:border-white rounded-lg px-3 py-2 shadow-[3px_3px_0px_#000] dark:shadow-[3px_3px_0px_#FFF] hover:shadow-[4px_4px_0px_#000] dark:hover:shadow-[4px_4px_0px_#FFF] hover:translate-x-[-1px] hover:translate-y-[-1px] transition-all h-12 md:h-12"
+                        className="flex items-center cursor-pointer bg-white dark:bg-gray-800 border-2 border-black dark:border-white rounded-lg px-3 py-1.5 shadow-[2px_2px_0px_#000] dark:shadow-[2px_2px_0px_#FFF] hover:shadow-[3px_3px_0px_#000] dark:hover:shadow-[3px_3px_0px_#FFF] hover:translate-x-[-1px] hover:translate-y-[-1px] transition-all h-10"
                         onClick={onNavigateHome}
                     >
                         <img
                             src={newLogo}
                             alt="Substantifique Logo"
-                            className="h-[26px] md:h-[30px] w-auto"
+                            className="h-[22px] md:h-[26px] w-auto"
                         />
-                        <span className="font-display font-bold text-lg tracking-wider ml-3 hidden md:block">SUBSTANTIFIQUE</span>
+                        <span className="font-display font-bold text-base tracking-wider ml-3 hidden md:block">SUBSTANTIFIQUE</span>
                     </div>
 
                     <div className="flex-1 flex items-center gap-3 justify-end">
@@ -64,34 +64,34 @@ export const Header = ({
                             {showDashboard && onNavigateHome && (
                                 <button
                                     onClick={onNavigateHome}
-                                    className="h-12 px-4 border-2 border-black dark:border-white bg-blue-300 text-black font-bold rounded-lg shadow-[3px_3px_0px_#000] dark:shadow-[3px_3px_0px_#FFF] hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-[4px_4px_0px_#000] dark:hover:shadow-[4px_4px_0px_#FFF] transition-all focus:outline-none focus:ring-4 focus:ring-yellow-400 focus:ring-offset-2 flex items-center justify-center"
+                                    className="h-10 px-3 text-sm border-2 border-black dark:border-white bg-blue-300 text-black font-bold rounded-md shadow-[2px_2px_0px_#000] dark:shadow-[2px_2px_0px_#FFF] hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-[3px_3px_0px_#000] dark:hover:shadow-[3px_3px_0px_#FFF] transition-all focus:outline-none focus:ring-4 focus:ring-yellow-400 focus:ring-offset-2 flex items-center justify-center"
                                 >
-                                    <LayoutGrid size={20} className="inline" /> Dashboard
+                                    <LayoutGrid size={18} className="inline" /> Dashboard
                                 </button>
                             )}
 
                             {onNavigateTimeline && (
                                 <button
                                     onClick={onNavigateTimeline}
-                                    className="h-12 px-4 border-2 border-black dark:border-white bg-purple-300 text-black font-bold rounded-lg shadow-[3px_3px_0px_#000] dark:shadow-[3px_3px_0px_#FFF] hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-[4px_4px_0px_#000] dark:hover:shadow-[4px_4px_0px_#FFF] transition-all focus:outline-none focus:ring-4 focus:ring-yellow-400 focus:ring-offset-2 flex items-center justify-center"
+                                    className="h-10 px-3 text-sm border-2 border-black dark:border-white bg-purple-300 text-black font-bold rounded-md shadow-[2px_2px_0px_#000] dark:shadow-[2px_2px_0px_#FFF] hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-[3px_3px_0px_#000] dark:hover:shadow-[3px_3px_0px_#FFF] transition-all focus:outline-none focus:ring-4 focus:ring-yellow-400 focus:ring-offset-2 flex items-center justify-center"
                                 >
-                                    <ChartNoAxesGantt size={20} className="inline" /> Timeline
+                                    <ChartNoAxesGantt size={18} className="inline" /> Timeline
                                 </button>
                             )}
 
                             {onNavigateLearning && (
                                 <button
                                     onClick={onNavigateLearning}
-                                    className="h-12 px-4 border-2 border-black dark:border-white bg-pink-300 text-black font-bold rounded-lg shadow-[3px_3px_0px_#000] dark:shadow-[3px_3px_0px_#FFF] hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-[4px_4px_0px_#000] dark:hover:shadow-[4px_4px_0px_#FFF] transition-all focus:outline-none focus:ring-4 focus:ring-yellow-400 focus:ring-offset-2 flex items-center justify-center"
+                                    className="h-10 px-3 text-sm border-2 border-black dark:border-white bg-pink-300 text-black font-bold rounded-md shadow-[2px_2px_0px_#000] dark:shadow-[2px_2px_0px_#FFF] hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-[3px_3px_0px_#000] dark:hover:shadow-[3px_3px_0px_#FFF] transition-all focus:outline-none focus:ring-4 focus:ring-yellow-400 focus:ring-offset-2 flex items-center justify-center"
                                 >
-                                    <Sparkles size={20} className="inline" /> Learning
+                                    <Sparkles size={18} className="inline" /> Learning
                                 </button>
                             )}
 
                             {!displayName && onLogin && (
                                 <button
                                     onClick={onLogin}
-                                    className="h-12 px-4 border-2 border-black dark:border-white bg-white text-black font-bold rounded-lg shadow-[3px_3px_0px_#000] dark:shadow-[3px_3px_0px_#FFF] hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-[4px_4px_0px_#000] dark:hover:shadow-[4px_4px_0px_#FFF] transition-all focus:outline-none focus:ring-4 focus:ring-yellow-400 focus:ring-offset-2 flex items-center justify-center"
+                                    className="h-10 px-3 text-sm border-2 border-black dark:border-white bg-white text-black font-bold rounded-md shadow-[2px_2px_0px_#000] dark:shadow-[2px_2px_0px_#FFF] hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-[3px_3px_0px_#000] dark:hover:shadow-[3px_3px_0px_#FFF] transition-all focus:outline-none focus:ring-4 focus:ring-yellow-400 focus:ring-offset-2 flex items-center justify-center"
                                 >
                                     Login
                                 </button>
@@ -101,7 +101,7 @@ export const Header = ({
                                 <div className="relative" ref={userMenuRef}>
                                     <button
                                         onClick={() => setUserMenuOpen(!userMenuOpen)}
-                                        className="flex items-center gap-2 border-2 border-black dark:border-white bg-white dark:bg-gray-700 text-black dark:text-white font-mono text-sm font-semibold rounded-lg px-3 h-12 shadow-[3px_3px_0px_#000] dark:shadow-[3px_3px_0px_#FFF] hover:bg-gray-100 dark:hover:bg-gray-600 transition-all focus:outline-none focus:ring-4 focus:ring-yellow-400 focus:ring-offset-2"
+                                        className="flex items-center gap-2 border-2 border-black dark:border-white bg-white dark:bg-gray-700 text-black dark:text-white font-mono text-sm font-semibold rounded-md px-2.5 h-10 shadow-[2px_2px_0px_#000] dark:shadow-[2px_2px_0px_#FFF] hover:bg-gray-100 dark:hover:bg-gray-600 transition-all focus:outline-none focus:ring-4 focus:ring-yellow-400 focus:ring-offset-2"
                                         aria-label="User menu"
                                     >
                                         <span
@@ -149,7 +149,7 @@ export const Header = ({
 
                             <button
                                 onClick={onToggleTheme}
-                                className="h-12 px-4 border-2 border-black dark:border-white bg-yellow-300 dark:bg-yellow-400 text-black font-bold rounded-lg shadow-[3px_3px_0px_#000] dark:shadow-[3px_3px_0px_#FFF] hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-[4px_4px_0px_#000] dark:hover:shadow-[4px_4px_0px_#FFF] transition-all focus:outline-none focus:ring-4 focus:ring-yellow-400 focus:ring-offset-2 flex items-center justify-center"
+                                className="h-10 px-3 border-2 border-black dark:border-white bg-yellow-300 dark:bg-yellow-400 text-black font-bold rounded-md shadow-[2px_2px_0px_#000] dark:shadow-[2px_2px_0px_#FFF] hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-[3px_3px_0px_#000] dark:hover:shadow-[3px_3px_0px_#FFF] transition-all focus:outline-none focus:ring-4 focus:ring-yellow-400 focus:ring-offset-2 flex items-center justify-center"
                                 aria-label={
                                     theme === "light" ? "Switch to dark mode" : "Switch to light mode"
                                 }
@@ -157,7 +157,7 @@ export const Header = ({
                                     theme === "light" ? "Switch to dark mode" : "Switch to light mode"
                                 }
                             >
-                                {theme === "light" ? <Moon size={20} /> : <Sun size={20} />}
+                                {theme === "light" ? <Moon size={18} /> : <Sun size={18} />}
                             </button>
                         </BurgerMenu>
 

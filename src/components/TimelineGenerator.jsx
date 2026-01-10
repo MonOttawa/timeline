@@ -31,6 +31,7 @@ const TimelineGenerator = ({ isDemoMode = false, initialTimeline = null, onBack 
   const menuRef = useRef(null);
   
   const [editingEvent, setEditingEvent] = useState(null); // { index, field: 'date' | 'content' }
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [hasLoadedDemo, setHasLoadedDemo] = useState(false);
 
   // Auth & Persistence
@@ -850,18 +851,14 @@ Outcome, impact, and next steps.
                     <ChevronLeft size={20} />
                   </button>
                 )}
-                <input
-                  value={timelineTitle}
-                  onChange={(e) => {
-                    setTimelineTitle(e.target.value);
-                    if (warning) setWarning('');
-                  }}
-                  className="text-xl font-black font-display bg-transparent border-b border-transparent hover:border-gray-300 focus:border-purple-500 focus:outline-none w-full flex-1 min-w-0 px-1"
-                  aria-label="Timeline title"
-                />
-                 {isDirty && (
-                    <span className="flex-shrink-0 w-2 h-2 rounded-full bg-yellow-500 animate-pulse" title="Unsaved changes" />
-                  )}
+                <div className="flex-1 min-w-0">
+                  <span className="text-sm font-bold text-gray-700 dark:text-gray-200 truncate" title={timelineTitle}>
+                    {timelineTitle}
+                  </span>
+                </div>
+                {isDirty && (
+                  <span className="flex-shrink-0 w-2 h-2 rounded-full bg-yellow-500 animate-pulse" title="Unsaved changes" />
+                )}
              </div>
              
              <div className="flex items-center gap-2" />
@@ -919,7 +916,7 @@ Outcome, impact, and next steps.
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 relative">
                {/* Style Dropdown */}
                <div className="relative">
                  <ToolbarButton icon={Palette} label="Style" onClick={() => setActiveMenu(activeMenu === 'style' ? null : 'style')} isActive={activeMenu === 'style'} />
@@ -969,35 +966,35 @@ Outcome, impact, and next steps.
                   <Download size={16} />
                   <span className="hidden sm:inline">Export</span>
                </button>
+
+               {/* Export Menu */}
+               {activeMenu === 'export' && (
+                  <div className="absolute top-full right-0 mt-2 w-48 bg-white dark:bg-gray-800 border-2 border-black dark:border-white shadow-[4px_4px_0px_#000] dark:shadow-[4px_4px_0px_#FFF] rounded-lg overflow-hidden z-50 flex flex-col animate-in fade-in zoom-in-95 duration-200">
+                     {[
+                          { value: 'png', label: 'PNG Image', icon: Image },
+                          { value: 'jpg', label: 'JPG Image', icon: Image },
+                          { value: 'svg', label: 'SVG Vector', icon: Type }
+                      ].map((option) => (
+                        <button
+                          key={option.value}
+                          onClick={async () => {
+                            setExportFormat(option.value);
+                            setActiveMenu(null);
+                            await handleExport(option.value);
+                            setExportFormat('');
+                          }}
+                          className="flex items-center gap-2 px-4 py-3 hover:bg-green-100 dark:hover:bg-green-900/30 text-left font-bold"
+                        >
+                          <option.icon size={16} /> {option.label}
+                        </button>
+                      ))}
+                      <button onClick={handleDownloadMarkdown} className="flex items-center gap-2 px-4 py-3 hover:bg-blue-100 dark:hover:bg-blue-900/30 text-left font-bold border-t border-gray-100 dark:border-gray-700">
+                         <FileText size={16} /> Download MD
+                      </button>
+                  </div>
+               )}
             </div>
           </div>
-          
-           {/* Export Menu (Positioned Absolute to avoid overflow clip in flex container if needed, but relative works usually) */}
-           {activeMenu === 'export' && (
-              <div className="absolute top-[80px] right-4 w-48 bg-white dark:bg-gray-800 border-2 border-black dark:border-white shadow-[4px_4px_0px_#000] dark:shadow-[4px_4px_0px_#FFF] rounded-lg overflow-hidden z-50 flex flex-col animate-in fade-in zoom-in-95 duration-200">
-                 {[
-                      { value: 'png', label: 'PNG Image', icon: Image },
-                      { value: 'jpg', label: 'JPG Image', icon: Image },
-                      { value: 'svg', label: 'SVG Vector', icon: Type }
-                  ].map((option) => (
-                    <button
-                      key={option.value}
-                      onClick={async () => {
-                        setExportFormat(option.value);
-                        setActiveMenu(null);
-                        await handleExport(option.value);
-                        setExportFormat('');
-                      }}
-                      className="flex items-center gap-2 px-4 py-3 hover:bg-green-100 dark:hover:bg-green-900/30 text-left font-bold"
-                    >
-                      <option.icon size={16} /> {option.label}
-                    </button>
-                  ))}
-                  <button onClick={handleDownloadMarkdown} className="flex items-center gap-2 px-4 py-3 hover:bg-blue-100 dark:hover:bg-blue-900/30 text-left font-bold border-t border-gray-100 dark:border-gray-700">
-                     <FileText size={16} /> Download MD
-                  </button>
-              </div>
-           )}
 
         </div>
       </div>
@@ -1037,13 +1034,31 @@ Outcome, impact, and next steps.
           <div
             id="timeline-container"
             ref={timelineRef}
-            className={`relative max-w-3xl mx-auto p-8 ${isBauhausStyle ? 'pl-10' : ''}`}
+            className={`relative max-w-3xl mx-auto p-8 ${isBauhausStyle ? 'pl-10' : ''} ${isBauhausStyle ? 'timeline-bauhaus' : ''} ${isBauhausMono ? 'timeline-bauhaus-mono' : ''}`}
             style={{ backgroundColor: 'transparent' }}
           >
             {/* Timeline Title (Hidden in export mostly, but useful context) */}
-            <h1 className={`text-5xl font-black mb-12 text-black dark:text-white tracking-tighter ${isBauhausStyle ? 'text-left pl-16' : 'text-center'} ${isBauhausMono ? 'font-doto' : 'font-display'}`}>
-              {timelineTitle}
-            </h1>
+            {isEditingTitle ? (
+              <input
+                value={timelineTitle}
+                onChange={(e) => {
+                  setTimelineTitle(e.target.value);
+                  setIsDirty(true);
+                }}
+                onBlur={() => setIsEditingTitle(false)}
+                autoFocus
+                className={`w-full text-5xl font-black mb-12 text-black dark:text-white tracking-tighter bg-transparent border-b-2 border-black/20 dark:border-white/30 focus:outline-none ${isBauhausStyle ? 'text-left pl-16' : 'text-center'} ${isBauhausMono ? 'font-doto' : 'font-display'}`}
+                aria-label="Timeline title"
+              />
+            ) : (
+              <h1
+                onClick={() => setIsEditingTitle(true)}
+                className={`text-5xl font-black mb-12 text-black dark:text-white tracking-tighter cursor-pointer hover:opacity-80 ${isBauhausStyle ? 'text-left pl-16' : 'text-center'} ${isBauhausMono ? 'font-doto' : 'font-display'}`}
+                title="Click to edit title"
+              >
+                {timelineTitle}
+              </h1>
+            )}
 
             {isBauhausStyle ? (
               /* Bauhaus Style */

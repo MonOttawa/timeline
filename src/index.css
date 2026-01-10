@@ -37,6 +37,19 @@
   .font-vt323 {
     font-family: var(--font-vt323);
   }
+
+  .timeline-bauhaus .markdown-content h3,
+  .timeline-bauhaus .markdown-content h4 {
+    font-weight: 800;
+  }
+
+  .timeline-bauhaus-mono .markdown-content h3,
+  .timeline-bauhaus-mono .markdown-content h4 {
+    font-family: var(--font-vt323);
+    font-weight: 800;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+  }
 }
 
 /* Custom blinking animation for the cursor */
