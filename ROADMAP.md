@@ -733,7 +733,7 @@ Test cases:
 
 1. ✅ **Validate demand**: Post on Reddit/Twitter
 2. [ ] **Build MVP**: Learning Paths + Review Queue + Stripe
-3. [ ] **Add video timeline export**: Remotion (or equivalent) animated timeline → MP4/GIF
+3. [ ] **Add video timeline export**: Remotion / Re.video (https://re.video) animated timeline → MP4/GIF
 4. [ ] **Create timeline generation API**: Public endpoints for generating timelines from text/markdown (integrations like Windmill)
 5. [ ] **Get 10 paying users**: Manual onboarding, feedback
 6. [ ] **Iterate**: Fix what's broken, double down on what works
