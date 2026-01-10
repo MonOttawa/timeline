@@ -31,6 +31,9 @@
 - **Debugging**:
   - Log PocketBase/AI responses in the console during development.
   - Remove debug logs before pushing to production.
+- **Common Pitfall**:
+  - If you switch PocketBase instances, **log out and back in**. Stale auth tokens cause 400 create errors with empty validation data.
+  - Ensure `VITE_POCKETBASE_URL` is the base URL (no trailing `/api`) when using the proxy.
 
 ---
 

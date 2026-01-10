@@ -11,6 +11,7 @@ PocketBase-backed timelines and learning content. Dev uses the Vite `/api` proxy
    - UI at `http://localhost:5173`
    - API proxied via `/api` → PocketBase
 4) Login with `testuser@example.com` / `password1234!` (seed user) or create a new one.
+5) If you recently pointed the app at a different PocketBase instance, **log out and back in** (stale auth tokens cause 400 create errors).
 
 ## PocketBase schema essentials
 - Collections: `timelines`, `flashcard_reviews`, `learning_cache`
@@ -20,7 +21,7 @@ PocketBase-backed timelines and learning content. Dev uses the Vite `/api` proxy
 
 ## Environment Variables
 
-- `VITE_POCKETBASE_URL` (required unless reverse-proxying `/api`): PocketBase endpoint, e.g. `https://substantifiquedb.rosehilltech.com`.
+- `VITE_POCKETBASE_URL` (required unless reverse-proxying `/api`): PocketBase base URL (no trailing `/api`), e.g. `https://substantifiquedb.rosehilltech.com`.
  - `VITE_DATA_PROVIDER` (default `pocketbase`): Switch provider when Supabase is added.
 - `VITE_APP_URL` (recommended): Public site URL for share/embed links, e.g. `https://timeline.example.com`.
 - `VITE_COMMIT_HASH` (optional): Short git SHA to display in the footer build tag.

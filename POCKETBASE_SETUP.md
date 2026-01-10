@@ -47,6 +47,7 @@ VITE_APP_URL=http://localhost:5173
 2. Click "Sign In / Create Account"
 3. Try creating a new account
 4. Check the PocketBase admin dashboard → **Users** collection to see registered users
+5. If you switch between different PocketBase URLs, **log out and back in** so the auth token matches the active instance (stale tokens cause 400 create errors).
 
 ## PocketBase Admin Dashboard
 

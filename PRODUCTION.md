@@ -13,6 +13,7 @@
   - Frontend: port 80
   - PocketBase: exposed on `8090` (admin UI + API)
   - `/api` is also proxied through Nginx for same-origin calls.
+  - If you change PocketBase URLs, force a re-login to avoid stale auth tokens.
 
 ## Environment Variables
 - `VITE_POCKETBASE_URL`:

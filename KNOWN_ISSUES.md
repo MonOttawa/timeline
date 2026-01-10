@@ -29,6 +29,21 @@ The remote PocketBase deployment is not responding. Cloudflare returns HTTP 521 
 4. Restart the deployment
 5. Verify it's accessible at https://substantifiquedb.rosehilltech.com
 
+## Auth Token Mismatch After Switching PocketBase (HIGH)
+
+**Symptom**:
+- Saving timelines or learning items fails with `400 Failed to create record`
+- Network response shows `{"data":{}, "message":"Failed to create record.", "status":400}`
+
+**Root Cause**:
+- Client holds a stale auth token from a different PocketBase instance.
+- The UI still shows a user, but the server sees an invalid session.
+
+**Fix**:
+1. Log out and log back in to the correct PocketBase instance.
+2. If needed, clear `localStorage` and refresh the page.
+3. Ensure `VITE_POCKETBASE_URL` points to the correct base URL (no trailing `/api`).
+
 ## Recent Fixes (Completed)
 
 ### 1. CORS Proxy Implementation ✅
